@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// Configuration for ibmcloudappid Istio Mixer Adapter
+package adapter.ibmcloudappid.config;
+
+import "gogoproto/gogo.proto";
+
+option go_package="config";
+
+// Configure the ibmcloudappid Istio Mixer Adapter with below parameters
+message Params {
+    // App ID server URL
+    string appid_url = 1;
+}
