@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-
 	"google.golang.org/grpc"
 
 	"istio.io/api/mixer/adapter/model/v1beta1"
@@ -35,11 +34,21 @@ type (
 	}
 )
 
+var IsProtectionEnabled = false
+
 var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
 // HandleMetric records metric entries
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	log.Infof(">> HandleAuthorization :: received request %v\n", *r)
+
+	if (!IsProtectionEnabled){
+		log.Infof("Application protection disabled")
+		return &v1beta1.CheckResult{
+			Status: status.OK,
+		}, nil
+
+	}
 
 	cfg := &config.Params{}
 
@@ -135,7 +144,12 @@ func NewAppidAdapter(port string) (Server, error) {
 	}
 
 	log.Infof("listening on \"%v\"\n", s.Addr())
+
 	s.server = grpc.NewServer()
 	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
 	return s, nil
+}
+
+func SetIsProtectionEnabled (){
+
 }

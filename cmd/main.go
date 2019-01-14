@@ -40,7 +40,6 @@ func main() {
 		port = os.Args[1]
 	}
 
-	// s, err := mygrpcadapter.NewMyGrpcAdapter(addr)
 	s, err := ibmcloudappid.NewAppidAdapter(port)
 
 	if err != nil {
@@ -79,9 +78,14 @@ func registerCluster() {
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			fmt.Printf("%s", err)
+			log.Errorf("%s", err)
 			os.Exit(1)
 		}
-		fmt.Printf("%s\n", string(contents))
+		var jsonObj map[string]interface{}
+		json.Unmarshal(contents, &jsonObj)
+		isProtectionEnabled := jsonObj["protectionEnabled"].(bool)
+		ibmcloudappid.IsProtectionEnabled = isProtectionEnabled
+		log.Infof("Protected: %t; %s", ibmcloudappid.IsProtectionEnabled, string(contents))
+
 	}
 }
