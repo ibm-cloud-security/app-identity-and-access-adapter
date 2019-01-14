@@ -1,0 +1,1 @@
+# appid-mixer-adapter-plugin
