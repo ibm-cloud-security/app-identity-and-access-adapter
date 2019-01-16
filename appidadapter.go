@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/glog"
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
@@ -118,8 +117,8 @@ func (s *AppidAdapter) Close() error {
 	return nil
 }
 
-// NewAppidAdapter creates a new IBP adapter that listens at provided port.
-func NewAppidAdapter(cfg *Config) (Server, error) {
+// NewAppIDAdapter creates a new AppID Adapter that listens at provided port.
+func NewAppIDAdapter(cfg *Config) (Server, error) {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 	if err != nil {
@@ -129,28 +128,14 @@ func NewAppidAdapter(cfg *Config) (Server, error) {
 	s := &AppidAdapter{
 		listener: listener,
 		parser:   &defaultJWTParser{},
-		keyUtil:  &defaultPublicKeyUtil{interval: defaultPubkeysInterval},
+		keyUtil:  NewPublicKeyUtil("", defaultPubkeysInterval),
 		cfg:      cfg,
+		server:   grpc.NewServer(),
 	}
 
 	log.Infof("listening on \"%v\"\n", s.Addr())
 
-	s.server = grpc.NewServer()
 	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
-
-	// Retrieve the public keys which are used to verify the tokens
-	for i := 0; i < 5; i++ {
-		if err = s.keyUtil.RetrievePublicKeys(); err != nil {
-			glog.Warningf("Failed to get Public Keys. Assuming failure is temporary, will retry later...")
-			glog.Error(err.Error())
-			if i == 4 {
-				glog.Errorf("Unable to Obtain Public Keys after multiple attempts. Please restart the Ingress Pods.")
-			}
-		} else {
-			glog.Infof("Success. Public Keys Obtained...")
-			break
-		}
-	}
 
 	return s, nil
 }

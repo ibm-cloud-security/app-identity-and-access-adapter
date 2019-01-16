@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"istio.io/istio/pkg/log"
 )
 
 // PublicKeyUtil retries public keys from OAuth server
@@ -23,10 +25,26 @@ type defaultPublicKeyUtil struct {
 
 // NewPublicKeyUtil Create a new Public Key Util
 func NewPublicKeyUtil(publicKeyURL string, interval time.Duration) *defaultPublicKeyUtil {
-	return &defaultPublicKeyUtil{
+	pku := defaultPublicKeyUtil{
 		publicKeyURL: publicKeyURL,
 		interval:     interval,
 	}
+
+	// Retrieve the public keys which are used to verify the tokens
+	for i := 0; i < 5; i++ {
+		if err := pku.RetrievePublicKeys(); err != nil {
+			log.Infof("Failed to get Public Keys. Assuming failure is temporary, will retry later...")
+			log.Error(err.Error())
+			if i == 4 {
+				log.Errorf("Unable to Obtain Public Keys after multiple attempts. Please restart the Ingress Pods.")
+			}
+		} else {
+			log.Infof("Success. Public Keys Obtained...")
+			break
+		}
+	}
+
+	return &pku
 }
 
 func (s *defaultPublicKeyUtil) GetPublicKeys() map[string]crypto.PublicKey {

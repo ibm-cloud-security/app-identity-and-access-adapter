@@ -11,7 +11,7 @@ import (
 const (
 	appIDURL               = "APPID_URL"
 	appIDApiKey            = "APPID_APIKEY"
-	TenantID               = "TENANT_ID"
+	tenantID               = "TENANT_ID"
 	clusterName            = "CLUSTER_NAME"
 	clusterGUID            = "CLUSTER_GUID"
 	clusterLocation        = "CLUSTER_LOCATION"
@@ -36,7 +36,7 @@ type Config struct { // structure should not be marshaled to JSON, not even usin
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 
-	cfg.TenantID = os.Getenv(TenantID)
+	cfg.TenantID = os.Getenv(tenantID)
 	cfg.AppidURL = os.Getenv(appIDURL)
 	cfg.AppidAPIKey = os.Getenv(appIDApiKey)
 	cfg.ClusterName = os.Getenv(clusterName)

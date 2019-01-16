@@ -21,10 +21,9 @@ func main() {
 		log.Infof("Failed to create the Ingress-Auth service: %s", err)
 	}
 
-	s, err := ibmcloudappid.NewAppidAdapter(cfg)
+	s, err := ibmcloudappid.NewAppIDAdapter(cfg)
 	if err != nil {
 		log.Errorf("Unable to start server: %v", err)
-		//fmt.Printf("Unable to start server: %v", err)
 		os.Exit(-1)
 	}
 
