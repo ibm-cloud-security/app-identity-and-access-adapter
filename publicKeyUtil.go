@@ -1,0 +1,58 @@
+package ibmcloudappid
+
+import (
+	"crypto"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+)
+
+func (s *AppidAdapter) getPubKeys() error {
+	var publicKeyURL = "https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys"
+
+	httpClient := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	resp, err := httpClient.Get(publicKeyURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", publicKeyURL, resp.StatusCode, http.StatusText(resp.StatusCode))
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var keys []key
+	var ks keySet
+
+	if err := json.Unmarshal(body, &ks); err == nil { // an RFC compliant JWK Set object, extract key array
+		keys = ks.Keys
+	} else if err := json.Unmarshal(body, &keys); err != nil { // attempt to decode as JWK array directly
+		return err
+	}
+
+	mkeys := make(map[string]crypto.PublicKey)
+	for i, k := range keys {
+		if k.Kid == "" {
+			return fmt.Errorf("getPubKeys: Failed to parse the public key %d: kid is missing", i)
+		}
+
+		pubkey, err := k.decodePublicKey()
+		if err != nil {
+			return fmt.Errorf("getPubKeys: Failed to parse the public key %d: %s", i, err)
+		}
+		mkeys[k.Kid] = pubkey
+	}
+
+	s.appIDPubkeys = mkeys
+
+	return nil
+}
