@@ -10,10 +10,16 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
+type tokens struct {
+	access string
+	id     string
+}
+
 func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	props := decodeValueMap(r.Instance.Subject.Properties)
 
-	accessToken, err := getAuthTokenFromRequest(props)
+	// Parse Authorization Header
+	tokens, err := getAuthTokensFromRequest(props)
 	if err != nil {
 		log.Infof("Authentication Failure; Authorization header not provided")
 		return &v1beta1.CheckResult{
@@ -21,41 +27,61 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 		}, nil
 	}
 
-	log.Infof("Found the authorization header with access token: %s", accessToken)
+	log.Debug("Found valid authorization header")
 
-	token, err := s.parser.Validate(s.keyUtil.GetPublicKeys(), accessToken, s.cfg.TenantID)
+	// Validate access token
+	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.TenantID)
 	if err != nil {
 		return &v1beta1.CheckResult{
 			Status: status.WithPermissionDenied("Invalid access token"),
 		}, nil
 	}
 
-	log.Infof("Valid raw access token: %s", token.Raw)
+	// If necessary, validate ID token
+	if tokens.id != "" {
+		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.TenantID)
+		if err != nil {
+			return &v1beta1.CheckResult{
+				Status: status.WithPermissionDenied("Invalid id token"),
+			}, nil
+		}
+	}
+
 	return &v1beta1.CheckResult{Status: status.OK}, nil
 }
 
-func getAuthTokenFromRequest(props map[string]interface{}) (string, error) {
+func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, error) {
 
 	for k, v := range props {
 		log.Infof(">> HandleAuthorization :: Received properties: key=%s value=%s", k, v)
 		if k == authorizationHeader {
 
+			// Authorization header should exist
 			if v == "" {
-				return "", errors.New("Empty authorization header")
+				return nil, errors.New("Empty authorization header")
 			}
 
+			// Authorization header must be in the format Bearer <access_token> <optional id_token>
 			parts := strings.SplitN(v.(string), " ", 3)
 			if len(parts) != 2 && len(parts) != 3 {
-				return "", errors.New("Authorization header malformed")
+				return nil, errors.New("Authorization header malformed")
 			}
 
 			if parts[0] != "Bearer" && parts[0] != "bearer" {
-				return "", errors.New("Invalid bearer header")
+				return nil, errors.New("Invalid bearer header")
 			}
 
-			return parts[1], nil
+			var idToken = ""
+			if len(parts) == 3 {
+				idToken = parts[2]
+			}
+
+			return &tokens{
+				access: parts[1],
+				id:     idToken,
+			}, nil
 		}
 	}
 
-	return "", errors.New("No authorizaiton header found")
+	return nil, errors.New("Authorizaiton header does not exist")
 }

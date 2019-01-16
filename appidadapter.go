@@ -36,8 +36,8 @@ type (
 		listener net.Listener
 		server   *grpc.Server
 		cfg      *Config
-		parser   *defaultJWTParser
-		keyUtil  *defaultPublicKeyUtil
+		parser   JWTTokenParser
+		keyUtil  PublicKeyUtil
 	}
 )
 

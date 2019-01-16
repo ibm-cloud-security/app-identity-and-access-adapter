@@ -12,7 +12,7 @@ import (
 // JWTTokenParser parses and validates JWT tokens
 type JWTTokenParser interface {
 	Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error)
-	Validate(pubkeys map[string]crypto.PublicKey, token string, tenantID string) (*jwt.Token, error)
+	Validate(pubkeys map[string]crypto.PublicKey, token string, tenantID string) error
 }
 
 type defaultJWTParser struct{}
@@ -36,32 +36,32 @@ func (parser *defaultJWTParser) Parse(pubkeys map[string]crypto.PublicKey, token
 }
 
 // Validate a JWT against a public key and given claims
-func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) (*jwt.Token, error) {
+func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) error {
 	// Parse the token, and validate expiration, and clientID
 	tkn, err := parser.Parse(publicKeys, token)
 
 	// Token is valid. The user is authenticated.
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	claims, ok := getClaims(tkn)
 	if ok != true {
-		err = fmt.Errorf("validateAppIDAuthToken: Error Obtaining Claims from Access Token")
-		return nil, err
+		err = fmt.Errorf("Validate token: Error Obtaining Claims from Access Token")
+		return err
 	}
 
 	if claimTenant, ok := claims["tenant"].(string); ok {
 		if claimTenant != tenantID {
-			err = fmt.Errorf("validateAppIDAuthToken: Tenant in Claim %v does not match Tenant in bind Secret %v", claimTenant, tenantID)
-			return nil, err
+			err = fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", claimTenant, tenantID)
+			return err
 		}
 	} else {
-		err = fmt.Errorf("validateAppIDAuthToken: Error Obtaining Tenant from Claims")
-		return nil, err
+		err = fmt.Errorf("Validate token: Error Obtaining Tenant from Claims")
+		return err
 	}
 
-	return tkn, nil
+	return nil
 
 }
 
