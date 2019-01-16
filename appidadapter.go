@@ -7,7 +7,6 @@ package ibmcloudappid
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"net"
 
@@ -33,12 +32,13 @@ type (
 		Run(shutdown chan error)
 	}
 
-	// AppidAdapter supports metric template.
+	// AppidAdapter supports authorization template.
 	AppidAdapter struct {
-		listener     net.Listener
-		server       *grpc.Server
-		appIDPubkeys map[string]crypto.PublicKey
-		cfg          *Config
+		listener net.Listener
+		server   *grpc.Server
+		cfg      *Config
+		parser   *defaultJWTParser
+		keyUtil  *defaultPublicKeyUtil
 	}
 )
 
@@ -128,17 +128,19 @@ func NewAppidAdapter(cfg *Config) (Server, error) {
 	}
 	s := &AppidAdapter{
 		listener: listener,
+		parser:   &defaultJWTParser{},
+		keyUtil:  &defaultPublicKeyUtil{interval: defaultPubkeysInterval},
+		cfg:      cfg,
 	}
 
 	log.Infof("listening on \"%v\"\n", s.Addr())
-	log.Infof("CREATING WITH CONFIG %s", cfg.ClusterName)
-	s.cfg = cfg
+
 	s.server = grpc.NewServer()
 	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
 
 	// Retrieve the public keys which are used to verify the tokens
 	for i := 0; i < 5; i++ {
-		if err = s.getPubKeys(); err != nil {
+		if err = s.keyUtil.RetrievePublicKeys(); err != nil {
 			glog.Warningf("Failed to get Public Keys. Assuming failure is temporary, will retry later...")
 			glog.Error(err.Error())
 			if i == 4 {

@@ -9,7 +9,31 @@ import (
 	"time"
 )
 
-func (s *AppidAdapter) getPubKeys() error {
+// PublicKeyUtil retries public keys from OAuth server
+type PublicKeyUtil interface {
+	RetrievePublicKeys() error
+	GetPublicKeys() map[string]crypto.PublicKey
+}
+
+type defaultPublicKeyUtil struct {
+	interval     time.Duration
+	publicKeys   map[string]crypto.PublicKey
+	publicKeyURL string
+}
+
+// NewPublicKeyUtil Create a new Public Key Util
+func NewPublicKeyUtil(publicKeyURL string, interval time.Duration) *defaultPublicKeyUtil {
+	return &defaultPublicKeyUtil{
+		publicKeyURL: publicKeyURL,
+		interval:     interval,
+	}
+}
+
+func (s *defaultPublicKeyUtil) GetPublicKeys() map[string]crypto.PublicKey {
+	return s.publicKeys
+}
+
+func (s *defaultPublicKeyUtil) RetrievePublicKeys() error {
 	var publicKeyURL = "https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys"
 
 	httpClient := &http.Client{
@@ -52,7 +76,7 @@ func (s *AppidAdapter) getPubKeys() error {
 		mkeys[k.Kid] = pubkey
 	}
 
-	s.appIDPubkeys = mkeys
+	s.publicKeys = mkeys
 
 	return nil
 }

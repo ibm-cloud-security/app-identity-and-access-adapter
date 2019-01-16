@@ -23,7 +23,7 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 
 	log.Infof("Found the authorization header with access token: %s", accessToken)
 
-	token, err := s.cfg.Parser.Validate(s.appIDPubkeys, accessToken, s.cfg.TenantID)
+	token, err := s.parser.Validate(s.keyUtil.GetPublicKeys(), accessToken, s.cfg.TenantID)
 	if err != nil {
 		return &v1beta1.CheckResult{
 			Status: status.WithPermissionDenied("Invalid access token"),

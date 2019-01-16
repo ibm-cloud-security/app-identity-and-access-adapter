@@ -22,24 +22,19 @@ const (
 
 // Config encapsulates REST server configuration parameters
 type Config struct { // structure should not be marshaled to JSON, not even using defaults
-	AppidURL            string        `json:"-"`
-	AppidAPIKey         string        `json:"-"`
-	TenantID            string        `json:"-"`
-	ClusterName         string        `json:"-"`
-	ClusterGUID         string        `json:"-"`
-	ClusterLocation     string        `json:"-"`
-	Port                string        `json:"-"`
-	IsProtectionEnabled bool          `json:"-"`
-	PubKeyInterval      time.Duration `json:"-"`
-	Parser              JWTTokenParser
+	AppidURL            string `json:"-"`
+	AppidAPIKey         string `json:"-"`
+	TenantID            string `json:"-"`
+	ClusterName         string `json:"-"`
+	ClusterGUID         string `json:"-"`
+	ClusterLocation     string `json:"-"`
+	Port                string `json:"-"`
+	IsProtectionEnabled bool   `json:"-"`
 }
 
 // NewConfig creates a configuration object
 func NewConfig() (*Config, error) {
-	cfg := &Config{
-		PubKeyInterval: defaultPubkeysInterval,
-		Parser:         &defaultJWTParser{},
-	}
+	cfg := &Config{}
 
 	cfg.TenantID = os.Getenv(TenantID)
 	cfg.AppidURL = os.Getenv(appIDURL)
