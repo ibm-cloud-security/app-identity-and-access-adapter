@@ -2,12 +2,13 @@
 apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
-  name: h1
+  name: handler-appid-api
   namespace: istio-system
 spec:
   adapter: ibmcloudappid
   connection:
-    address: "[::]:47304"
+    #address: "[::]:47304"
+    address: "svc-ibmcloudappid:47304"
   params:
     appid_url: "https://appid.com"
 ---
@@ -16,7 +17,7 @@ spec:
 apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
-  name: icheck
+  name: instance-appid-api
   namespace: istio-system
 spec:
   template: authorization
@@ -30,11 +31,11 @@ spec:
 apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
-  name: r1
+  name: rule-appid-api
   namespace: istio-system
 spec:
   actions:
-    - handler: h1.istio-system
+    - handler: handler-appid-api.istio-system
       instances:
-        - icheck
+        - instance-appid-api
 ---

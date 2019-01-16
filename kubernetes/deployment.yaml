@@ -1,0 +1,60 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: dpl-ibmcloudappid
+  namespace: istio-system
+  labels:
+    app: ibmcloudappid
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ibmcloudappid
+      annotations:
+        sidecar.istio.io/inject: "false"
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+    spec:
+      containers:
+        - name: ibmcloudappid
+          image: antonal80/istio-adapter-ibmcloudappid:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 47304
+          volumeMounts:
+            - name: transient-storage
+              mountPath: /volume
+          env:
+            - name: APPID_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: appid_url
+            - name: APPID_APIKEY
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: appid_apikey
+            - name: CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: cluster_name
+            - name: CLUSTER_GUID
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: cluster_guid
+            - name: CLUSTER_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: cluster_location
+            - name: CLUSTER_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: cluster_type
+      volumes:
+        - name: transient-storage
+          emptyDir: {}

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var appidUrl, appidApiKey, clusterName, clusterGuid, clusterLocation string
+var appidUrl, appidApiKey, clusterName, clusterGuid, clusterLocation, clusterType string
 
 func main() {
 	log.Info (">> main() :: Starting ibmcloudappid adapter")
@@ -22,15 +22,17 @@ func main() {
 	clusterName = os.Getenv("CLUSTER_NAME");
 	clusterGuid = os.Getenv("CLUSTER_GUID");
 	clusterLocation = os.Getenv("CLUSTER_LOCATION");
+	clusterType = os.Getenv("CLUSTER_TYPE");
 
 	log.Infof("APPID_URL: %s", appidUrl);
 	log.Infof("APPID_APIKEY: %s", appidApiKey);
 	log.Infof("CLUSTER_NAME: %s", clusterName);
 	log.Infof("CLUSTER_GUID: %s", clusterGuid);
 	log.Infof("CLUSTER_LOCATION: %s", clusterLocation);
+	log.Infof("CLUSTER_TYPE: %s", clusterType);
 
-	if (appidUrl == "" || appidApiKey == "" || clusterName == "" || clusterGuid == "" || clusterLocation == ""){
-		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION");
+	if (appidUrl == "" || appidApiKey == "" || clusterName == "" || clusterGuid == "" || clusterLocation == "" || clusterType == ""){
+		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE");
 		log.Error("Shutting down....");
 		return;
 	}
