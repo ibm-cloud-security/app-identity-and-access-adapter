@@ -10,12 +10,12 @@ FROM alpine:3.8
 RUN apk --no-cache add ca-certificates
 WORKDIR /bin/
 #COPY --from=builder /go/src/github.com/username/myootadapter/bin/mygrpcadapter .
-COPY executable .
+COPY bin/ibmcloudappid .
 #ENV APPID_URL=https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api
 #ENV APPID_APIKEY=DefaultAppidApiKey
 #ENV CLUSTER_NAME=DefaultClusterName
 #ENV CLUSTER_GUID=DefaultClusterGuid
 #ENV CLUSTER_LOCATION=DefaultClusterLocation
-ENTRYPOINT [ "/bin/executable" ]
+ENTRYPOINT [ "/bin/ibmcloudappid" ]
 CMD [ "47304" ]
 EXPOSE 47304
