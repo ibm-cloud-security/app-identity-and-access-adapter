@@ -21,6 +21,7 @@ const (
 	tenantID               = "TENANT_ID"
 	clusterName            = "CLUSTER_NAME"
 	clusterGUID            = "CLUSTER_GUID"
+	clusterType            = "CLUSTER_TYPE"
 	clusterLocation        = "CLUSTER_LOCATION"
 	defaultPort            = "47304"
 	defaultPubkeysInterval = 60 * time.Minute
@@ -35,6 +36,7 @@ type Config struct { // structure should not be marshaled to JSON, not even usin
 	TenantID            string `json:"-"`
 	ClusterName         string `json:"-"`
 	ClusterGUID         string `json:"-"`
+	ClusterType         string `json:"-"`
 	ClusterLocation     string `json:"-"`
 	Port                string `json:"-"`
 	IsProtectionEnabled bool   `json:"-"`
@@ -50,6 +52,7 @@ func NewConfig() (*Config, error) {
 	cfg.OAuthServerURL = os.Getenv(oauthServerURL)
 	cfg.ClusterName = os.Getenv(clusterName)
 	cfg.ClusterGUID = os.Getenv(clusterGUID)
+	cfg.ClusterType = os.Getenv(clusterType)
 	cfg.ClusterLocation = os.Getenv(clusterLocation)
 
 	log.Infof("TENANT_ID: %s", cfg.TenantID)
@@ -57,10 +60,11 @@ func NewConfig() (*Config, error) {
 	log.Infof("APPID_APIKEY: %s", cfg.AppidAPIKey)
 	log.Infof("CLUSTER_NAME: %s", cfg.ClusterName)
 	log.Infof("CLUSTER_GUID: %s", cfg.ClusterGUID)
+	log.Infof("CLUSTER_TYPE: %s", cfg.ClusterType)
 	log.Infof("CLUSTER_LOCATION: %s", cfg.ClusterLocation)
 
-	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterName == "" || cfg.ClusterGUID == "" || cfg.ClusterLocation == "" || cfg.TenantID == "" {
-		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION")
+	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterName == "" || cfg.ClusterGUID == "" || cfg.ClusterLocation == "" || cfg.TenantID == "" || cfg.ClusterType == "" {
+		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE")
 		log.Error("Shutting down....")
 		return nil, errors.New("Missing one or more env variables")
 	}

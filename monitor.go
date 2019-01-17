@@ -71,7 +71,12 @@ func registerCluster(config *Config) {
 	requestURL := config.AppidURL + "/clusters"
 	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", config.ClusterGUID, requestURL)
 
-	jsonMap := map[string]string{"guid": config.ClusterGUID, "name": config.ClusterName, "location": config.ClusterLocation}
+	jsonMap := map[string]string{
+		"guid":     config.ClusterGUID,
+		"name":     config.ClusterName,
+		"location": config.ClusterLocation,
+		"type":     config.ClusterType,
+	}
 	jsonString, _ := json.Marshal(jsonMap)
 
 	response, err := http.Post(requestURL, "application/json", bytes.NewBuffer(jsonString))

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-ibmcloudappid
+  namespace: istio-system
+data:
+  appid_url: "https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
+  appid_apikey: "some-api-key"
+  cluster_name: "antona/secdev1"
+  cluster_guid: "da0e3a5d-dda0-4d7c-a287-0b3f8f9179d5"
+  cluster_location: "us-south, dal13"
+  cluster_type: "IBM Kubernetes Service"
