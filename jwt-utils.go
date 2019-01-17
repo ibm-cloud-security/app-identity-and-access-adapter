@@ -24,11 +24,13 @@ func (parser *defaultJWTParser) Parse(pubkeys map[string]crypto.PublicKey, token
 	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		kid, ok := token.Header["kid"].(string)
 		if kid == "" || !ok {
+			log.Info(">> Parse: kid is missing")
 			return nil, fmt.Errorf("kid is missing")
 		}
 
 		pk := pubkeys[kid]
 		if pk == nil {
+			log.Infof(">> Parse: kid not found: %s", token.Header["kid"])
 			return nil, fmt.Errorf("Undefined kid: %s", token.Header["kid"])
 		}
 		return pk, nil
@@ -38,6 +40,7 @@ func (parser *defaultJWTParser) Parse(pubkeys map[string]crypto.PublicKey, token
 // Validate a JWT against a public key and given claims
 func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) error {
 	// Parse the token, and validate expiration, and clientID
+	log.Info(">> Validate Token")
 	tkn, err := parser.Parse(publicKeys, token)
 
 	// Token is valid. The user is authenticated.
@@ -47,18 +50,18 @@ func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey,
 
 	claims, ok := getClaims(tkn)
 	if ok != true {
-		err = fmt.Errorf("Validate token: Error Obtaining Claims from Access Token")
-		return err
+		log.Info(">> Validate token: Error Obtaining Claims from Access Token")
+		return fmt.Errorf("Validate token: Error Obtaining Claims from Access Token")
 	}
 
 	if claimTenant, ok := claims["tenant"].(string); ok {
 		if claimTenant != tenantID {
-			err = fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", claimTenant, tenantID)
-			return err
+			log.Info(">> Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v")
+			return fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", claimTenant, tenantID)
 		}
 	} else {
-		err = fmt.Errorf("Validate token: Error Obtaining Tenant from Claims")
-		return err
+		log.Info("Error Obtaining Tenant from Claims")
+		return fmt.Errorf("Validate token: Error Obtaining Tenant from Claims")
 	}
 
 	return nil

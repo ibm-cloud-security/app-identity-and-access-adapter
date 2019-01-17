@@ -24,9 +24,9 @@ type defaultPublicKeyUtil struct {
 }
 
 // NewPublicKeyUtil Create a new Public Key Util
-func NewPublicKeyUtil(publicKeyURL string, interval time.Duration) *defaultPublicKeyUtil {
+func NewPublicKeyUtil(oauthServerURL string, interval time.Duration) *defaultPublicKeyUtil {
 	pku := defaultPublicKeyUtil{
-		publicKeyURL: publicKeyURL,
+		publicKeyURL: oauthServerURL + "/publicKeys",
 		interval:     interval,
 	}
 
@@ -52,19 +52,19 @@ func (s *defaultPublicKeyUtil) GetPublicKeys() map[string]crypto.PublicKey {
 }
 
 func (s *defaultPublicKeyUtil) RetrievePublicKeys() error {
-	var publicKeyURL = "https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys"
 
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := httpClient.Get(publicKeyURL)
+	resp, err := httpClient.Get(s.publicKeyURL)
 	if err != nil {
+		log.Errorf("RetrievePublicKeys >> Failed to retrieve public keys : %s", s.publicKeyURL)
 		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", publicKeyURL, resp.StatusCode, http.StatusText(resp.StatusCode))
+		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", s.publicKeyURL, resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
