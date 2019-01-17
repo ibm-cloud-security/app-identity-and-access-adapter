@@ -24,12 +24,12 @@ type Monitor interface {
 }
 
 type defaultMonitor struct {
-	cfg    *Config
+	cfg    *AppIDConfig
 	ticker *time.Ticker
 }
 
 // NewMonitor creates an App ID Monitor object
-func NewMonitor(cfg *Config) (Monitor, error) {
+func NewMonitor(cfg *AppIDConfig) (Monitor, error) {
 	monitor := &defaultMonitor{
 		cfg:    cfg,
 		ticker: time.NewTicker(time.Millisecond * 1000),
@@ -67,7 +67,7 @@ func (m *defaultMonitor) Stop() error {
 	return errors.New("Missing active ticker")
 }
 
-func registerCluster(config *Config) {
+func registerCluster(config *AppIDConfig) {
 	requestURL := config.AppidURL + "/clusters"
 	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", config.ClusterGUID, requestURL)
 

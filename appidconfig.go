@@ -4,32 +4,31 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"time"
-
 	"istio.io/istio/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 const (
-	appIDURL               = "APPID_URL"
-	appIDApiKey            = "APPID_APIKEY"
-	oauthServerURL         = "APPID_OAUTHSERVERURL"
-	tenantID               = "TENANT_ID"
-	clusterName            = "CLUSTER_NAME"
-	clusterGUID            = "CLUSTER_GUID"
-	clusterType            = "CLUSTER_TYPE"
-	clusterLocation        = "CLUSTER_LOCATION"
-	defaultPort            = "47304"
+	APPID_URL            = "APPID_URL"
+	APPID_APIKEY         = "APPID_APIKEY"
+	APPID_OAUTHSERVERURL = "APPID_OAUTHSERVERURL"
+	TENANT_ID            = "TENANT_ID"
+	CLUSTER_NAME         = "CLUSTER_NAME"
+	CLUSTER_GUID         = "CLUSTER_GUID"
+	CLUSTER_TYPE         = "CLUSTER_TYPE"
+	CLUSTER_LOCATION     = "CLUSTER_LOCATION"
+	DEFAULT_PORT         = "47304"
 	defaultPubkeysInterval = 60 * time.Minute
 	minPubkeyInterval      = 60 * time.Minute
 )
 
-// Config encapsulates REST server configuration parameters
-type Config struct { // structure should not be marshaled to JSON, not even using defaults
+// AppIDConfig encapsulates REST server configuration parameters
+type AppIDConfig struct {// structure should not be marshaled to JSON, not even using defaults
 	OAuthServerURL      string `json:"-"`
 	AppidURL            string `json:"-"`
 	AppidAPIKey         string `json:"-"`
@@ -42,18 +41,18 @@ type Config struct { // structure should not be marshaled to JSON, not even usin
 	IsProtectionEnabled bool   `json:"-"`
 }
 
-// NewConfig creates a configuration object
-func NewConfig() (*Config, error) {
-	cfg := &Config{}
+// NewAppIDConfig creates a configuration object
+func NewAppIDConfig() (*AppIDConfig, error) {
+	cfg := &AppIDConfig{}
 
-	cfg.TenantID = os.Getenv(tenantID)
-	cfg.AppidURL = os.Getenv(appIDURL)
-	cfg.AppidAPIKey = os.Getenv(appIDApiKey)
-	cfg.OAuthServerURL = os.Getenv(oauthServerURL)
-	cfg.ClusterName = os.Getenv(clusterName)
-	cfg.ClusterGUID = os.Getenv(clusterGUID)
-	cfg.ClusterType = os.Getenv(clusterType)
-	cfg.ClusterLocation = os.Getenv(clusterLocation)
+	cfg.TenantID = os.Getenv(TENANT_ID)
+	cfg.AppidURL = os.Getenv(APPID_URL)
+	cfg.AppidAPIKey = os.Getenv(APPID_APIKEY)
+	cfg.OAuthServerURL = os.Getenv(APPID_OAUTHSERVERURL)
+	cfg.ClusterName = os.Getenv(CLUSTER_NAME)
+	cfg.ClusterGUID = os.Getenv(CLUSTER_GUID)
+	cfg.ClusterType = os.Getenv(CLUSTER_TYPE)
+	cfg.ClusterLocation = os.Getenv(CLUSTER_LOCATION)
 
 	log.Infof("TENANT_ID: %s", cfg.TenantID)
 	log.Infof("APPID_URL: %s", cfg.AppidURL)
@@ -69,7 +68,7 @@ func NewConfig() (*Config, error) {
 		return nil, errors.New("Missing one or more env variables")
 	}
 
-	cfg.Port = defaultPort
+	cfg.Port = DEFAULT_PORT
 	if len(os.Args) > 1 {
 		cfg.Port = os.Args[1]
 	}

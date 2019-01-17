@@ -2,6 +2,7 @@ package ibmcloudappid
 
 import (
 	"errors"
+	"github.com/gogo/googleapis/google/rpc"
 	"strings"
 
 	"istio.io/api/mixer/adapter/model/v1beta1"
@@ -21,9 +22,9 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(props)
 	if err != nil {
-		log.Infof("Authentication Failure; Authorization header not provided")
+		log.Warn("Unauthorized. Authorization header not found.")
 		return &v1beta1.CheckResult{
-			Status: status.WithPermissionDenied("Unauthorized..."),
+			Status: status.WithPermissionDenied("Unauthorized. Authorization header not found."),
 		}, nil
 	}
 
@@ -33,7 +34,7 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.TenantID)
 	if err != nil {
 		return &v1beta1.CheckResult{
-			Status: status.WithPermissionDenied("Invalid access token"),
+			Status: status.WithPermissionDenied("Unauthorized. Invalid access token."),
 		}, nil
 	}
 
@@ -42,7 +43,8 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.TenantID)
 		if err != nil {
 			return &v1beta1.CheckResult{
-				Status: status.WithPermissionDenied("Invalid id token"),
+				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Invalid id token."),
+				//Status: status.WithPermissionDenied("Unauthorized. Invalid id token."),
 			}, nil
 		}
 	}

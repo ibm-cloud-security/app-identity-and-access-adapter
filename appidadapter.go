@@ -35,7 +35,7 @@ type (
 	AppidAdapter struct {
 		listener net.Listener
 		server   *grpc.Server
-		cfg      *Config
+		cfg      *AppIDConfig
 		parser   JWTTokenParser
 		keyUtil  PublicKeyUtil
 	}
@@ -118,7 +118,7 @@ func (s *AppidAdapter) Close() error {
 }
 
 // NewAppIDAdapter creates a new AppID Adapter that listens at provided port.
-func NewAppIDAdapter(cfg *Config) (Server, error) {
+func NewAppIDAdapter(cfg *AppIDConfig) (Server, error) {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 	if err != nil {

@@ -35,6 +35,11 @@ spec:
                 configMapKeyRef:
                   name: configmap-ibmcloudappid
                   key: appid_apikey
+            - name: TENANT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: configmap-ibmcloudappid
+                  key: tenant_id
             - name: CLUSTER_NAME
               valueFrom:
                 configMapKeyRef:

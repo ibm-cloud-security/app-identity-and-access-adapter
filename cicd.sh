@@ -28,16 +28,3 @@ kubectl apply -f kubernetes/deployment.yaml
 
 echo Updating Service
 kubectl apply -f kubernetes/service.yaml
-
-# Build commands
-#env GOOS=linux GOARCH=arm go build -a -installsuffix cgo -v -o bin/ibmcloudappid cmd
-#env GOOS=linux GOARCH=arm go build -a -installsuffix cgo -v -o bin/ibmcloudappid .
-#cd bin/
-#ls -la
-#chmod +x ibmcloudappid
-#./ibmcloudappid
-#chmod -x ibmcloudappid
-#cd ..
-#env GOOS=linux GOARCH=arm CGO_ENABLED=0 go build -a -installsuffix cgo -v -o bin/ibmcloudappid .
-#docker build .
-#d images

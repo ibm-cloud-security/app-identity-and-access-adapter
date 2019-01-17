@@ -10,3 +10,4 @@ data:
   cluster_guid: "da0e3a5d-dda0-4d7c-a287-0b3f8f9179d5"
   cluster_location: "us-south, dal13"
   cluster_type: "IBM Kubernetes Service"
+  tenant_id: "f30e77ae-599c-4833-98b9-4fb7728caa1e"

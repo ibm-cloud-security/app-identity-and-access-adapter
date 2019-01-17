@@ -11,7 +11,7 @@ func main() {
 	log.Info(">> main() :: Starting ibmcloudappid adapter")
 
 	// Ensure we have correct configuration
-	cfg, err := ibmcloudappid.NewConfig()
+	cfg, err := ibmcloudappid.NewAppIDConfig()
 	if err != nil {
 		log.Infof("Failed to create the Ingress-Auth service: %s", err)
 		os.Exit(-1)
