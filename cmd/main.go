@@ -68,7 +68,12 @@ func registerCluster() {
 	requestUrl := appidUrl + "/clusters"
 	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", clusterGuid, requestUrl);
 
-	jsonMap := map[string]string {"guid":clusterGuid, "name":clusterName, "location":clusterLocation}
+	jsonMap := map[string]string {
+		"guid":clusterGuid,
+		"name":clusterName,
+		"location":clusterLocation,
+		"type":clusterType}
+
 	jsonString, _:= json.Marshal(jsonMap)
 
 	response, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonString))
