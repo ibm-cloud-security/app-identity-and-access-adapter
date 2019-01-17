@@ -7,8 +7,8 @@ metadata:
 spec:
   adapter: ibmcloudappid
   connection:
-    address: "[::]:47304"
-    #address: "svc-ibmcloudappid:47304"
+    #address: "[::]:47304"
+    address: "svc-ibmcloudappid:47304"
   params:
     appid_url: "https://appid.com"
 ---
