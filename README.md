@@ -2,40 +2,68 @@
 
 Prototype of App ID integration with Istio.
 
-## Run
+## Local Development
 
-### Start Istio Mixer and Adapter
-
-#### App ID Mixer Adapter
+#### Set Environment
 
 ```
-export ISTIO=$GOPATH/src/istio.io                                                        ✹
+// Mandataory Adapter Configuration Fields
+export APPID_URL="https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
+export APPID_APIKEY="abcd1234"
+export CLUSTER_GUID="78901234-aaaa-bbbb-bd0a-f01df6a1f000"
+export CLUSTER_NAME="local-test-of-ibmcloudappid-adapter-aaron"
+export CLUSTER_LOCATION="aaron's mac"
+
+// Export a path that points to your personal go workspace
+export GOPATH=/Users/AaronLiberatore/go-workspace
+
+// Go and Istio Paths
+export ISTIO=$GOPATH/src/istio.io
 export MIXER_REPO=$GOPATH/src/istio.io/istio/mixer
+```
+
+#### Start App ID Adapter
+
+By default the adapter runs on port 47304
+
+```
 cd $MIXER_REPO/adapter/ibmcloudappid
 go build . && go run cmd/main.go 47304
 ```
 
-#### Mixer
+#### Start the Istio Mixer
 
 ```
-export ISTIO=$GOPATH/src/istio.io 
-
 $GOPATH/out/darwin_amd64/release/mixs server \                                                 ⏎ ✭
     --configStoreURL=fs://$GOPATH/src/istio.io/istio/mixer/adapter/ibmcloudappid/testdata \
     --log_output_level=attributes:debug
 ```
 
-### Send direct request to mixer
+### Testing
 
+To test locally you can send requests directly to the mixer using the following example command.
 ```
-pushd $ISTIO/istio && make mixc && $GOPATH/out/darwin_amd64/release/mixc report -s destination.service="svc.cluster.local" -i request.size=1
+$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:Bearer <token>"
+```
 
-$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:abc"
+### Kubernetes
 
-$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:Bearer token"
+Istio runs inside the `istio-system` kube namespace with each component run in its own pod
 
-$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTcifQ.eyJpc3MiOiJhcHBpZC1vYXV0aC5zdGFnZTEuZXUtZ2IuYmx1ZW1peC5uZXQiLCJleHAiOjE1NDc2MTA2MzEsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTQ3NjA3MDMxLCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.NjhoELlVfHHMhxHw9EIrPqvfct2Ns9j4cg4f2wjtL5efDl48WLRyp-LgeBDVfajK0LANlxeBvooXxBn7dNhjc2cm0Rnx-lYpj3JYpYiMfFSiUg8WjDrMyvWBU4v61GlQlNQWUERxAmMzsnQijz57V6emuyZ2mNIZWjx6QzCjgCarQ_9U5HmoJOZ2eTAovHCiwjtgDDeEa3_9DkKvYC3Ekfr-UwAUxfkSydQQ2hBO8cf1SuReXaTIMYs21NWZJSBPH4k-w6azLOR_qzkvkHeS1rW-7_MKISgW06FISPAOIUFZ_NJlaYcAJe9cepno3IHmUtBkro28h08WBUzGGSuXJw"
+#### Deploying
 
+1. Update `cicd.sh` with the locatin of your personal kube configuration
+2. Run `sh ./cicd.sh` to build the image, push to docker, and deploy to kubernetes
 
-$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC0wNTdmNDQxOS03MzYzLTQ0ZDktYWNiNy0xNzA3MjQ4ZWU1ZTQtMjAxOC0wOC0wMlQxMjowMzo1Ny42MTQifQ.eyJpc3MiOiJhcHBpZC1vYXV0aC5zdGFnZTEuZXUtZ2IuYmx1ZW1peC5uZXQiLCJleHAiOjE1NDc1OTY0NjksImF1ZCI6IjlhMDJiZGZkLTFmYWItNGFlZi1hOTE3LTQ4YjJiNWQxMzFjZiIsInN1YiI6IjlhMDJiZGZkLTFmYWItNGFlZi1hOTE3LTQ4YjJiNWQxMzFjZiIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTQ3NTkyODY5LCJ0ZW5hbnQiOiIwNTdmNDQxOS03MzYzLTQ0ZDktYWNiNy0xNzA3MjQ4ZWU1ZTQiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.TJ-AFySbaosodACcJUJtH-cPDyBRcjg6FPv7u4R_M_OR0aq_oOYTqBI86QFliZNIizT3VPAFhRRUjSbgfH9zH3GvhIotC4pj4re9zx8HnbWXsPbplmwi7VlO8MlzUGH3EXijkk5-2Fs-GUOVhBhCre6Hm2ofx5CgP9aZzdDfLW9TB0cFupk1FfsbTI9hfW-7IjQrT2bEKCtNuTPT-ndLAwrHRB1PhG3gKPKojdcFIxdpBxvaG5pDIJJnEkNj-yyNnEH7PGfIqVRQAotSoFEOIQBXk7Q24qVbz5TYiiB2tVdy1GjPBbEs11B9JfEg6vzU_amgshiIdJCF67deJotl8A"
+If you modified the adapters configuration information located under `testdata/sample_operator_cfg.yaml` run the following command:
+
+`kubectl apply -f ./testdata/sample_operator_cfg.yaml`
+
+#### Logs
+```
+// Follow adapter logs
+kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+
+// Follow mixer logs
+kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
 ```

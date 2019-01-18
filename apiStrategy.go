@@ -56,21 +56,22 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 
 func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, error) {
 
-	for k, v := range props {
-		log.Infof(">> HandleAuthorization :: Received properties: key=%s value=%s", k, v)
-		if k == authorizationHeader {
+	if v, found := props[authorizationHeader]; found {
+
+		if authHeader, ok := v.(string); ok {
 
 			// Authorization header should exist
-			if v == "" {
+			if authHeader == "" {
 				return nil, errors.New("Empty authorization header")
 			}
 
 			// Authorization header must be in the format Bearer <access_token> <optional id_token>
-			parts := strings.SplitN(v.(string), " ", 3)
+			parts := strings.SplitN(authHeader, " ", 3)
 			if len(parts) != 2 && len(parts) != 3 {
 				return nil, errors.New("Authorization header malformed")
 			}
 
+			// Authorization header must begin with bearer
 			if parts[0] != "Bearer" && parts[0] != "bearer" {
 				return nil, errors.New("Invalid bearer header")
 			}

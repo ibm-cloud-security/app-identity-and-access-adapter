@@ -25,6 +25,8 @@ spec:
     subject:
       properties:
         authorization_header:  request.headers["authorization"]
+        destination_ip: destination.ip | ip("0.0.0.0")
+        destination_service_host: destination.service.host | ""
 ---
 
 # rule to dispatch to handler h1

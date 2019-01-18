@@ -64,6 +64,8 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 		}
 	}
 
+	logEnvVars(r)
+
 	// Check whether we should perform API or Web strategy. Only API strategy is supported
 	var useAPIStrategy = true
 	if useAPIStrategy {
@@ -71,6 +73,13 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	}
 
 	return s.appIDAPIStrategy(r)
+}
+
+func logEnvVars(r *authorization.HandleAuthorizationRequest) {
+	props := decodeValueMap(r.Instance.Subject.Properties)
+	for key, val := range props {
+		log.Infof("ENV:\n\tkey: %s\nvalue: \t%s", key, val)
+	}
 }
 
 func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
@@ -89,6 +98,8 @@ func decodeValue(in interface{}) interface{} {
 		return t.Int64Value
 	case *policy.Value_DoubleValue:
 		return t.DoubleValue
+	case *policy.Value_IpAddressValue:
+		return t.IpAddressValue
 	default:
 		return fmt.Sprintf("%v", in)
 	}
