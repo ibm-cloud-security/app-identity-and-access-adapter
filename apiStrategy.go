@@ -2,8 +2,9 @@ package ibmcloudappid
 
 import (
 	"errors"
-	"github.com/gogo/googleapis/google/rpc"
 	"strings"
+
+	"github.com/gogo/googleapis/google/rpc"
 
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
@@ -24,27 +25,26 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 	if err != nil {
 		log.Warn("Unauthorized. Authorization header not found.")
 		return &v1beta1.CheckResult{
-			Status: status.WithPermissionDenied("Unauthorized. Authorization header not found."),
+			Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Authorization header not found."),
 		}, nil
 	}
 
 	log.Debug("Found valid authorization header")
 
 	// Validate access token
-	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.TenantID)
+	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.Credentials.TenantID)
 	if err != nil {
 		return &v1beta1.CheckResult{
-			Status: status.WithPermissionDenied("Unauthorized. Invalid access token."),
+			Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Invalid access token."),
 		}, nil
 	}
 
 	// If necessary, validate ID token
 	if tokens.id != "" {
-		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.TenantID)
+		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.Credentials.TenantID)
 		if err != nil {
 			return &v1beta1.CheckResult{
 				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Invalid id token."),
-				//Status: status.WithPermissionDenied("Unauthorized. Invalid id token."),
 			}, nil
 		}
 	}

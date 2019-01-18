@@ -24,9 +24,9 @@ type defaultPublicKeyUtil struct {
 }
 
 // NewPublicKeyUtil Create a new Public Key Util
-func NewPublicKeyUtil(oauthServerURL string, interval time.Duration) *defaultPublicKeyUtil {
+func NewPublicKeyUtil(publicKeyURL string, interval time.Duration) PublicKeyUtil {
 	pku := defaultPublicKeyUtil{
-		publicKeyURL: oauthServerURL + "/publicKeys",
+		publicKeyURL: publicKeyURL,
 		interval:     interval,
 	}
 

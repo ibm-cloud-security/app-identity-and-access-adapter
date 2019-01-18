@@ -128,7 +128,7 @@ func NewAppIDAdapter(cfg *AppIDConfig) (Server, error) {
 	s := &AppidAdapter{
 		listener: listener,
 		parser:   &defaultJWTParser{},
-		keyUtil:  NewPublicKeyUtil(cfg.OAuthServerURL, defaultPubkeysInterval),
+		keyUtil:  NewPublicKeyUtil(cfg.Credentials.JwksURL, defaultPubkeysInterval),
 		cfg:      cfg,
 		server:   grpc.NewServer(),
 	}
