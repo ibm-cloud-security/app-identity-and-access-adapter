@@ -49,6 +49,8 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 		}
 	}
 
+	log.Info("Authorized. Valid authorization header")
+
 	return &v1beta1.CheckResult{Status: status.OK}, nil
 }
 
