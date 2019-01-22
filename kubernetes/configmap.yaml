@@ -5,7 +5,7 @@ metadata:
   namespace: istio-system
 data:
   appid_url: "https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
-  appid_apikey: "some-api-key"
+  appid_apikey: "m5pou9gyvw8psqlgnyi9a34fpgbndaidfgr9zs4r"
   cluster_name: "antona/secdev1"
   cluster_guid: "da0e3a5d-dda0-4d7c-a287-0b3f8f9179d5"
   cluster_location: "us-south, dal13"

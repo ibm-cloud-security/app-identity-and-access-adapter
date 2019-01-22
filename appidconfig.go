@@ -101,12 +101,18 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	log.Infof("retrieveAppIDConfig Response body: %s", string(body))
+
 	if err != nil {
 		return nil, err
 	}
+
+
+
+	defer resp.Body.Close()
+
 
 	appidCreds := Credentials{}
 	err = json.Unmarshal(body, &appidCreds)
