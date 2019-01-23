@@ -59,6 +59,13 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	cfg.ClusterType = os.Getenv(CLUSTER_TYPE)
 	cfg.ClusterLocation = os.Getenv(CLUSTER_LOCATION)
 
+	log.Infof("APPID_URL: %s", cfg.AppidURL)
+	log.Infof("APPID_APIKEY: %s", cfg.AppidAPIKey)
+	log.Infof("CLUSTER_NAME: %s", cfg.ClusterName)
+	log.Infof("CLUSTER_TYPE: %s", cfg.ClusterType)
+	log.Infof("CLUSTER_LOCATION: %s", cfg.ClusterLocation)
+	log.Infof("CLUSTER_GUID: %s", cfg.ClusterGUID)
+
 	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterName == "" || cfg.ClusterGUID == "" || cfg.ClusterLocation == "" || cfg.ClusterType == "" {
 		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE")
 		log.Error("Shutting down....")
@@ -80,12 +87,13 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	cfg.Credentials = credentials
 
 	res, _ := json.MarshalIndent(cfg, "", "\t")
-	log.Info(string(res))
+	log.Infof("Retrieved configuration: %s", string(res))
 
 	return cfg, nil
 }
 
 func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
+	log.Infof(">> retrieveAppIDConfig")
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
@@ -93,23 +101,28 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 	req, err := http.NewRequest("GET", url+"/config", nil)
 	req.Header.Add("X-Api-Key", apiKey)
 	if err != nil {
+		log.Infof("<< retrieveAppIDConfig FAIL http.NewRequest :: %s", err)
 		return nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Infof("<< retrieveAppIDConfig FAIL client.Do :: %s", err)
 		return nil, err
 	}
 
+	if resp.StatusCode == 403 {
+		log.Infof("<< retrieveAppIDConfig 403")
+		return nil, errors.New("403 Forbidden")
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	log.Infof("retrieveAppIDConfig Response body: %s", string(body))
 
 	if err != nil {
+		log.Infof("<< retrieveAppIDConfig FAIL ioutil.ReadAll :: %s", err)
 		return nil, err
 	}
-
-
 
 	defer resp.Body.Close()
 
@@ -117,7 +130,10 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 	appidCreds := Credentials{}
 	err = json.Unmarshal(body, &appidCreds)
 	if err != nil {
+		log.Infof("<< retrieveAppIDConfig FAIL json.Unmarshal :: %s", err)
 		return nil, err
 	}
+	log.Infof("<< retrieveAppIDConfig OK")
+
 	return &appidCreds, nil
 }

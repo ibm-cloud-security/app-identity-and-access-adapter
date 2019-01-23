@@ -13,14 +13,14 @@ func main() {
 	// Ensure we have correct configuration
 	cfg, err := ibmcloudappid.NewAppIDConfig()
 	if err != nil {
-		log.Infof("Failed to create the Ingress-Auth service: %s", err)
+		log.Infof("Failed to create ibmcloudappid.NewAppIDConfig: %s", err)
 		os.Exit(-1)
 	}
 
 	// Start communication with App ID
 	monitor, err := ibmcloudappid.NewMonitor(cfg)
 	if err != nil {
-		log.Errorf("Could not create App ID monitor: %v", err)
+		log.Errorf("Failed to create ibmcloudappid.NewMonitor: %s", err)
 		os.Exit(-1)
 	}
 	monitor.Start()
@@ -28,7 +28,7 @@ func main() {
 	// Create App ID Adapter
 	s, err := ibmcloudappid.NewAppIDAdapter(cfg)
 	if err != nil {
-		log.Errorf("Unable to start server: %v", err)
+		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
 		os.Exit(-1)
 	}
 

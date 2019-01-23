@@ -16,6 +16,8 @@ docker build -t $IMAGE_TAG .
 echo Pushing image to Container Registry
 docker push $IMAGE_TAG
 
+exit 1
+
 echo Targeting Cluster
 export KUBECONFIG=/Users/antona/.bluemix/plugins/container-service/clusters/secdev1/kube-config-dal13-secdev1.yml
 
