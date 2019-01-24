@@ -16,6 +16,7 @@ COPY bin/ibmcloudappid .
 #ENV CLUSTER_NAME=DefaultClusterName
 #ENV CLUSTER_GUID=DefaultClusterGuid
 #ENV CLUSTER_LOCATION=DefaultClusterLocation
+#RUN echo nameserver 8.8.8.8 > /etc/resolv.conf && cat /etc/resolv.conf
 ENTRYPOINT [ "/bin/ibmcloudappid" ]
 CMD [ "47304" ]
 EXPOSE 47304
