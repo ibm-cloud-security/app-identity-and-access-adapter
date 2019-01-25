@@ -47,7 +47,7 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	log.Infof(">> HandleAuthorization :: received request %v\n", *r)
 
-	if !s.cfg.IsProtectionEnabled {
+	if !s.cfg.ClusterInfo.IsProtectionEnabled {
 		log.Infof("Application protection disabled")
 		return &v1beta1.CheckResult{
 			Status: status.OK,
@@ -139,7 +139,7 @@ func NewAppIDAdapter(cfg *AppIDConfig) (Server, error) {
 	s := &AppidAdapter{
 		listener: listener,
 		parser:   &defaultJWTParser{},
-		keyUtil:  NewPublicKeyUtil(cfg.Credentials.JwksURL, defaultPubkeysInterval),
+		keyUtil:  NewPublicKeyUtil(cfg.Credentials.JwksURL),
 		cfg:      cfg,
 		server:   grpc.NewServer(),
 	}

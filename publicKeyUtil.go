@@ -18,16 +18,14 @@ type PublicKeyUtil interface {
 }
 
 type defaultPublicKeyUtil struct {
-	interval     time.Duration
 	publicKeys   map[string]crypto.PublicKey
 	publicKeyURL string
 }
 
 // NewPublicKeyUtil Create a new Public Key Util
-func NewPublicKeyUtil(publicKeyURL string, interval time.Duration) PublicKeyUtil {
+func NewPublicKeyUtil(publicKeyURL string) PublicKeyUtil {
 	pku := defaultPublicKeyUtil{
 		publicKeyURL: publicKeyURL,
-		interval:     interval,
 	}
 
 	// Retrieve the public keys which are used to verify the tokens

@@ -72,8 +72,7 @@ func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey,
 func getClaims(token *jwt.Token) (jwt.MapClaims, bool) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return claims, true
-	} else {
-		glog.Errorf("getClaims: Invalid JWT Token: %v", token)
-		return nil, false
 	}
+	glog.Errorf("getClaims: Invalid JWT Token: %v", token)
+	return nil, false
 }

@@ -9,7 +9,7 @@ Prototype of App ID integration with Istio.
 ```
 // Mandataory Adapter Configuration Fields
 export APPID_URL="https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
-export APPID_APIKEY="abcd1234"
+export APPID_APIKEY="m5pou9gyvw8psqlgnyi9a34fpgbndaidfgr9zs4r"
 export CLUSTER_GUID="78901234-aaaa-bbbb-bd0a-f01df6a1f000"
 export CLUSTER_NAME="local-test-of-ibmcloudappid-adapter-aaron"
 export CLUSTER_LOCATION="aaron's mac"
@@ -34,9 +34,7 @@ go build . && go run cmd/main.go 47304
 #### Start the Istio Mixer
 
 ```
-$GOPATH/out/darwin_amd64/release/mixs server \                                                 ⏎ ✭
-    --configStoreURL=fs://$GOPATH/src/istio.io/istio/mixer/adapter/ibmcloudappid/testdata \
-    --log_output_level=attributes:debug
+$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/istio.io/istio/mixer/adapter/ibmcloudappid/testdata --log_output_level=attributes:debug
 ```
 
 ### Testing

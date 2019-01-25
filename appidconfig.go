@@ -12,35 +12,46 @@ import (
 )
 
 const (
-	APPID_URL              = "APPID_URL"
-	APPID_APIKEY           = "APPID_APIKEY"
-	CLUSTER_NAME           = "CLUSTER_NAME"
-	CLUSTER_GUID           = "CLUSTER_GUID"
-	CLUSTER_TYPE           = "CLUSTER_TYPE"
-	CLUSTER_LOCATION       = "CLUSTER_LOCATION"
-	DEFAULT_PORT           = "47304"
-	defaultPubkeysInterval = 60 * time.Minute
-	minPubkeyInterval      = 60 * time.Minute
+	appIDURL        = "APPID_URL"
+	appIDApiKey     = "APPID_APIKEY"
+	clusterName     = "CLUSTER_NAME"
+	clusterGUID     = "CLUSTER_GUID"
+	clusterType     = "CLUSTER_TYPE"
+	clusterLocation = "CLUSTER_LOCATION"
+	defaultPort     = "47304"
 )
 
 // AppIDConfig encapsulates REST server configuration parameters
 type AppIDConfig struct { // private fields should not be marshaled to json
-	AppidURL            string       `json:"appidURL"`
-	AppidAPIKey         string       `json:"-"`
-	ClusterName         string       `json:"clusterName"`
-	ClusterGUID         string       `json:"clusterGUID"`
-	ClusterType         string       `json:"clusterType"`
-	ClusterLocation     string       `json:"clusterLocation"`
-	Port                string       `json:"port"`
-	IsProtectionEnabled bool         `json:"isProtectionEnabled"`
-	Credentials         *Credentials `json:"credentials"`
+	AppidURL    string       `json:"appidURL"`
+	AppidAPIKey string       `json:"-,"`
+	ClusterInfo *ClusterInfo `json:"clusterName"`
+	Port        string       `json:"port"`
+	Credentials *Credentials `json:"credentials"`
+}
+
+// ClusterInfo encapsulates the Kubernetes cluster information
+type ClusterInfo struct {
+	Name                string             `json:"name"`
+	GUID                string             `json:"guid"`
+	Type                string             `json:"type"`
+	Location            string             `json:"location"`
+	Services            map[string]Service `json:"services,string"`
+	IsProtectionEnabled bool               `json:"protectionEnabled"`
+}
+
+// Service encapsulates a Kubernetes Service
+type Service struct {
+	Name                string `json:"name"`
+	Namespace           string `json:"namespace"`
+	IsProtectionEnabled bool   `json:"IsProtectionEnabled"`
 }
 
 // Credentials encapsulates App ID instance credentials
 type Credentials struct {
 	TenantID         string `json:"tenantId"`
 	ClientID         string `json:"clientId"`
-	Secret           string `json:"secret"`
+	Secret           string `json:"-,"`
 	AuthorizationURL string `json:"authorizationUrl"`
 	TokenURL         string `json:"tokenUrl"`
 	UserinfoURL      string `json:"userinfoUrl"`
@@ -52,27 +63,30 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	cfg := &AppIDConfig{}
 
 	// Retrieve Environment Variables
-	cfg.AppidURL = os.Getenv(APPID_URL)
-	cfg.AppidAPIKey = os.Getenv(APPID_APIKEY)
-	cfg.ClusterName = os.Getenv(CLUSTER_NAME)
-	cfg.ClusterGUID = os.Getenv(CLUSTER_GUID)
-	cfg.ClusterType = os.Getenv(CLUSTER_TYPE)
-	cfg.ClusterLocation = os.Getenv(CLUSTER_LOCATION)
+	cfg.AppidURL = os.Getenv(appIDURL)
+	cfg.AppidAPIKey = os.Getenv(appIDApiKey)
+	cfg.ClusterInfo = &ClusterInfo{
+		Name:     os.Getenv(clusterName),
+		GUID:     os.Getenv(clusterGUID),
+		Type:     os.Getenv(clusterType),
+		Location: os.Getenv(clusterLocation),
+		Services: make(map[string]Service),
+	}
 
 	log.Infof("APPID_URL: %s", cfg.AppidURL)
 	log.Infof("APPID_APIKEY: %s", cfg.AppidAPIKey)
-	log.Infof("CLUSTER_NAME: %s", cfg.ClusterName)
-	log.Infof("CLUSTER_TYPE: %s", cfg.ClusterType)
-	log.Infof("CLUSTER_LOCATION: %s", cfg.ClusterLocation)
-	log.Infof("CLUSTER_GUID: %s", cfg.ClusterGUID)
+	log.Infof("CLUSTER_NAME: %s", cfg.ClusterInfo.Name)
+	log.Infof("CLUSTER_TYPE: %s", cfg.ClusterInfo.Type)
+	log.Infof("CLUSTER_LOCATION: %s", cfg.ClusterInfo.Location)
+	log.Infof("CLUSTER_GUID: %s", cfg.ClusterInfo.GUID)
 
-	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterName == "" || cfg.ClusterGUID == "" || cfg.ClusterLocation == "" || cfg.ClusterType == "" {
+	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterInfo.Name == "" || cfg.ClusterInfo.GUID == "" || cfg.ClusterInfo.Location == "" || cfg.ClusterInfo.Type == "" {
 		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE")
 		log.Error("Shutting down....")
 		return nil, errors.New("Missing one or more env variables")
 	}
 
-	cfg.Port = DEFAULT_PORT
+	cfg.Port = defaultPort
 	if len(os.Args) > 1 {
 		cfg.Port = os.Args[1]
 	}
@@ -87,7 +101,7 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	cfg.Credentials = credentials
 
 	res, _ := json.MarshalIndent(cfg, "", "\t")
-	log.Infof("Retrieved configuration: %s", string(res))
+	log.Infof("Retrieved configuration:\n %s", string(res))
 
 	return cfg, nil
 }
@@ -101,39 +115,38 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 	req, err := http.NewRequest("GET", url+"/config", nil)
 	req.Header.Add("X-Api-Key", apiKey)
 	if err != nil {
-		log.Infof("<< retrieveAppIDConfig FAIL http.NewRequest :: %s", err)
+		log.Errorf("<< retrieveAppIDConfig FAIL http.NewRequest :: %s", err)
 		return nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Infof("<< retrieveAppIDConfig FAIL client.Do :: %s", err)
+		log.Errorf("<< retrieveAppIDConfig FAIL client.Do :: %s", err)
 		return nil, err
 	}
 
 	if resp.StatusCode == 403 {
-		log.Infof("<< retrieveAppIDConfig 403")
+		log.Errorf("<< retrieveAppIDConfig 403")
 		return nil, errors.New("403 Forbidden")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Infof("retrieveAppIDConfig Response body: %s", string(body))
+	log.Debugf("retrieveAppIDConfig Response body: %s", string(body))
 
 	if err != nil {
-		log.Infof("<< retrieveAppIDConfig FAIL ioutil.ReadAll :: %s", err)
+		log.Errorf("<< retrieveAppIDConfig FAIL ioutil.ReadAll :: %s", err)
 		return nil, err
 	}
 
 	defer resp.Body.Close()
 
-
 	appidCreds := Credentials{}
 	err = json.Unmarshal(body, &appidCreds)
 	if err != nil {
-		log.Infof("<< retrieveAppIDConfig FAIL json.Unmarshal :: %s", err)
+		log.Errorf("<< retrieveAppIDConfig FAIL json.Unmarshal :: %s", err)
 		return nil, err
 	}
-	log.Infof("<< retrieveAppIDConfig OK")
+	log.Debugf("<< retrieveAppIDConfig OK")
 
 	return &appidCreds, nil
 }

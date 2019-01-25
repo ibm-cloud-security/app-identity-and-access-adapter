@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"istio.io/istio/pkg/log"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -31,13 +35,15 @@ type defaultMonitor struct {
 // NewMonitor creates an App ID Monitor object
 func NewMonitor(cfg *AppIDConfig) (Monitor, error) {
 	monitor := &defaultMonitor{
-		cfg:    cfg,
 		ticker: time.NewTicker(time.Millisecond * 1000),
+		cfg:    cfg,
 	}
+
+	go monitor.watchServices(cfg)
 
 	go func() {
 		for range monitor.ticker.C {
-			registerCluster(cfg)
+			monitor.registerCluster()
 		}
 	}()
 
@@ -53,7 +59,7 @@ func (m *defaultMonitor) Start() {
 
 	go func() {
 		for range m.ticker.C {
-			registerCluster(m.cfg)
+			m.registerCluster()
 		}
 	}()
 }
@@ -67,35 +73,94 @@ func (m *defaultMonitor) Stop() error {
 	return errors.New("Missing active ticker")
 }
 
-func registerCluster(config *AppIDConfig) {
-	requestURL := config.AppidURL + "/clusters"
-	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", config.ClusterGUID, requestURL)
+func (m *defaultMonitor) registerCluster() {
+	requestURL := m.cfg.AppidURL + "/clusters"
+	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", m.cfg.ClusterInfo.GUID, requestURL)
 
-	jsonMap := map[string]string{
-		"guid":     config.ClusterGUID,
-		"name":     config.ClusterName,
-		"location": config.ClusterLocation,
-		"type":     config.ClusterType,
-	}
-	jsonString, _ := json.Marshal(jsonMap)
+	jsonString, _ := json.Marshal(m.cfg.ClusterInfo)
 
 	response, err := http.Post(requestURL, "application/json", bytes.NewBuffer(jsonString))
-
 	if err != nil {
-		fmt.Printf("%s", err)
+		log.Errorf("Error sending request to App ID management: %s", err)
 		return
 	}
 
 	defer response.Body.Close()
-	contents, err := ioutil.ReadAll(response.Body)
+	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Errorf("%s", err)
-		os.Exit(1)
+		log.Errorf("Error reading App ID management response: %s", err)
+		return
 	}
 
-	var jsonObj map[string]interface{}
-	json.Unmarshal(contents, &jsonObj)
-	isProtectionEnabled := jsonObj["protectionEnabled"].(bool)
-	config.IsProtectionEnabled = isProtectionEnabled
-	log.Infof("Protected: %t; %s", config.IsProtectionEnabled, string(contents))
+	clusterInfo := ClusterInfo{}
+	err = json.Unmarshal(body, &clusterInfo)
+	if err != nil {
+		log.Errorf("Error parsing management cluster response: %s", err)
+		return
+	}
+
+	m.cfg.ClusterInfo.IsProtectionEnabled = clusterInfo.IsProtectionEnabled
+	log.Infof("Protected: %t; %s", m.cfg.ClusterInfo.IsProtectionEnabled, string(body))
+}
+
+func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
+
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Errorf("Error creating a cluster config: %s", err)
+		return
+	}
+
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Errorf("Error creating a client set: %s", err)
+		return
+	}
+
+	// Watch for service changes
+	watchlist := cache.NewListWatchFromClient(clientset.Core().RESTClient(), "services", v1.NamespaceAll,
+		fields.Everything())
+	_, controller := cache.NewInformer(
+		watchlist,
+		&v1.Service{},
+		time.Second*0,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				if service := checkValidService(obj); service != nil {
+					m.cfg.ClusterInfo.Services[service.Namespace+"-"+service.Name] = Service{
+						Name:                service.Name,
+						Namespace:           service.Namespace,
+						IsProtectionEnabled: false,
+					}
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				if service := checkValidService(obj); service != nil {
+					delete(m.cfg.ClusterInfo.Services, service.Namespace+"-"+service.Name)
+				}
+			},
+		},
+	)
+
+	stop := make(chan struct{})
+	go controller.Run(stop)
+}
+
+func checkValidService(obj interface{}) *v1.Service {
+	service, ok := obj.(*v1.Service)
+	if !ok {
+		log.Errorf("Could not cast interface as Service")
+		return nil
+	}
+
+	// Ensure service does not belong to system or kube namespaces
+	if strings.HasPrefix(service.Namespace, "kube") || strings.HasSuffix(service.Namespace, "system") {
+		log.Debugf("System or kubernetes service - %s : %s", service.Namespace, service.Name)
+		return nil
+	}
+
+	return service
+
 }
