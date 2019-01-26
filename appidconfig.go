@@ -211,5 +211,9 @@ func retrieveClusterConfig(url string, apiKey string, clusterID string) (*Cluste
 	}
 	log.Debugf("<< retrieveClusterInfo OK")
 
+	if clusterInfo.Services == nil { // Can be removed when the API guarantees this is returned
+		clusterInfo.Services = make(map[string]Service)
+	}
+
 	return &clusterInfo, nil
 }
