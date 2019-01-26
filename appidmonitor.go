@@ -99,8 +99,10 @@ func (m *defaultMonitor) registerCluster() {
 		return
 	}
 
-	m.cfg.ClusterInfo.IsProtectionEnabled = clusterInfo.IsProtectionEnabled
-	log.Infof("Protected: %t; %s", m.cfg.ClusterInfo.IsProtectionEnabled, string(body))
+	m.cfg.ClusterPolicies = &ClusterPolicies{
+		Services: clusterInfo.Services,
+	}
+	log.Infof(">> registerCluster :: Updated m.cfg.ClusterPolicies %v", m.cfg.ClusterPolicies)
 }
 
 func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
@@ -129,18 +131,20 @@ func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
 			AddFunc: func(obj interface{}) {
 				if service := checkValidService(obj); service != nil {
 					// If the element is not already in our table Add it.
-					if _, ok := m.cfg.ClusterInfo.Services[service.Namespace+"."+service.Name]; !ok {
-						m.cfg.ClusterInfo.Services[service.Namespace+"."+service.Name] = Service{
+					if _, ok := m.cfg.ClusterInfo.Services[service.Name+"."+service.Namespace]; !ok {
+							m.cfg.ClusterInfo.Services[service.Name+"."+service.Namespace] = Service{
 							Name:                service.Name,
 							Namespace:           service.Namespace,
-							IsProtectionEnabled: false,
+							// Adapter should not be able to decide whether protection is on or off.
+							// Need to fix this in the mgmt API as well
+							//IsProtectionEnabled: false,
 						}
 					}
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				if service := checkValidService(obj); service != nil {
-					delete(m.cfg.ClusterInfo.Services, service.Namespace+"."+service.Name)
+					delete(m.cfg.ClusterInfo.Services, service.Name+"."+service.Namespace)
 				}
 			},
 		},
@@ -158,11 +162,10 @@ func checkValidService(obj interface{}) *v1.Service {
 	}
 
 	// Ensure service does not belong to system or kube namespaces
-	if strings.HasPrefix(service.Namespace, "kube") || strings.HasSuffix(service.Namespace, "system") {
+	if strings.HasPrefix(service.Namespace, "kube") || strings.HasSuffix(service.Namespace, "system") || strings.Contains(service.Name, "demo-cloud-fund-web") {
 		log.Debugf("System or kubernetes service - %s : %s", service.Namespace, service.Name)
 		return nil
 	}
 
 	return service
-
 }

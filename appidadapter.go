@@ -8,13 +8,14 @@ package ibmcloudappid
 import (
 	"context"
 	"fmt"
+	"istio.io/istio/mixer/pkg/status"
 	"net"
+	"strings"
 
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/config"
-	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
@@ -47,32 +48,37 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	log.Infof(">> HandleAuthorization :: received request %v\n", *r)
 
-	if !s.cfg.ClusterInfo.IsProtectionEnabled {
-		log.Infof("Application protection disabled")
-		return &v1beta1.CheckResult{
-			Status: status.OK,
-		}, nil
-
-	}
+	//if !s.cfg.ClusterInfo.IsProtectionEnabled {
+	//	log.Infof("Application protection disabled")
+	//	return &v1beta1.CheckResult{
+	//		Status: status.OK,
+	//	}, nil
+	//}
 
 	cfg := &config.Params{}
 
 	if r.AdapterConfig != nil {
 		if err := cfg.Unmarshal(r.AdapterConfig.Value); err != nil {
-			log.Errorf("error unmarshalling adapter config: %v", err)
+			log.Errorf("Error unmarshalling adapter config: %v", err)
 			return nil, err
 		}
 	}
 
-	logEnvVars(r)
+	//logEnvVars(r)
 
-	// Check whether we should perform API or Web strategy. Only API strategy is supported
-	var useAPIStrategy = true
-	if useAPIStrategy {
+	props := decodeValueMap(r.Instance.Subject.Properties)
+	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local");
+	clusterServices := s.cfg.ClusterPolicies.Services
+
+	if clusterServices[destinationService].IsProtectionEnabled == true {
+		log.Infof("Protected destination_service: %s ", destinationService);
 		return s.appIDAPIStrategy(r)
+	} else {
+		log.Infof("Unprotected destination_service: %s ", destinationService);
+		return &v1beta1.CheckResult{
+			Status: status.OK,
+		}, nil
 	}
-
-	return s.appIDAPIStrategy(r)
 }
 
 func logEnvVars(r *authorization.HandleAuthorizationRequest) {
@@ -139,7 +145,7 @@ func NewAppIDAdapter(cfg *AppIDConfig) (Server, error) {
 	s := &AppidAdapter{
 		listener: listener,
 		parser:   &defaultJWTParser{},
-		keyUtil:  NewPublicKeyUtil(cfg.Credentials.JwksURL),
+		keyUtil:  NewPublicKeyUtil(cfg.ClientCredentials.JwksURL),
 		cfg:      cfg,
 		server:   grpc.NewServer(),
 	}

@@ -7,8 +7,9 @@ IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${APP_VERSION}
 KUBE_NAMESPACE=istio-system
 
 echo Building Linux Executable
+rm -f bin/ibmcloudappid
 env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -v -o bin/ibmcloudappid ./cmd/main.go
-chmod +x ibmcloudappid
+#chmod +x ibmcloudappid
 
 echo Building Image
 docker build -t $IMAGE_TAG .

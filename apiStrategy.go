@@ -32,7 +32,7 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 	log.Debug("Found valid authorization header")
 
 	// Validate access token
-	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.Credentials.TenantID)
+	err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.access, s.cfg.ClientCredentials.TenantID)
 	if err != nil {
 		return &v1beta1.CheckResult{
 			Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Invalid access token."),
@@ -41,7 +41,7 @@ func (s *AppidAdapter) appIDAPIStrategy(r *authorization.HandleAuthorizationRequ
 
 	// If necessary, validate ID token
 	if tokens.id != "" {
-		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.Credentials.TenantID)
+		err = s.parser.Validate(s.keyUtil.GetPublicKeys(), tokens.id, s.cfg.ClientCredentials.TenantID)
 		if err != nil {
 			return &v1beta1.CheckResult{
 				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized. Invalid id token."),

@@ -22,22 +22,28 @@ const (
 )
 
 // AppIDConfig encapsulates REST server configuration parameters
-type AppIDConfig struct { // private fields should not be marshaled to json
-	AppidURL    string       `json:"appidURL"`
-	AppidAPIKey string       `json:"-,"`
-	ClusterInfo *ClusterInfo `json:"clusterName"`
-	Port        string       `json:"port"`
-	Credentials *Credentials `json:"credentials"`
+type AppIDConfig struct {
+	// private fields should not be marshaled to json
+	AppidURL          string             `json:"appidURL"`
+	AppidAPIKey       string             `json:"-,"`
+	ClusterInfo       *ClusterInfo       `json:"clusterInfo"`
+	ClusterPolicies   *ClusterPolicies   `json:"clusterPolicies"`
+	Port              string             `json:"port"`
+	ClientCredentials *ClientCredentials `json:"clientCredentials"`
 }
 
-// ClusterInfo encapsulates the Kubernetes cluster information
+// ClusterInfo encapsulates the Kubernetes cluster information to be sent to App ID
 type ClusterInfo struct {
-	Name                string             `json:"name"`
-	GUID                string             `json:"guid"`
-	Type                string             `json:"type"`
-	Location            string             `json:"location"`
-	Services            map[string]Service `json:"services,string"`
-	IsProtectionEnabled bool               `json:"protectionEnabled"`
+	Name     string             `json:"name"`
+	GUID     string             `json:"guid"`
+	Type     string             `json:"type"`
+	Location string             `json:"location"`
+	Services map[string]Service `json:"services,string"`
+}
+
+// ClusterPolicies encapsulates the policies retrieved from App ID
+type ClusterPolicies struct {
+	Services map[string]Service
 }
 
 // Service encapsulates a Kubernetes Service
@@ -47,8 +53,8 @@ type Service struct {
 	IsProtectionEnabled bool   `json:"protectionEnabled"`
 }
 
-// Credentials encapsulates App ID instance credentials
-type Credentials struct {
+// ClientCredentials encapsulates App ID instance credentials
+type ClientCredentials struct {
 	TenantID         string `json:"tenantId"`
 	ClientID         string `json:"clientId"`
 	Secret           string `json:"-,"`
@@ -60,67 +66,67 @@ type Credentials struct {
 
 // NewAppIDConfig creates a configuration object
 func NewAppIDConfig() (*AppIDConfig, error) {
-	cfg := &AppIDConfig{}
+	appidCfg := &AppIDConfig{}
 
 	// Retrieve Environment Variables
-	cfg.AppidURL = os.Getenv(appIDURL)
-	cfg.AppidAPIKey = os.Getenv(appIDApiKey)
+	appidCfg.AppidURL = os.Getenv(appIDURL)
+	appidCfg.AppidAPIKey = os.Getenv(appIDApiKey)
 	clsterName := os.Getenv(clusterName)
 	clsterGUID := os.Getenv(clusterGUID)
 	clsterType := os.Getenv(clusterType)
 	clsterLocation := os.Getenv(clusterLocation)
 
-	log.Infof("APPID_URL: %s", cfg.AppidURL)
-	log.Infof("APPID_APIKEY: %s", cfg.AppidAPIKey)
+	log.Infof("APPID_URL: %s", appidCfg.AppidURL)
+	log.Infof("APPID_APIKEY: %s", appidCfg.AppidAPIKey)
 	log.Infof("CLUSTER_NAME: %s", clsterName)
 	log.Infof("CLUSTER_TYPE: %s", clsterType)
 	log.Infof("CLUSTER_LOCATION: %s", clsterLocation)
 	log.Infof("CLUSTER_GUID: %s", clsterGUID)
 
-	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || clsterName == "" || clsterGUID == "" || clsterLocation == "" || clsterType == "" {
+	if appidCfg.AppidURL == "" || appidCfg.AppidAPIKey == "" || clsterName == "" || clsterGUID == "" || clsterLocation == "" || clsterType == "" {
 		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE")
 		log.Error("Shutting down....")
 		return nil, errors.New("Missing one or more env variables")
 	}
 
-	cfg.Port = defaultPort
+	appidCfg.Port = defaultPort
 	if len(os.Args) > 1 {
-		cfg.Port = os.Args[1]
+		appidCfg.Port = os.Args[1]
 	}
 
 	// Retrieve App ID instance configuration
-	credentials, err := retrieveAppIDConfig(cfg.AppidURL, cfg.AppidAPIKey)
+	credentials, err := retrieveAppIDConfig(appidCfg.AppidURL, appidCfg.AppidAPIKey)
 	if err != nil {
 		log.Error("Shutting down....")
 		return nil, errors.New("Could not retrieve App ID instance credentials")
 	}
 
-	cfg.Credentials = credentials
+	appidCfg.ClientCredentials = credentials
 
 	// Retrieve cluster configuration before monitoring. For the moment, this must succeed or services will be overwritten.
-	clusterInfo, err := retrieveClusterConfig(cfg.AppidURL, cfg.AppidAPIKey, clsterGUID)
-	if err != nil {
-		log.Error("Shutting down....")
-		return nil, errors.New("Could not retrieve cluster configuration from App ID")
-	} else if clusterInfo != nil {
-		cfg.ClusterInfo = clusterInfo
-	} else {
-		cfg.ClusterInfo = &ClusterInfo{
-			Name:     clsterName,
-			GUID:     clsterGUID,
-			Type:     clsterType,
-			Location: clsterLocation,
-			Services: make(map[string]Service),
-		}
+	//clusterInfo, err := retrieveClusterInfo(cfg.AppidURL, cfg.AppidAPIKey, clsterGUID)
+	//if err != nil {
+	//	log.Error("Shutting down....")
+	//	return nil, errors.New("Could not retrieve cluster configuration from App ID")
+	//} else if clusterInfo != nil {
+	//	cfg.ClusterInfo = clusterInfo
+	//} else {
+	appidCfg.ClusterInfo = &ClusterInfo{
+		Name:     clsterName,
+		GUID:     clsterGUID,
+		Type:     clsterType,
+		Location: clsterLocation,
+		Services: make(map[string]Service),
 	}
+	//}
 
-	res, _ := json.MarshalIndent(cfg, "", "\t")
-	log.Infof("Retrieved configuration:\n %s", string(res))
+	res, _ := json.MarshalIndent(appidCfg, "", "\t")
+	log.Debugf("Retrieved configuration:\n %s", string(res))
 
-	return cfg, nil
+	return appidCfg, nil
 }
 
-func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
+func retrieveAppIDConfig(url string, apiKey string) (*ClientCredentials, error) {
 	log.Infof(">> retrieveAppIDConfig")
 	client := &http.Client{
 		Timeout: 5 * time.Second,
@@ -154,7 +160,7 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 
 	defer resp.Body.Close()
 
-	appidCreds := Credentials{}
+	appidCreds := ClientCredentials{}
 	err = json.Unmarshal(body, &appidCreds)
 	if err != nil {
 		log.Errorf("<< retrieveAppIDConfig FAIL json.Unmarshal :: %s", err)
@@ -165,7 +171,7 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 	return &appidCreds, nil
 }
 
-func retrieveClusterConfig(url string, apiKey string, clusterID string) (*ClusterInfo, error) {
+func retrieveClusterInfo(url string, apiKey string, clusterID string) (*ClusterInfo, error) {
 	log.Infof(">> retrieveClusterInfo")
 	client := &http.Client{
 		Timeout: 5 * time.Second,
