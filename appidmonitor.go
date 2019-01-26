@@ -120,8 +120,7 @@ func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
 	}
 
 	// Watch for service changes
-	watchlist := cache.NewListWatchFromClient(clientset.Core().RESTClient(), "services", v1.NamespaceAll,
-		fields.Everything())
+	watchlist := cache.NewListWatchFromClient(clientset.Core().RESTClient(), "services", v1.NamespaceAll, fields.Everything())
 	_, controller := cache.NewInformer(
 		watchlist,
 		&v1.Service{},
@@ -129,16 +128,19 @@ func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				if service := checkValidService(obj); service != nil {
-					m.cfg.ClusterInfo.Services[service.Namespace+"-"+service.Name] = Service{
-						Name:                service.Name,
-						Namespace:           service.Namespace,
-						IsProtectionEnabled: false,
+					// If the element is not already in our table Add it.
+					if _, ok := m.cfg.ClusterInfo.Services[service.Namespace+"."+service.Name]; !ok {
+						m.cfg.ClusterInfo.Services[service.Namespace+"."+service.Name] = Service{
+							Name:                service.Name,
+							Namespace:           service.Namespace,
+							IsProtectionEnabled: false,
+						}
 					}
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				if service := checkValidService(obj); service != nil {
-					delete(m.cfg.ClusterInfo.Services, service.Namespace+"-"+service.Name)
+					delete(m.cfg.ClusterInfo.Services, service.Namespace+"."+service.Name)
 				}
 			},
 		},
