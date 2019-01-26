@@ -44,7 +44,7 @@ type ClusterInfo struct {
 type Service struct {
 	Name                string `json:"name"`
 	Namespace           string `json:"namespace"`
-	IsProtectionEnabled bool   `json:"IsProtectionEnabled"`
+	IsProtectionEnabled bool   `json:"protectionEnabled"`
 }
 
 // Credentials encapsulates App ID instance credentials
@@ -65,22 +65,19 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	// Retrieve Environment Variables
 	cfg.AppidURL = os.Getenv(appIDURL)
 	cfg.AppidAPIKey = os.Getenv(appIDApiKey)
-	cfg.ClusterInfo = &ClusterInfo{
-		Name:     os.Getenv(clusterName),
-		GUID:     os.Getenv(clusterGUID),
-		Type:     os.Getenv(clusterType),
-		Location: os.Getenv(clusterLocation),
-		Services: make(map[string]Service),
-	}
+	clsterName := os.Getenv(clusterName)
+	clsterGUID := os.Getenv(clusterGUID)
+	clsterType := os.Getenv(clusterType)
+	clsterLocation := os.Getenv(clusterLocation)
 
 	log.Infof("APPID_URL: %s", cfg.AppidURL)
 	log.Infof("APPID_APIKEY: %s", cfg.AppidAPIKey)
-	log.Infof("CLUSTER_NAME: %s", cfg.ClusterInfo.Name)
-	log.Infof("CLUSTER_TYPE: %s", cfg.ClusterInfo.Type)
-	log.Infof("CLUSTER_LOCATION: %s", cfg.ClusterInfo.Location)
-	log.Infof("CLUSTER_GUID: %s", cfg.ClusterInfo.GUID)
+	log.Infof("CLUSTER_NAME: %s", clsterName)
+	log.Infof("CLUSTER_TYPE: %s", clsterType)
+	log.Infof("CLUSTER_LOCATION: %s", clsterLocation)
+	log.Infof("CLUSTER_GUID: %s", clsterGUID)
 
-	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || cfg.ClusterInfo.Name == "" || cfg.ClusterInfo.GUID == "" || cfg.ClusterInfo.Location == "" || cfg.ClusterInfo.Type == "" {
+	if cfg.AppidURL == "" || cfg.AppidAPIKey == "" || clsterName == "" || clsterGUID == "" || clsterLocation == "" || clsterType == "" {
 		log.Errorf("Missing one of the following environment variables: APPID_URL APPID_APIKEY CLUSTER_NAME CLUSTER_GUID CLUSTER_LOCATION CLUSTER_TYPE")
 		log.Error("Shutting down....")
 		return nil, errors.New("Missing one or more env variables")
@@ -99,6 +96,23 @@ func NewAppIDConfig() (*AppIDConfig, error) {
 	}
 
 	cfg.Credentials = credentials
+
+	// Retrieve cluster configuration before monitoring. For the moment, this must succeed or services will be overwritten.
+	clusterInfo, err := retrieveClusterConfig(cfg.AppidURL, cfg.AppidAPIKey, clsterGUID)
+	if err != nil {
+		log.Error("Shutting down....")
+		return nil, errors.New("Could not retrieve cluster configuration from App ID")
+	} else if clusterInfo != nil {
+		cfg.ClusterInfo = clusterInfo
+	} else {
+		cfg.ClusterInfo = &ClusterInfo{
+			Name:     clsterName,
+			GUID:     clsterGUID,
+			Type:     clsterType,
+			Location: clsterLocation,
+			Services: make(map[string]Service),
+		}
+	}
 
 	res, _ := json.MarshalIndent(cfg, "", "\t")
 	log.Infof("Retrieved configuration:\n %s", string(res))
@@ -149,4 +163,53 @@ func retrieveAppIDConfig(url string, apiKey string) (*Credentials, error) {
 	log.Debugf("<< retrieveAppIDConfig OK")
 
 	return &appidCreds, nil
+}
+
+func retrieveClusterConfig(url string, apiKey string, clusterID string) (*ClusterInfo, error) {
+	log.Infof(">> retrieveClusterInfo")
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", url+"/clusters/"+clusterID, nil)
+	req.Header.Add("X-Api-Key", apiKey)
+	if err != nil {
+		log.Errorf("<< retrieveClusterInfo FAIL http.NewRequest :: %s", err)
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Errorf("<< retrieveClusterInfo FAIL client.Do :: %s", err)
+		return nil, err
+	}
+
+	if resp.StatusCode == 403 {
+		log.Error("<< retrieveClusterInfo 403")
+		return nil, errors.New("403 Forbidden")
+	}
+
+	if resp.StatusCode == 404 {
+		return nil, nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	log.Debugf("retrieveClusterInfo Response body: %s", string(body))
+
+	if err != nil {
+		log.Errorf("<< retrieveClusterInfo FAIL ioutil.ReadAll :: %s", err)
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	clusterInfo := ClusterInfo{}
+	err = json.Unmarshal(body, &clusterInfo)
+	if err != nil {
+		log.Errorf("<< retrieveClusterInfo FAIL json.Unmarshal :: %s", err)
+		return nil, err
+	}
+	log.Debugf("<< retrieveClusterInfo OK")
+
+	return &clusterInfo, nil
 }
