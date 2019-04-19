@@ -62,17 +62,26 @@ func (s *Util) RetrievePublicKeys() error {
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := httpClient.Get(s.publicKeyURL)
+	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
+	if err != nil {
+		log.Errorf("RetrievePublicKeys >> Failed to create public key request : %s", s.publicKeyURL)
+		return err
+	}
+
+	req.Header.Set("xFilterType", "IstioAdapter")
+
+	res, err := httpClient.Do(req)
 	if err != nil {
 		log.Errorf("RetrievePublicKeys >> Failed to retrieve public keys : %s", s.publicKeyURL)
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", s.publicKeyURL, resp.StatusCode, http.StatusText(resp.StatusCode))
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", s.publicKeyURL, res.StatusCode, http.StatusText(res.StatusCode))
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}

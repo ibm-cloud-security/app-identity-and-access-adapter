@@ -2,12 +2,10 @@
 apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
-  name: handler-appid-api
+  name: handler-{{ .Values.appName }}
   namespace: istio-system
 spec:
   adapter: ibmcloudappid
   connection:
     #address: "[::]:47304"
     address: svc-{{ .Values.appName }}:{{ .Values.service.port }}
-  params:
-    appid_url: "https://appid.com"
