@@ -23,23 +23,23 @@
 
 ### Installation
 
-    ```
-    helm init
-    helm install ./helm/ibmcloudappid -f ./helm/config.yaml --name ibmcloudappid
-    ```
+```
+helm init
+helm install ./helm/ibmcloudappid -f ./helm/config.yaml --name ibmcloudappid
+```
 ### Logging
 
 #### Adapter
 
-    ```
-    kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
-    ```
+```
+kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+```
 
 #### Mixer
 
-    ```
-    kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
-    ```
+```
+kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
+```
 
 ### License
 This package contains code licensed under the Apache License, Version 2.0 (the "License"). You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 and may also view the License in the LICENSE file within this package.
