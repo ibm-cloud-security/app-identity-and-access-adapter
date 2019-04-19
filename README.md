@@ -46,6 +46,7 @@ This package contains code licensed under the Apache License, Version 2.0 (the "
 
 [img-ibmcloud-powered]: https://img.shields.io/badge/ibm%20cloud-powered-blue.svg
 [url-ibmcloud]: https://www.ibm.com/cloud/
+[url-npm]: https://www.npmjs.com/package/ibmcloud-appid
 [img-license]: https://img.shields.io/npm/l/ibmcloud-appid.svg
 [img-version]: https://img.shields.io/npm/v/ibmcloud-appid.svg
 [img-npm-downloads-monthly]: https://img.shields.io/npm/dm/ibmcloud-appid.svg
@@ -57,3 +58,12 @@ This package contains code licensed under the Apache License, Version 2.0 (the "
 [url-github-stars]: https://github.com/ibm-cloud-security/appid-serversdk-nodejs/stargazers
 [img-github-forks]: https://img.shields.io/github/forks/ibm-cloud-security/appid-serversdk-nodejs.svg?style=social&label=Fork
 [url-github-forks]: https://github.com/ibm-cloud-security/appid-serversdk-nodejs/network
+
+[img-travis-master]: https://travis-ci.org/ibm-cloud-security/appid-serversdk-nodejs.svg
+[url-travis-master]: https://travis-ci.org/ibm-cloud-security/appid-serversdk-nodejs
+
+[img-coveralls-master]: https://coveralls.io/repos/github/ibm-cloud-security/appid-serversdk-nodejs/badge.svg
+[url-coveralls-master]: https://coveralls.io/github/ibm-cloud-security/appid-serversdk-nodejs
+
+[img-codacy]: https://api.codacy.com/project/badge/Grade/3156f40a37cb4026a443082fc1afcaa4?branch=master
+[url-codacy]: https://www.codacy.com/app/ibm-cloud-security/appid-serversdk-nodejs
