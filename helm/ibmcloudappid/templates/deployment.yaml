@@ -1,26 +1,26 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: dpl-ibmcloudappid
+  name: dpl-{{ .Values.appName }}
   namespace: istio-system
   labels:
-    app: ibmcloudappid
+    app: {{ .Values.appName }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
-        app: ibmcloudappid
+        app: {{ .Values.appName }}
       annotations:
         sidecar.istio.io/inject: "false"
         scheduler.alpha.kubernetes.io/critical-pod: ""
     spec:
       containers:
-        - name: ibmcloudappid
-          image: aliberat1/istio-adapter-ibmcloudappid:latest
-          imagePullPolicy: Always
+        - name: {{ .Values.appName }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
           ports:
-            - containerPort: 47304
+            - containerPort: {{ .Values.service.port }}
           volumeMounts:
             - name: transient-storage
               mountPath: /volume
@@ -28,37 +28,32 @@ spec:
             - name: APPID_URL
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: appid_url
             - name: APPID_APIKEY
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: appid_apikey
-            - name: TENANT_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: configmap-ibmcloudappid
-                  key: tenant_id
             - name: CLUSTER_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: cluster_name
             - name: CLUSTER_GUID
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: cluster_guid
             - name: CLUSTER_LOCATION
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: cluster_location
             - name: CLUSTER_TYPE
               valueFrom:
                 configMapKeyRef:
-                  name: configmap-ibmcloudappid
+                  name: configmap-{{ .Values.appName }}
                   key: cluster_type
       volumes:
         - name: transient-storage

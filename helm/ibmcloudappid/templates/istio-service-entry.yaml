@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: serviceentry-external-appid-hosts
+  namespace: istio-system
+spec:
+  hosts:
+  - appid-oauth.ng.bluemix.net
+  ports:
+  - number: 443
+    name: http
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: virtualservice-external-appid-hosts
+  namespace: istio-system
+spec:
+  hosts:
+  - appid-oauth.ng.bluemix.net
+  tls:
+  - match:
+    - port: 443
+      sni_hosts:
+      - appid-oauth.ng.bluemix.net
+    route:
+    - destination:
+        host: appid-oauth.ng.bluemix.net
+        port:
+          number: 443
+      weight: 100

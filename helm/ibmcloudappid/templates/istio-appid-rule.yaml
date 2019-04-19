@@ -1,0 +1,11 @@
+# rule to dispatch the app ID adapter handler
+apiVersion: "config.istio.io/v1alpha2"
+kind: rule
+metadata:
+  name: rule-appid-api
+  namespace: istio-system
+spec:
+  actions:
+    - handler: handler-appid-api.istio-system
+      instances:
+        - instance-appid-api

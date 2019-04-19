@@ -15,13 +15,17 @@ type TokenValidator interface {
 	Validate(pubkeys map[string]crypto.PublicKey, token string, tenantID string) error
 }
 
-// Validator implements the JWTParserInterface
+// Validator implements the TokenValidator
 type Validator struct{}
+
+////////////////// constructor //////////////////////////
 
 // New creates a New TokenValidator
 func New() TokenValidator {
 	return &Validator{}
 }
+
+////////////////// interface //////////////////////////
 
 // Parse parses the given token
 // The underlying Parse function already verifies the ExpiresAt and NotBefore claims
@@ -74,6 +78,8 @@ func (parser *Validator) Validate(publicKeys map[string]crypto.PublicKey, token 
 	return nil
 
 }
+
+////////////////// utils //////////////////////////
 
 // Retrieve claims from JWT
 func getClaims(token *jwt.Token) (jwt.MapClaims, bool) {

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-{{ .Values.appName }}
+  namespace: istio-system
+data:
+  appid_url: {{ required "A valid appid_url value required!" .Values.appid_url }}
+  appid_apikey: {{ required "A valid appid_apikey value required!" .Values.appid_apikey }}
+  cluster_name: {{ required "A valid cluster_name value required!" .Values.cluster_name }}
+  cluster_guid: {{ required "A valid cluster_guid value required!" .Values.cluster_guid }}
+  cluster_location: {{ required "A valid cluster_location value required!" .Values.cluster_location }}
+  cluster_type: {{ required "A valid cluster_type value required!" .Values.cluster_type }}

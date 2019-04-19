@@ -1,67 +1,59 @@
-# appid-mixer-adapter-plugin
+# IBM Cloud AppID Istio Adapter
 
-Prototype of App ID integration with Istio.
+[![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
+[![Travis][img-travis-master]][url-travis-master]
+[![Coveralls][img-coveralls-master]][url-coveralls-master]
+[![Codacy][img-codacy]][url-codacy]
+[![Version][img-version]][url-npm]
+[![DownloadsMonthly][img-npm-downloads-monthly]][url-npm]
+[![DownloadsTotal][img-npm-downloads-total]][url-npm]
+[![License][img-license]][url-npm]
 
-## Local Development
+[![GithubWatch][img-github-watchers]][url-github-watchers]
+[![GithubStars][img-github-stars]][url-github-stars]
+[![GithubForks][img-github-forks]][url-github-forks]
 
-#### Set Environment
+### Summary
 
-```
-// Mandataory Adapter Configuration Fields
-export APPID_URL="https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
-export APPID_APIKEY="m5pou9gyvw8psqlgnyi9a34fpgbndaidfgr9zs4r"
-export CLUSTER_GUID="78901234-aaaa-bbbb-bd0a-f01df6a1f000"
-export CLUSTER_NAME="local-test-of-ibmcloudappid-adapter-aaron"
-export CLUSTER_LOCATION="aaron's mac"
+### Requirements
 
-// Export a path that points to your personal go workspace
-export GOPATH=/Users/AaronLiberatore/go-workspace
+- Kubernetes Cluster
+- Istio
+- Helm
 
-// Go and Istio Paths
-export ISTIO=$GOPATH/src/istio.io
-export MIXER_REPO=$GOPATH/src/istio.io/istio/mixer
-```
+### Installation
 
-#### Start App ID Adapter
+    ```
+    helm init
+    helm install ./helm/ibmcloudappid -f ./helm/config.yaml --name ibmcloudappid
+    ```
+### Logging
 
-By default the adapter runs on port 47304
+#### Adapter
 
-```
-cd $MIXER_REPO/adapter/ibmcloudappid
-go build . && go run cmd/main.go 47304
-```
+    ```
+    kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+    ```
 
-#### Start the Istio Mixer
+#### Mixer
 
-```
-$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/istio.io/istio/mixer/adapter/ibmcloudappid/testdata --log_output_level=attributes:debug
-```
+    ```
+    kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
+    ```
 
-### Testing
+### License
+This package contains code licensed under the Apache License, Version 2.0 (the "License"). You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 and may also view the License in the LICENSE file within this package.
 
-To test locally you can send requests directly to the mixer using the following example command.
-```
-$GOPATH/out/darwin_amd64/release/mixc check -s destination.service="svc.cluster.local" --stringmap_attributes "request.headers=authorization:Bearer <token>"
-```
+[img-ibmcloud-powered]: https://img.shields.io/badge/ibm%20cloud-powered-blue.svg
+[url-ibmcloud]: https://www.ibm.com/cloud/
+[img-license]: https://img.shields.io/npm/l/ibmcloud-appid.svg
+[img-version]: https://img.shields.io/npm/v/ibmcloud-appid.svg
+[img-npm-downloads-monthly]: https://img.shields.io/npm/dm/ibmcloud-appid.svg
+[img-npm-downloads-total]: https://img.shields.io/npm/dt/ibmcloud-appid.svg
 
-### Kubernetes
-
-Istio runs inside the `istio-system` kube namespace with each component run in its own pod
-
-#### Deploying
-
-1. Update `cicd.sh` with the locatin of your personal kube configuration
-2. Run `sh ./cicd.sh` to build the image, push to docker, and deploy to kubernetes
-
-If you modified the adapters configuration information located under `testdata/sample_operator_cfg.yaml` run the following command:
-
-`kubectl apply -f ./testdata/sample_operator_cfg.yaml`
-
-#### Logs
-```
-// Follow adapter logs
-kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
-
-// Follow mixer logs
-kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
-```
+[img-github-watchers]: https://img.shields.io/github/watchers/ibm-cloud-security/appid-serversdk-nodejs.svg?style=social&label=Watch
+[url-github-watchers]: https://github.com/ibm-cloud-security/appid-serversdk-nodejs/watchers
+[img-github-stars]: https://img.shields.io/github/stars/ibm-cloud-security/appid-serversdk-nodejs.svg?style=social&label=Star
+[url-github-stars]: https://github.com/ibm-cloud-security/appid-serversdk-nodejs/stargazers
+[img-github-forks]: https://img.shields.io/github/forks/ibm-cloud-security/appid-serversdk-nodejs.svg?style=social&label=Fork
+[url-github-forks]: https://github.com/ibm-cloud-security/appid-serversdk-nodejs/network

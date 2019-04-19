@@ -50,7 +50,7 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
 // HandleAuthorization evaulates authoroization policy using api/web strategy
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
-	log.Debugf("HandleAuthorization :: received request %v\n", *r)
+	log.Infof("HandleAuthorization :: received request %v\n", *r)
 
 	cfg := &config.Params{}
 
