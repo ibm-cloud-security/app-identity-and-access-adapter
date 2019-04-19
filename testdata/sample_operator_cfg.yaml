@@ -2,41 +2,37 @@
 apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
-  name: handler-appid-api
+  name: handler-ibmcloudappid
   namespace: istio-system
 spec:
   adapter: ibmcloudappid
   connection:
     address: "[::]:47304"
-    #address: "svc-ibmcloudappid:47304"
-  params:
-    appid_url: "https://appid.com"
 ---
-
 # instance for App ID authorization template
 apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
-  name: instance-appid-api
+  name: instance-ibmcloudappid
   namespace: istio-system
 spec:
   template: authorization
   params:
     subject:
       properties:
-        authorization_header:  request.headers["authorization"]
+        authorization_header: request.headers["authorization"]
         destination_service_host: destination.service.host | ""
 ---
-
 # rule to dispatch to ibmcloudappid adapter handler
 apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
-  name: rule-appid-api
+  name: rule-ibmcloudappid
   namespace: istio-system
 spec:
   actions:
-    - handler: handler-appid-api.istio-system
+    - handler: handler-ibmcloudappid.istio-system
       instances:
-        - instance-appid-api
+        - instance-ibmcloudappid
 ---
+

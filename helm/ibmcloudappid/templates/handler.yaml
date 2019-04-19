@@ -7,5 +7,4 @@ metadata:
 spec:
   adapter: ibmcloudappid
   connection:
-    #address: "[::]:47304"
     address: svc-{{ .Values.appName }}:{{ .Values.service.port }}
