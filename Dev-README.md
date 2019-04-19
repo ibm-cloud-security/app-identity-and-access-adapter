@@ -65,3 +65,11 @@ kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmclou
 // Follow mixer logs
 kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
 ```
+
+
+### Installation 
+
+Policy checks must be enabled!!!
+```
+--set global.disablePolicyChecks=false
+```

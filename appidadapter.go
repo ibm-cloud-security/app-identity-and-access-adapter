@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/config"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/monitor"
 	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
@@ -52,21 +51,14 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	log.Infof("HandleAuthorization :: received request %v\n", *r)
 
-	cfg := &config.Params{}
-
-	if r.AdapterConfig != nil {
-		if err := cfg.Unmarshal(r.AdapterConfig.Value); err != nil {
-			log.Errorf("Error unmarshalling adapter config: %v", err)
-			return nil, err
-		}
-	}
-
 	logInstanceVars(r)
 
+	// Enforce policy
 	api, err := apistrategy.New(*s.cfg, s.parser, s.keyUtil)
 	if err != nil {
 		return nil, err
 	}
+
 	return api.HandleAuthorizationRequest(r)
 }
 
