@@ -1,6 +1,0 @@
-appid_url: "http://173.193.112.163:30036/api"
-appid_apikey: "m5pou9gyvw8psqlgnyi9a34fpgbndaidfgr9zs4r"
-cluster_name: "Cluster-681765"
-cluster_guid: "cluster1-1234-5678"
-cluster_location: "US, South"
-cluster_type: "IBM Kubernetes Service"
