@@ -8,14 +8,16 @@ package ibmcloudappid
 import (
 	"context"
 	"fmt"
-	"istio.io/istio/mixer/pkg/status"
 	"net"
-	"strings"
 
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/config"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/monitor"
+	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/validator"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
@@ -36,24 +38,19 @@ type (
 	AppidAdapter struct {
 		listener net.Listener
 		server   *grpc.Server
-		cfg      *AppIDConfig
-		parser   JWTTokenParser
-		keyUtil  PublicKeyUtil
+		cfg      *monitor.AppIDConfig
+		parser   validator.TokenValidator
+		keyUtil  keyutil.KeyUtil
 	}
 )
 
 var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
-// HandleAuthorization handles web authentiation
-func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
-	log.Infof(">> HandleAuthorization :: received request %v\n", *r)
+////////////////// adapter.Handler //////////////////////////
 
-	//if !s.cfg.ClusterInfo.IsProtectionEnabled {
-	//	log.Infof("Application protection disabled")
-	//	return &v1beta1.CheckResult{
-	//		Status: status.OK,
-	//	}, nil
-	//}
+// HandleAuthorization evaulates authoroization policy using api/web strategy
+func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
+	log.Debugf("HandleAuthorization :: received request %v\n", *r)
 
 	cfg := &config.Params{}
 
@@ -64,52 +61,16 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 		}
 	}
 
-	//logEnvVars(r)
+	logInstanceVars(r)
 
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local");
-	clusterServices := s.cfg.ClusterPolicies.Services
-
-	if clusterServices[destinationService].IsProtectionEnabled == true {
-		log.Infof("Protected destination_service: %s ", destinationService);
-		return s.appIDAPIStrategy(r)
-	} else {
-		log.Infof("Unprotected destination_service: %s ", destinationService);
-		return &v1beta1.CheckResult{
-			Status: status.OK,
-		}, nil
+	api, err := apistrategy.New(*s.cfg, s.parser, s.keyUtil)
+	if err != nil {
+		return nil, err
 	}
+	return api.HandleAuthorizationRequest(r)
 }
 
-func logEnvVars(r *authorization.HandleAuthorizationRequest) {
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	for key, val := range props {
-		log.Infof("ENV:\n\tkey: %s\nvalue: \t%s", key, val)
-	}
-}
-
-func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, v := range in {
-		out[k] = decodeValue(v.GetValue())
-	}
-	return out
-}
-
-func decodeValue(in interface{}) interface{} {
-	switch t := in.(type) {
-	case *policy.Value_StringValue:
-		return t.StringValue
-	case *policy.Value_Int64Value:
-		return t.Int64Value
-	case *policy.Value_DoubleValue:
-		return t.DoubleValue
-	case *policy.Value_IpAddressValue:
-		return t.IpAddressValue
-	default:
-		return fmt.Sprintf("%v", in)
-	}
-}
+////////////////// server //////////////////////////
 
 // Addr returns the listening address of the server
 func (s *AppidAdapter) Addr() string {
@@ -134,25 +95,80 @@ func (s *AppidAdapter) Close() error {
 	return nil
 }
 
-// NewAppIDAdapter creates a new AppID Adapter that listens at provided port.
-func NewAppIDAdapter(cfg *AppIDConfig) (Server, error) {
+////////////////// constructor //////////////////////////
+
+// NewAppIDAdapter creates a new App ID Adapter listening on the provided port.
+func NewAppIDAdapter() (Server, error) {
+
+	// Ensure we have correct configuration
+	cfg, err := monitor.NewAppIDConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 	if err != nil {
-		log.Errorf("unable to listen on socket: %v", err)
-		return nil, fmt.Errorf("unable to listen on socket: %v", err)
+		log.Errorf("Unable to listen on socket: %v", err)
+		return nil, fmt.Errorf("Unable to listen on socket: %v", err)
 	}
+
+	// Start communication with App ID
+	/*
+		monitor, err := ibmcloudappid.NewMonitor(cfg)
+		if err != nil {
+			log.Errorf("Failed to create ibmcloudappid.NewMonitor: %s", err)
+			os.Exit(-1)
+		}
+		monitor.Start()
+	*/
+
 	s := &AppidAdapter{
 		listener: listener,
-		parser:   &defaultJWTParser{},
-		keyUtil:  NewPublicKeyUtil(cfg.ClientCredentials.JwksURL),
+		parser:   validator.New(),
+		keyUtil:  keyutil.New(cfg.ClientCredentials.JwksURL),
 		cfg:      cfg,
 		server:   grpc.NewServer(),
 	}
 
-	log.Infof("listening on \"%v\"\n", s.Addr())
+	log.Infof("Listening on : \"%v\"\n", s.Addr())
 
 	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
 
 	return s, nil
+}
+
+////////////////// util //////////////////////////
+
+// Logs request instance properties
+func logInstanceVars(r *authorization.HandleAuthorizationRequest) {
+	props := decodeValueMap(r.Instance.Subject.Properties)
+	log.Debugf("Instance request properties:")
+	for key, val := range props {
+		log.Debugf("key: %s\nvalue: \t%s", key, val)
+	}
+}
+
+// Decodes gRPC values into string interface
+func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = decodeValue(v.GetValue())
+	}
+	return out
+}
+
+// Decodes policy value into standard type
+func decodeValue(in interface{}) interface{} {
+	switch t := in.(type) {
+	case *policy.Value_StringValue:
+		return t.StringValue
+	case *policy.Value_Int64Value:
+		return t.Int64Value
+	case *policy.Value_DoubleValue:
+		return t.DoubleValue
+	case *policy.Value_IpAddressValue:
+		return t.IpAddressValue
+	default:
+		return fmt.Sprintf("%v", in)
+	}
 }

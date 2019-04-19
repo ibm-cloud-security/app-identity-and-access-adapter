@@ -8,25 +8,10 @@ import (
 )
 
 func main() {
-	log.Info(">> main() :: Starting ibmcloudappid adapter")
-
-	// Ensure we have correct configuration
-	cfg, err := ibmcloudappid.NewAppIDConfig()
-	if err != nil {
-		log.Infof("Failed to create ibmcloudappid.NewAppIDConfig: %s", err)
-		os.Exit(-1)
-	}
-
-	// Start communication with App ID
-	monitor, err := ibmcloudappid.NewMonitor(cfg)
-	if err != nil {
-		log.Errorf("Failed to create ibmcloudappid.NewMonitor: %s", err)
-		os.Exit(-1)
-	}
-	monitor.Start()
+	log.Info("Starting ibmcloudappid adapter")
 
 	// Create App ID Adapter
-	s, err := ibmcloudappid.NewAppIDAdapter(cfg)
+	s, err := ibmcloudappid.NewAppIDAdapter()
 	if err != nil {
 		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
 		os.Exit(-1)

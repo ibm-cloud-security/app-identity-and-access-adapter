@@ -1,4 +1,4 @@
-package ibmcloudappid
+package monitor
 
 import (
 	"bytes"
@@ -27,14 +27,15 @@ type Monitor interface {
 	Stop() error
 }
 
-type defaultMonitor struct {
+// AppIDMonitor tracks App ID config and policy CRDs
+type AppIDMonitor struct {
 	cfg    *AppIDConfig
 	ticker *time.Ticker
 }
 
 // NewMonitor creates an App ID Monitor object
 func NewMonitor(cfg *AppIDConfig) (Monitor, error) {
-	monitor := &defaultMonitor{
+	monitor := &AppIDMonitor{
 		ticker: time.NewTicker(time.Millisecond * 1000),
 		cfg:    cfg,
 	}
@@ -50,8 +51,8 @@ func NewMonitor(cfg *AppIDConfig) (Monitor, error) {
 	return monitor, nil
 }
 
-/// Starts the App ID Monitoring Service
-func (m *defaultMonitor) Start() {
+// Start the App ID Monitoring Service
+func (m *AppIDMonitor) Start() {
 	if m != nil {
 		m.ticker.Stop()
 	}
@@ -64,8 +65,8 @@ func (m *defaultMonitor) Start() {
 	}()
 }
 
-/// Starts the App ID Monitoring Service
-func (m *defaultMonitor) Stop() error {
+// Stop the App ID monitoring service
+func (m *AppIDMonitor) Stop() error {
 	if m != nil {
 		m.ticker.Stop()
 		return nil
@@ -73,7 +74,7 @@ func (m *defaultMonitor) Stop() error {
 	return errors.New("Missing active ticker")
 }
 
-func (m *defaultMonitor) registerCluster() {
+func (m *AppIDMonitor) registerCluster() {
 	requestURL := m.cfg.AppidURL + "/clusters"
 	log.Infof(">> registerCluster :: clusterGuid %s, requestUrl %s", m.cfg.ClusterInfo.GUID, requestURL)
 
@@ -105,7 +106,7 @@ func (m *defaultMonitor) registerCluster() {
 	log.Infof(">> registerCluster :: Updated m.cfg.ClusterPolicies %v", m.cfg.ClusterPolicies)
 }
 
-func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
+func (m *AppIDMonitor) watchServices(cfg *AppIDConfig) {
 
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
@@ -132,9 +133,9 @@ func (m *defaultMonitor) watchServices(cfg *AppIDConfig) {
 				if service := checkValidService(obj); service != nil {
 					// If the element is not already in our table Add it.
 					if _, ok := m.cfg.ClusterInfo.Services[service.Name+"."+service.Namespace]; !ok {
-							m.cfg.ClusterInfo.Services[service.Name+"."+service.Namespace] = Service{
-							Name:                service.Name,
-							Namespace:           service.Namespace,
+						m.cfg.ClusterInfo.Services[service.Name+"."+service.Namespace] = Service{
+							Name:      service.Name,
+							Namespace: service.Namespace,
 							// Adapter should not be able to decide whether protection is on or off.
 							// Need to fix this in the mgmt API as well
 							//IsProtectionEnabled: false,

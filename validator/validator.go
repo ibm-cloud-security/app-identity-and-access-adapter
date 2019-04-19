@@ -1,4 +1,4 @@
-package ibmcloudappid
+package validator
 
 import (
 	"crypto"
@@ -9,17 +9,23 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
-// JWTTokenParser parses and validates JWT tokens
-type JWTTokenParser interface {
+// TokenValidator parses and validates JWT tokens
+type TokenValidator interface {
 	Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error)
 	Validate(pubkeys map[string]crypto.PublicKey, token string, tenantID string) error
 }
 
-type defaultJWTParser struct{}
+// Validator implements the JWTParserInterface
+type Validator struct{}
 
-// ParseToken parses the give token
+// New creates a New TokenValidator
+func New() TokenValidator {
+	return &Validator{}
+}
+
+// Parse parses the given token
 // The underlying Parse function already verifies the ExpiresAt and NotBefore claims
-func (parser *defaultJWTParser) Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error) {
+func (*Validator) Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error) {
 	log.Info(">> Parse")
 	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		kid, ok := token.Header["kid"].(string)
@@ -38,7 +44,7 @@ func (parser *defaultJWTParser) Parse(pubkeys map[string]crypto.PublicKey, token
 }
 
 // Validate a JWT against a public key and given claims
-func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) error {
+func (parser *Validator) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) error {
 	// Parse the token, and validate expiration, and clientID
 	log.Info(">> Validate Token")
 	tkn, err := parser.Parse(publicKeys, token)
@@ -54,10 +60,11 @@ func (parser *defaultJWTParser) Validate(publicKeys map[string]crypto.PublicKey,
 		return fmt.Errorf("Validate token: Error Obtaining Claims from Access Token")
 	}
 
-	if claimTenant, ok := claims["tenant"].(string); ok {
-		if claimTenant != tenantID {
+	// TODO: Validate audience, validate scopes, validate other
+	if tenant, ok := claims["tenant"].(string); ok {
+		if tenant != tenantID {
 			log.Info(">> Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v")
-			return fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", claimTenant, tenantID)
+			return fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", tenant, tenantID)
 		}
 	} else {
 		log.Info("Error Obtaining Tenant from Claims")

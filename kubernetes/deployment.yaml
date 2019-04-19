@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ibmcloudappid
-          image: antonal80/istio-adapter-ibmcloudappid:latest
+          image: aliberat1/istio-adapter-ibmcloudappid:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 47304

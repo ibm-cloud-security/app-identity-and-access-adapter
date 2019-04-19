@@ -1,4 +1,4 @@
-package ibmcloudappid
+package keyutil
 
 import (
 	"crypto"
@@ -11,20 +11,23 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
-// PublicKeyUtil retries public keys from OAuth server
-type PublicKeyUtil interface {
+// KeyUtil retrieves public keys from OAuth server
+type KeyUtil interface {
 	RetrievePublicKeys() error
-	GetPublicKeys() map[string]crypto.PublicKey
+	PublicKeys() map[string]crypto.PublicKey
 }
 
-type defaultPublicKeyUtil struct {
+// Util manages the retrieval and storage of OIDC public keys
+type Util struct {
 	publicKeys   map[string]crypto.PublicKey
 	publicKeyURL string
 }
 
-// NewPublicKeyUtil Create a new Public Key Util
-func NewPublicKeyUtil(publicKeyURL string) PublicKeyUtil {
-	pku := defaultPublicKeyUtil{
+////////////////// constructor //////////////////////////
+
+// New creates a new Public Key Util
+func New(publicKeyURL string) KeyUtil {
+	pku := Util{
 		publicKeyURL: publicKeyURL,
 	}
 
@@ -45,11 +48,15 @@ func NewPublicKeyUtil(publicKeyURL string) PublicKeyUtil {
 	return &pku
 }
 
-func (s *defaultPublicKeyUtil) GetPublicKeys() map[string]crypto.PublicKey {
+////////////////// instance methods  //////////////////////////
+
+// PublicKeys returns the public keys for the instance
+func (s *Util) PublicKeys() map[string]crypto.PublicKey {
 	return s.publicKeys
 }
 
-func (s *defaultPublicKeyUtil) RetrievePublicKeys() error {
+// RetrievePublicKeys retrieves public keys from the OIDC server for the instance
+func (s *Util) RetrievePublicKeys() error {
 
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second,

@@ -1,4 +1,4 @@
-package ibmcloudappid
+package keyutil
 
 import (
 	"crypto"
