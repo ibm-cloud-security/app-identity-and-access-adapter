@@ -15,6 +15,7 @@ import (
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
+	authpolicy "istio.io/istio/mixer/adapter/ibmcloudappid/policy"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
 	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
 	//webstrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/web"
@@ -54,21 +55,26 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 
 	logInstanceVars(r)
 
+	// Get destination service
 	props := decodeValueMap(r.Instance.Subject.Properties)
 	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local")
 
-	// Check if authn/z is required for the given policy
-	if !s.manager.IsRequired(destinationService) {
-		return &adapter.CheckResult{Status: status.OK}, nil
-	}
-
 	// Get policy to enforce
 	policies := s.manager.GetPolicies(destinationService)
+	if policies == nil || len(policies) == 0 {
+		log.Infof("HandleAuthorization ::no policies exists for service: %s\n", destinationService)
+		return &adapter.CheckResult{Status: status.OK}, nil
+	}
 	policyToEnforce := policies[0]
 	client := s.manager.GetClient(policyToEnforce.ClientName)
 
-	// Enforce policy
-	return s.apistrategy.HandleAuthorizationRequest(r, &client)
+	// Enforce as API policy
+	if policyToEnforce.Type == authpolicy.API {
+		return s.apistrategy.HandleAuthorizationRequest(r, &client)
+	}
+
+	// Enforce WEB policy in the future
+	return &adapter.CheckResult{Status: status.OK}, nil
 }
 
 ////////////////// server //////////////////////////

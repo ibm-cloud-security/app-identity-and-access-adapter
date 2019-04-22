@@ -1,7 +1,7 @@
 package client
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/client/keyutil"
 )
 
 // Type represents a client type (OIDC/OAuth2)
@@ -33,6 +33,6 @@ type Client struct {
 func New(cfg Config) Client {
 	return Client{
 		Config:  cfg,
-		KeyUtil: keyutil.New(cfg.DiscoveryURL), // TODO: // this needs to be the public keys URL
+		KeyUtil: keyutil.New("https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publicKeys"), // TODO: // this needs to be the public keys URL
 	}
 }

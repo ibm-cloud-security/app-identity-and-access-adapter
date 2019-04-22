@@ -35,9 +35,29 @@ func (m *Manager) GetClient(clientName string) client.Client {
 }
 
 func New() *Manager {
+	// Temporary Hardcode Setup
+	cfg := client.Config{
+		Name:         "71b34890-a94f-4ef2-a4b6-ce094aa68092",
+		ClientID:     "7a2a8cb8-774e-49e0-90c2-425f03aecec6",
+		Secret:       "Y2VjNGIwNjctOTEyMy00NTQ0LTg0NjgtZTJjYTA3MjNhYjFl",
+		DiscoveryURL: "https://appid-oauth.ng.bluemix.net/oauth/v3/798288dc-79cb-4faf-9825-dad68cd4ed6f/oidc",
+		Type:         client.OIDC,
+	}
+	p := policy.Policy{
+		ClientName: "71b34890-a94f-4ef2-a4b6-ce094aa68092",
+		Dest:       "any",
+		Type:       policy.API,
+	}
+	ps := []policy.Policy{p}
+	c := client.New(cfg)
+	clients := make(map[string]*client.Client)
+	clients[c.Name] = &c
+	policies := make(map[string][]policy.Policy)
+	policies[p.Dest] = ps
+
 	return &Manager{
-		clients:  make(map[string]*client.Client),
+		clients:  clients,
 		services: make(map[string]*client.Client),
-		policies: make(map[string][]policy.Policy),
+		policies: policies,
 	}
 }
