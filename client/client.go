@@ -33,6 +33,6 @@ type Client struct {
 func New(cfg Config) Client {
 	return Client{
 		Config:  cfg,
-		KeyUtil: keyutil.New("https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publicKeys"), // TODO: // this needs to be the public keys URL
+		KeyUtil: keyutil.New("https://appid-oauth.eu-gb.bluemix.net/oauth/v3/f82dc917-3047-4af1-9775-60e0e07e1fac/publicKeys"), // TODO: // this needs to be the public keys URL
 	}
 }

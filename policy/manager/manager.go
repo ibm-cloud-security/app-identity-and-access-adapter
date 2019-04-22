@@ -37,14 +37,14 @@ func (m *Manager) GetClient(clientName string) client.Client {
 func New() *Manager {
 	// Temporary Hardcode Setup
 	cfg := client.Config{
-		Name:         "71b34890-a94f-4ef2-a4b6-ce094aa68092",
-		ClientID:     "7a2a8cb8-774e-49e0-90c2-425f03aecec6",
-		Secret:       "Y2VjNGIwNjctOTEyMy00NTQ0LTg0NjgtZTJjYTA3MjNhYjFl",
-		DiscoveryURL: "https://appid-oauth.ng.bluemix.net/oauth/v3/798288dc-79cb-4faf-9825-dad68cd4ed6f/oidc",
+		Name:         "f82dc917-3047-4af1-9775-60e0e07e1fac",
+		ClientID:     "4da82297-b0ce-45e0-b17b-4a96e965b609",
+		Secret:       "ODYxYjJhY2EtZTMwNi00ZmQ2LTk5ZTgtMjgwNzViYTM4Mjhj",
+		DiscoveryURL: "https://appid-oauth.eu-gb.bluemix.net/oauth/v3/f82dc917-3047-4af1-9775-60e0e07e1fac/oidc",
 		Type:         client.OIDC,
 	}
 	p := policy.Policy{
-		ClientName: "71b34890-a94f-4ef2-a4b6-ce094aa68092",
+		ClientName: "f82dc917-3047-4af1-9775-60e0e07e1fac",
 		Dest:       "any",
 		Type:       policy.API,
 	}
