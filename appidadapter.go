@@ -9,14 +9,16 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
+	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/monitor"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
 	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/validator"
+	//webstrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/web"
+	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
@@ -35,11 +37,10 @@ type (
 
 	// AppidAdapter supports authorization template.
 	AppidAdapter struct {
-		listener net.Listener
-		server   *grpc.Server
-		cfg      *monitor.AppIDConfig
-		parser   validator.TokenValidator
-		keyUtil  keyutil.KeyUtil
+		listener    net.Listener
+		server      *grpc.Server
+		apistrategy *apistrategy.APIStrategy
+		manager     manager.PolicyManager
 	}
 )
 
@@ -53,13 +54,21 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 
 	logInstanceVars(r)
 
-	// Enforce policy
-	api, err := apistrategy.New(*s.cfg, s.parser, s.keyUtil)
-	if err != nil {
-		return nil, err
+	props := decodeValueMap(r.Instance.Subject.Properties)
+	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local")
+
+	// Check if authn/z is required for the given policy
+	if !s.manager.IsRequired(destinationService) {
+		return &adapter.CheckResult{Status: status.OK}, nil
 	}
 
-	return api.HandleAuthorizationRequest(r)
+	// Get policy to enforce
+	policies := s.manager.GetPolicies(destinationService)
+	policyToEnforce := policies[0]
+	client := s.manager.GetClient(policyToEnforce.ClientName)
+
+	// Enforce policy
+	return s.apistrategy.HandleAuthorizationRequest(r, &client)
 }
 
 ////////////////// server //////////////////////////
@@ -93,33 +102,18 @@ func (s *AppidAdapter) Close() error {
 func NewAppIDAdapter() (Server, error) {
 
 	// Ensure we have correct configuration
-	cfg, err := monitor.NewAppIDConfig()
-	if err != nil {
-		return nil, err
-	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", "47304"))
 	if err != nil {
 		log.Errorf("Unable to listen on socket: %v", err)
 		return nil, fmt.Errorf("Unable to listen on socket: %v", err)
 	}
 
-	// Start communication with App ID
-	/*
-		monitor, err := ibmcloudappid.NewMonitor(cfg)
-		if err != nil {
-			log.Errorf("Failed to create ibmcloudappid.NewMonitor: %s", err)
-			os.Exit(-1)
-		}
-		monitor.Start()
-	*/
-
 	s := &AppidAdapter{
-		listener: listener,
-		parser:   validator.New(),
-		keyUtil:  keyutil.New(cfg.ClientCredentials.JwksURL),
-		cfg:      cfg,
-		server:   grpc.NewServer(),
+		listener:    listener,
+		apistrategy: apistrategy.New(),
+		server:      grpc.NewServer(),
+		manager:     manager.New(),
 	}
 
 	log.Infof("Listening on : \"%v\"\n", s.Addr())

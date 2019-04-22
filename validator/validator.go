@@ -1,18 +1,18 @@
 package validator
 
 import (
-	"crypto"
 	"fmt"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/golang/glog"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
 	"istio.io/istio/pkg/log"
 )
 
 // TokenValidator parses and validates JWT tokens
 type TokenValidator interface {
-	Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error)
-	Validate(pubkeys map[string]crypto.PublicKey, token string, tenantID string) error
+	Parse(client client.Client, token string) (*jwt.Token, error)
+	Validate(client client.Client, token string) error
 }
 
 // Validator implements the TokenValidator
@@ -29,7 +29,7 @@ func New() TokenValidator {
 
 // Parse parses the given token
 // The underlying Parse function already verifies the ExpiresAt and NotBefore claims
-func (*Validator) Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt.Token, error) {
+func (*Validator) Parse(client client.Client, token string) (*jwt.Token, error) {
 	log.Info(">> Parse")
 	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		kid, ok := token.Header["kid"].(string)
@@ -38,6 +38,7 @@ func (*Validator) Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt
 			return nil, fmt.Errorf("kid is missing")
 		}
 
+		pubkeys := client.KeyUtil.PublicKeys()
 		pk := pubkeys[kid]
 		if pk == nil {
 			log.Infof(">> Parse: kid not found: %s", token.Header["kid"])
@@ -48,10 +49,10 @@ func (*Validator) Parse(pubkeys map[string]crypto.PublicKey, token string) (*jwt
 }
 
 // Validate a JWT against a public key and given claims
-func (parser *Validator) Validate(publicKeys map[string]crypto.PublicKey, token string, tenantID string) error {
+func (parser *Validator) Validate(client client.Client, token string) error {
 	// Parse the token, and validate expiration, and clientID
 	log.Info(">> Validate Token")
-	tkn, err := parser.Parse(publicKeys, token)
+	tkn, err := parser.Parse(client, token)
 
 	// Token is valid. The user is authenticated.
 	if err != nil {
@@ -66,9 +67,9 @@ func (parser *Validator) Validate(publicKeys map[string]crypto.PublicKey, token 
 
 	// TODO: Validate audience, validate scopes, validate other
 	if tenant, ok := claims["tenant"].(string); ok {
-		if tenant != tenantID {
+		if tenant != client.Name { // Validate Tenant ID
 			log.Info(">> Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v")
-			return fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", tenant, tenantID)
+			return fmt.Errorf("Validate token: Tenant in Claim %v does not match Tenant in bind Secret %v", tenant, client.Name)
 		}
 	} else {
 		log.Info("Error Obtaining Tenant from Claims")

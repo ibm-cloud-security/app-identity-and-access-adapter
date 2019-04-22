@@ -8,8 +8,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/monitor"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/validator"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
@@ -27,9 +26,7 @@ type tokens struct {
 
 // APIStrategy handles authorization requests
 type APIStrategy struct {
-	parser  validator.TokenValidator
-	keyUtil keyutil.KeyUtil
-	cfg     monitor.AppIDConfig
+	parser validator.TokenValidator
 }
 
 // Options contains config info for ap strategy
@@ -37,16 +34,14 @@ type Options struct {
 }
 
 // New constructs a new APIStrategy used to handle API Requests
-func New(cfg monitor.AppIDConfig, parser validator.TokenValidator, keyUtil keyutil.KeyUtil) (*APIStrategy, error) {
+func New() *APIStrategy {
 	return &APIStrategy{
-		parser:  parser,
-		keyUtil: keyUtil,
-		cfg:     cfg,
-	}, nil
+		parser: validator.New(),
+	}
 }
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest) (*adapter.CheckResult, error) {
+func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, client *client.Client) (*adapter.CheckResult, error) {
 	props := decodeValueMap(r.Instance.Subject.Properties)
 
 	// Parse Authorization Header
@@ -61,7 +56,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	log.Debug("Found valid authorization header")
 
 	// Validate access token
-	err = s.parser.Validate(s.keyUtil.PublicKeys(), tokens.access, s.cfg.ClientCredentials.TenantID)
+	err = s.parser.Validate(*client, tokens.access)
 	if err != nil {
 		log.Debugf("Unauthorized - invalid access token - %s", err)
 		return &adapter.CheckResult{
@@ -71,7 +66,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 
 	// If necessary, validate ID token
 	if tokens.id != "" {
-		err = s.parser.Validate(s.keyUtil.PublicKeys(), tokens.id, s.cfg.ClientCredentials.TenantID)
+		err = s.parser.Validate(*client, tokens.id)
 		if err != nil {
 			log.Debugf("Unauthorized - invalid ID token - %s", err)
 			return &adapter.CheckResult{

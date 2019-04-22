@@ -12,8 +12,8 @@ const (
 
 // Policy encasulates an authn/z policy definition
 type Policy struct {
-	clientName string
-	dest       string
+	ClientName string
+	Dest       string
 	Type       Type `json:"type"`
 }
 

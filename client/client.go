@@ -1,5 +1,9 @@
 package client
 
+import (
+	"istio.io/istio/mixer/adapter/ibmcloudappid/keyutil"
+)
+
 // Type represents a client type (OIDC/OAuth2)
 type Type int
 
@@ -10,8 +14,8 @@ const (
 	OIDC
 )
 
-// Client encasulates an authn/z client definition
-type Client struct {
+// Config encasulates an authn/z client definition
+type Config struct {
 	Name         string
 	ClientID     string
 	Secret       string
@@ -19,7 +23,16 @@ type Client struct {
 	Type         Type `json:"type"`
 }
 
+// Client encapsulates an authn/z client object
+type Client struct {
+	Config
+	KeyUtil keyutil.KeyUtil
+}
+
 // New creates a new policy
-func New() Client {
-	return Client{}
+func New(cfg Config) Client {
+	return Client{
+		Config:  cfg,
+		KeyUtil: keyutil.New(cfg.DiscoveryURL), // TODO: // this needs to be the public keys URL
+	}
 }

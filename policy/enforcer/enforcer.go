@@ -1,6 +1,11 @@
 // Package enforcer is responsible for enforcing authn/z policy decision
 package enforcer
 
+import (
+	"istio.io/istio/mixer/adapter/ibmcloudappid/policy"
+)
+
 type PolicyEnforcer interface {
-	IsRrequired(string) bool
+	IsRequired(string) bool
+	GetPolicies(string) []policy.Policy
 }
