@@ -12,11 +12,11 @@ const (
 
 // Client encasulates an authn/z client definition
 type Client struct {
-	name         string
-	clientID     string
-	secret       string
-	discoveryURL string
-	_type        Type
+	Name         string
+	ClientID     string
+	Secret       string
+	DiscoveryURL string
+	Type         Type `json:"type"`
 }
 
 // New creates a new policy

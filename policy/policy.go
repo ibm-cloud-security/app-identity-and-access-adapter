@@ -14,7 +14,7 @@ const (
 type Policy struct {
 	clientName string
 	dest       string
-	_type      Type
+	Type       Type `json:"type"`
 }
 
 // New creates a new policy
