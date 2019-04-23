@@ -64,7 +64,7 @@ func (s *Util) RetrievePublicKeys() error {
 
 	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
 	if err != nil {
-		log.Errorf("RetrievePublicKeys >> Failed to create public key request : %s", s.publicKeyURL)
+		log.Errorf("RetrievePublicKeys - Failed to create public key request : %s", s.publicKeyURL)
 		return err
 	}
 
@@ -72,12 +72,13 @@ func (s *Util) RetrievePublicKeys() error {
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		log.Errorf("RetrievePublicKeys >> Failed to retrieve public keys : %s", s.publicKeyURL)
+		log.Errorf("RetrievePublicKeys - Failed to retrieve public keys for url: %s", s.publicKeyURL)
 		return err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("getPubKeys: Failed to retrieve the public keys from %s with status: %d(%s)", s.publicKeyURL, res.StatusCode, http.StatusText(res.StatusCode))
+		log.Errorf("RetrievePublicKeys - Failed to retrieve public keys for url %s", s.publicKeyURL)
+		return fmt.Errorf("public key url returned non 200 status code: %d", res.StatusCode)
 	}
 
 	defer res.Body.Close()
@@ -96,14 +97,16 @@ func (s *Util) RetrievePublicKeys() error {
 	}
 
 	mkeys := make(map[string]crypto.PublicKey)
-	for i, k := range keys {
+	for _, k := range keys {
 		if k.Kid == "" {
-			return fmt.Errorf("getPubKeys: Failed to parse the public key %d: kid is missing", i)
+			log.Errorf("RetrievePublicKeys - public key missing kid %s", k)
+			continue
 		}
 
 		pubkey, err := k.decodePublicKey()
 		if err != nil {
-			return fmt.Errorf("getPubKeys: Failed to parse the public key %d: %s", i, err)
+			log.Errorf("RetrievePublicKeys - could not decode public key err %s : %s", err, k)
+			continue
 		}
 		mkeys[k.Kid] = pubkey
 	}

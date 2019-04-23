@@ -2,8 +2,6 @@ package keyutil
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/binary"
@@ -62,13 +60,13 @@ func (k *key) decodePublicKey() (crypto.PublicKey, error) {
 	switch k.Kty {
 	case "RSA":
 		if k.N == "" || k.E == "" {
-			return nil, errors.New("Malformed JWK RSA key")
+			return nil, errors.New("malformed JWK RSA key")
 		}
 
 		// decode exponent
 		data, err := safeDecode(k.E)
 		if err != nil {
-			return nil, errors.New("Malformed JWK RSA key")
+			return nil, errors.New("malformed JWK RSA key exponent")
 		}
 		if len(data) < 4 {
 			ndata := make([]byte, 4)
@@ -83,65 +81,13 @@ func (k *key) decodePublicKey() (crypto.PublicKey, error) {
 
 		data, err = safeDecode(k.N)
 		if err != nil {
-			return nil, errors.New("Malformed JWK RSA key")
+			return nil, errors.New("malformed JWK RSA key modulus")
 		}
 		pubKey.N.SetBytes(data)
 
 		return pubKey, nil
-
-	case "EC":
-		if k.Crv == "" || k.X == "" || k.Y == "" {
-			return nil, errors.New("Malformed JWK EC key")
-		}
-
-		var curve elliptic.Curve
-		switch k.Crv {
-		case "P-224":
-			curve = elliptic.P224()
-		case "P-256":
-			curve = elliptic.P256()
-		case "P-384":
-			curve = elliptic.P384()
-		case "P-521":
-			curve = elliptic.P521()
-		default:
-			return nil, fmt.Errorf("Unknown curve type: %s", k.Crv)
-		}
-
-		pubKey := &ecdsa.PublicKey{
-			Curve: curve,
-			X:     &big.Int{},
-			Y:     &big.Int{},
-		}
-
-		data, err := safeDecode(k.X)
-		if err != nil {
-			return nil, fmt.Errorf("Malformed JWK EC key")
-		}
-		pubKey.X.SetBytes(data)
-
-		data, err = safeDecode(k.Y)
-		if err != nil {
-			return nil, fmt.Errorf("Malformed JWK EC key")
-		}
-		pubKey.Y.SetBytes(data)
-
-		return pubKey, nil
-
-	case "oct":
-		if k.K == "" {
-			return nil, errors.New("Malformed JWK octect key")
-		}
-
-		data, err := safeDecode(k.K)
-		if err != nil {
-			return nil, errors.New("Malformed JWK octect key")
-		}
-
-		return data, nil
-
 	default:
-		return nil, fmt.Errorf("Unknown JWK key type %s", k.Kty)
+		return nil, fmt.Errorf("unknown JWK key type %s", k.Kty)
 	}
 }
 
