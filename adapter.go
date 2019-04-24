@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	authorizationHeader = "authorization_header"
+	authorizationHeader    = "authorization_header"
+	destinationServiceHost = "destination_service_host"
 )
 
 type (
@@ -57,7 +58,7 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 
 	// Get destination service
 	props := decodeValueMap(r.Instance.Subject.Properties)
-	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local")
+	destinationService := strings.TrimSuffix(props[destinationServiceHost].(string), ".svc.cluster.local")
 
 	// Get policy to enforce
 	policies := s.manager.GetPolicies(destinationService)

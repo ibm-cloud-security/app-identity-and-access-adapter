@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"time"
-
 	"istio.io/istio/pkg/log"
+	"net/http"
+	"sync"
+	"time"
 )
 
 // KeySet retrieves public keys from OAuth server
@@ -20,9 +20,13 @@ type KeySet interface {
 
 // RemoteKeySet manages the retrieval and storage of OIDC public keys
 type RemoteKeySet struct {
-	publicKeys   map[string]crypto.PublicKey
 	publicKeyURL string
 	httpClient   *http.Client
+
+	// guard all other fields
+	mu sync.Mutex
+
+	publicKeys map[string]crypto.PublicKey
 }
 
 ////////////////// constructor //////////////////////////
