@@ -1,0 +1,8 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: AccessPolicy
+metadata:
+  name: sampleaccesspolicy
+spec:
+  client_name: client_name
+  destination: ["backend"]
+  type: API

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 export APPID_URL="https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
 export APPID_APIKEY="abcd1234"
 export APPID_OAUTHSERVERURL="https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092"

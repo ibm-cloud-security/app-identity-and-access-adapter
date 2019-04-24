@@ -1,0 +1,12 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: AppIDConfig
+metadata:
+  name: webconfig
+spec:
+  config : {
+      client_name: client_name,
+      client_id: client_id,
+      client_secret: { "secret": "secret"},
+      discovery_url: http://discovery.com,
+      type: OIDC
+  }
