@@ -1,4 +1,4 @@
-package keyutil
+package keyset
 
 import (
 	"crypto"
@@ -11,24 +11,29 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
-// KeyUtil retrieves public keys from OAuth server
-type KeyUtil interface {
+// KeySet retrieves public keys from OAuth server
+type KeySet interface {
 	RetrievePublicKeys() error
 	PublicKeys() map[string]crypto.PublicKey
+	PublicKey(kid string) crypto.PublicKey
 }
 
-// Util manages the retrieval and storage of OIDC public keys
-type Util struct {
+// RemoteKeySet manages the retrieval and storage of OIDC public keys
+type RemoteKeySet struct {
 	publicKeys   map[string]crypto.PublicKey
 	publicKeyURL string
+	httpClient   *http.Client
 }
 
 ////////////////// constructor //////////////////////////
 
 // New creates a new Public Key Util
-func New(publicKeyURL string) KeyUtil {
-	pku := Util{
+func New(publicKeyURL string) KeySet {
+	pku := RemoteKeySet{
 		publicKeyURL: publicKeyURL,
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 	}
 
 	// Retrieve the public keys which are used to verify the tokens
@@ -50,17 +55,18 @@ func New(publicKeyURL string) KeyUtil {
 
 ////////////////// instance methods  //////////////////////////
 
+// PublicKey returns the public key with the specified kid
+func (s *RemoteKeySet) PublicKey(kid string) crypto.PublicKey {
+	return s.publicKeys[kid]
+}
+
 // PublicKeys returns the public keys for the instance
-func (s *Util) PublicKeys() map[string]crypto.PublicKey {
+func (s *RemoteKeySet) PublicKeys() map[string]crypto.PublicKey {
 	return s.publicKeys
 }
 
 // RetrievePublicKeys retrieves public keys from the OIDC server for the instance
-func (s *Util) RetrievePublicKeys() error {
-
-	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
-	}
+func (s *RemoteKeySet) RetrievePublicKeys() error {
 
 	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
 	if err != nil {
@@ -70,7 +76,7 @@ func (s *Util) RetrievePublicKeys() error {
 
 	req.Header.Set("xFilterType", "IstioAdapter")
 
-	res, err := httpClient.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Errorf("RetrievePublicKeys - Failed to retrieve public keys for url: %s", s.publicKeyURL)
 		return err

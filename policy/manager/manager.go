@@ -40,7 +40,7 @@ func New() *Manager {
 		Name:         "f82dc917-3047-4af1-9775-60e0e07e1fac",
 		ClientID:     "4da82297-b0ce-45e0-b17b-4a96e965b609",
 		Secret:       "ODYxYjJhY2EtZTMwNi00ZmQ2LTk5ZTgtMjgwNzViYTM4Mjhj",
-		DiscoveryURL: "https://appid-oauth.eu-gb.bluemix.net/oauth/v3/f82dc917-3047-4af1-9775-60e0e07e1fac/oidc",
+		DiscoveryURL: "https://appid-oauth.eu-gb.bluemix.net/oauth/v3/f82dc917-3047-4af1-9775-60e0e07e1fac/.well-known/openid-configuration",
 		Type:         client.OIDC,
 	}
 	p := policy.Policy{

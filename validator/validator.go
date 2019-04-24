@@ -40,13 +40,12 @@ func (*Validator) parse(client client.Client, token string) (*jwt.Token, error) 
 		}
 
 		// Find public key in client
-		pubkeys := client.KeyUtil.PublicKeys()
-		pk := pubkeys[kid]
-		if pk == nil {
+		key := client.KeySet.PublicKey(kid)
+		if key == nil {
 			log.Debugf("Token validation error - key not found for kid: %s", token.Header["kid"])
 			return nil, fmt.Errorf("token validation error - key not found for kid: %s", token.Header["kid"])
 		}
-		return pk, nil
+		return key, nil
 	}
 
 	return jwt.Parse(token, getKey)

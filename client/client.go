@@ -1,7 +1,13 @@
 package client
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client/keyutil"
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/client/keyset"
+	"istio.io/istio/pkg/log"
+	"net/http"
+	"time"
 )
 
 // Type represents a client type (OIDC/OAuth2)
@@ -23,16 +29,73 @@ type Config struct {
 	Type         Type `json:"type"`
 }
 
+// ProviderConfig encasulates the discovery endpoint configuration
+type ProviderConfig struct {
+	Issuer      string `json:"issuer"`
+	AuthURL     string `json:"authorization_endpoint"`
+	TokenURL    string `json:"token_endpoint"`
+	JWKSURL     string `json:"jwks_uri"`
+	UserInfoURL string `json:"userinfo_endpoint"`
+}
+
 // Client encapsulates an authn/z client object
 type Client struct {
 	Config
-	KeyUtil keyutil.KeyUtil
+	ProviderConfig
+	KeySet keyset.KeySet
 }
 
 // New creates a new policy
 func New(cfg Config) Client {
-	return Client{
-		Config:  cfg,
-		KeyUtil: keyutil.New("https://appid-oauth.eu-gb.bluemix.net/oauth/v3/f82dc917-3047-4af1-9775-60e0e07e1fac/publicKeys"), // TODO: // this needs to be the public keys URL
+	client := Client{
+		Config: cfg,
 	}
+
+	err := client.load()
+	if err != nil {
+		log.Infof("Could not load client")
+		return client
+	}
+	log.Infof("Loaded Client Successfully")
+	set := keyset.New(client.JWKSURL)
+	client.KeySet = set
+	return client
+}
+
+func (c *Client) load() error {
+
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("GET", c.DiscoveryURL, nil)
+
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("xFilterType", "IstioAdapter")
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		log.Infof("Error %s", err)
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		log.Infof("Error status code %d", res.StatusCode)
+		return errors.New("unexpected error code")
+	}
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Infof("Error parsing response %s", err)
+		return err
+	}
+
+	var config ProviderConfig
+
+	if err := json.Unmarshal(body, &config); err == nil {
+		c.ProviderConfig = config
+	}
+
+	return nil
 }

@@ -48,6 +48,15 @@ func TestInvalidTokenExpired(t *testing.T) {
 	}
 }
 */
+
+func TestInvalidTokenMissingParts(t *testing.T) {
+	v := New()
+	err := v.Validate(testClient, "p1.p2")
+	if err == nil || err.Error() != "token contains an invalid number of segments" {
+		t.Errorf("Expected to fail token validation for number of segments : err %s", err)
+	}
+}
+
 /////// Claim Validation //////
 
 func TestClaimValidation(t *testing.T) {
