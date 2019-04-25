@@ -1,0 +1,13 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: JwtPolicy
+metadata:
+  name: sampljwtpolicy
+spec:
+  jwksUrl: https://publickeyurl.com
+  target:
+    - serviceName: serviceA
+      paths:
+        - /path1
+        - /path2
+    - serviceName: serviceB
+      paths: []
