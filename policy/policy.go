@@ -8,6 +8,8 @@ const (
 	API Type = iota
 	// WEB policy types specifies requests protected by WEB strategy
 	WEB
+	// NONE policy specifies requests without protection
+	NONE
 )
 
 // Policy encasulates an authn/z policy definition

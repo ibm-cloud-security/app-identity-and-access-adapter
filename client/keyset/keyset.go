@@ -1,39 +1,40 @@
-package keyutil
+package keyset
 
 import (
 	"crypto"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"time"
-
 	"istio.io/istio/pkg/log"
+	"net/http"
 )
 
-// KeyUtil retrieves public keys from OAuth server
-type KeyUtil interface {
-	RetrievePublicKeys() error
+// KeySet retrieves public keys from OAuth server
+type KeySet interface {
 	PublicKeys() map[string]crypto.PublicKey
+	PublicKey(kid string) crypto.PublicKey
 }
 
-// Util manages the retrieval and storage of OIDC public keys
-type Util struct {
-	publicKeys   map[string]crypto.PublicKey
+// RemoteKeySet manages the retrieval and storage of OIDC public keys
+type RemoteKeySet struct {
 	publicKeyURL string
+	httpClient   *http.Client
+
+	publicKeys map[string]crypto.PublicKey
 }
 
 ////////////////// constructor //////////////////////////
 
 // New creates a new Public Key Util
-func New(publicKeyURL string) KeyUtil {
-	pku := Util{
+func New(publicKeyURL string, httpClient *http.Client) KeySet {
+	pku := RemoteKeySet{
 		publicKeyURL: publicKeyURL,
+		httpClient:   httpClient,
 	}
 
 	// Retrieve the public keys which are used to verify the tokens
 	for i := 0; i < 5; i++ {
-		if err := pku.RetrievePublicKeys(); err != nil {
+		if err := pku.updateKeys(); err != nil {
 			log.Infof("Failed to get Public Keys. Assuming failure is temporary, will retry later...")
 			log.Error(err.Error())
 			if i == 4 {
@@ -50,17 +51,18 @@ func New(publicKeyURL string) KeyUtil {
 
 ////////////////// instance methods  //////////////////////////
 
+// PublicKey returns the public key with the specified kid
+func (s *RemoteKeySet) PublicKey(kid string) crypto.PublicKey {
+	return s.publicKeys[kid]
+}
+
 // PublicKeys returns the public keys for the instance
-func (s *Util) PublicKeys() map[string]crypto.PublicKey {
+func (s *RemoteKeySet) PublicKeys() map[string]crypto.PublicKey {
 	return s.publicKeys
 }
 
-// RetrievePublicKeys retrieves public keys from the OIDC server for the instance
-func (s *Util) RetrievePublicKeys() error {
-
-	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
-	}
+// updateKeys retrieves public keys from the OIDC server for the instance
+func (s *RemoteKeySet) updateKeys() error {
 
 	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
 	if err != nil {
@@ -70,7 +72,7 @@ func (s *Util) RetrievePublicKeys() error {
 
 	req.Header.Set("xFilterType", "IstioAdapter")
 
-	res, err := httpClient.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Errorf("RetrievePublicKeys - Failed to retrieve public keys for url: %s", s.publicKeyURL)
 		return err
@@ -87,17 +89,17 @@ func (s *Util) RetrievePublicKeys() error {
 		return err
 	}
 
-	var keys []key
+	var jwks []key
 	var ks keySet
 
 	if err := json.Unmarshal(body, &ks); err == nil { // an RFC compliant JWK Set object, extract key array
-		keys = ks.Keys
-	} else if err := json.Unmarshal(body, &keys); err != nil { // attempt to decode as JWK array directly
+		jwks = ks.Keys
+	} else if err := json.Unmarshal(body, &jwks); err != nil { // attempt to decode as JWK array directly
 		return err
 	}
 
-	mkeys := make(map[string]crypto.PublicKey)
-	for _, k := range keys {
+	keymap := make(map[string]crypto.PublicKey)
+	for _, k := range jwks {
 		if k.Kid == "" {
 			log.Errorf("RetrievePublicKeys - public key missing kid %s", k)
 			continue
@@ -108,10 +110,10 @@ func (s *Util) RetrievePublicKeys() error {
 			log.Errorf("RetrievePublicKeys - could not decode public key err %s : %s", err, k)
 			continue
 		}
-		mkeys[k.Kid] = pubkey
+		keymap[k.Kid] = pubkey
 	}
 
-	s.publicKeys = mkeys
+	s.publicKeys = keymap
 
 	return nil
 }

@@ -9,13 +9,10 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
-	adapter "istio.io/api/mixer/adapter/model/v1beta1"
-	policy "istio.io/api/policy/v1beta1"
-	authpolicy "istio.io/istio/mixer/adapter/ibmcloudappid/policy"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/policy"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
 	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
 	//webstrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/web"
@@ -51,30 +48,18 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
 // HandleAuthorization evaulates authoroization policy using api/web strategy
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
-	log.Infof("HandleAuthorization :: received request %v\n", *r)
+	log.Debugf("HandleAuthorization :: received request\n")
 
-	logInstanceVars(r)
+	action := s.manager.Evaluate(r.Instance.Action)
 
-	// Get destination service
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	destinationService := strings.TrimSuffix(props["destination_service_host"].(string), ".svc.cluster.local")
-
-	// Get policy to enforce
-	policies := s.manager.GetPolicies(destinationService)
-	if policies == nil || len(policies) == 0 {
-		log.Infof("HandleAuthorization ::no policies exists for service: %s\n", destinationService)
-		return &adapter.CheckResult{Status: status.OK}, nil
+	switch action.Type {
+	case policy.API:
+		return s.apistrategy.HandleAuthorizationRequest(r, action.Client)
+	case policy.WEB:
+		fallthrough
+	default:
+		return &v1beta1.CheckResult{Status: status.OK}, nil
 	}
-	policyToEnforce := policies[0]
-	client := s.manager.GetClient(policyToEnforce.ClientName)
-
-	// Enforce as API policy
-	if policyToEnforce.Type == authpolicy.API {
-		return s.apistrategy.HandleAuthorizationRequest(r, &client)
-	}
-
-	// Enforce WEB policy in the future
-	return &adapter.CheckResult{Status: status.OK}, nil
 }
 
 ////////////////// server //////////////////////////
@@ -105,14 +90,14 @@ func (s *AppidAdapter) Close() error {
 ////////////////// constructor //////////////////////////
 
 // NewAppIDAdapter creates a new App ID Adapter listening on the provided port.
-func NewAppIDAdapter() (Server, error) {
+func NewAppIDAdapter(port uint16) (Server, error) {
+	saddr := fmt.Sprintf(":%d", port)
 
 	// Ensure we have correct configuration
-
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", "47304"))
+	listener, err := net.Listen("tcp", saddr)
 	if err != nil {
 		log.Errorf("Unable to listen on socket: %v", err)
-		return nil, fmt.Errorf("Unable to listen on socket: %v", err)
+		return nil, fmt.Errorf("unable to listen on socket: %v", err)
 	}
 
 	s := &AppidAdapter{
@@ -127,40 +112,4 @@ func NewAppIDAdapter() (Server, error) {
 	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
 
 	return s, nil
-}
-
-////////////////// util //////////////////////////
-
-// Logs request instance properties
-func logInstanceVars(r *authorization.HandleAuthorizationRequest) {
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	log.Debugf("Instance request properties:")
-	for key, val := range props {
-		log.Debugf("key: %s\nvalue: \t%s", key, val)
-	}
-}
-
-// Decodes gRPC values into string interface
-func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, v := range in {
-		out[k] = decodeValue(v.GetValue())
-	}
-	return out
-}
-
-// Decodes policy value into standard type
-func decodeValue(in interface{}) interface{} {
-	switch t := in.(type) {
-	case *policy.Value_StringValue:
-		return t.StringValue
-	case *policy.Value_Int64Value:
-		return t.Int64Value
-	case *policy.Value_DoubleValue:
-		return t.DoubleValue
-	case *policy.Value_IpAddressValue:
-		return t.IpAddressValue
-	default:
-		return fmt.Sprintf("%v", in)
-	}
 }
