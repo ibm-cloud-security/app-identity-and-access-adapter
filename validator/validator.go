@@ -87,7 +87,7 @@ func (parser *Validator) Validate(client client.Client, token string) error {
 // validateClaim given claim
 func validateClaim(name string, expected string, claims jwt.MapClaims) error {
 	if found, ok := claims[name].(string); ok {
-		if found != expected { // Validate Tenant ID
+		if found != expected {
 			log.Debugf("Token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
 			return fmt.Errorf("token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
 		}
