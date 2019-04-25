@@ -10,13 +10,16 @@ import (
 
 // args represents args consumed by IBMCloudAppID OOP adapter.
 type args struct {
-	// Port to start the grpc adapter on
+	// port to start the grpc adapter on
 	adapterPort uint16
+	// verbosity of logs
+	verbose bool
 }
 
 func defaultArgs() *args {
 	return &args{
 		adapterPort: uint16(47304),
+		verbose:     false,
 	}
 }
 
@@ -39,11 +42,22 @@ func getCmd() *cobra.Command {
 
 	f := cmd.PersistentFlags()
 	f.Uint16VarP(&sa.adapterPort, "port", "p", sa.adapterPort, "TCP port to use for gRPC Adapter API")
+	f.BoolVarP(&sa.verbose, "verbose", "v", sa.verbose, "Use verbose logging")
+
+	scope := log.Scopes()["default"]
+	scope.SetOutputLevel(log.DebugLevel)
 
 	return cmd
 }
 
 func runServer(args *args) {
+	// Set logs
+	if args.verbose {
+		scope := log.Scopes()["default"]
+		scope.SetOutputLevel(log.DebugLevel)
+	}
+
+	// Configure Adapter
 	s, err := ibmcloudappid.NewAppIDAdapter(args.adapterPort)
 	if err != nil {
 		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
