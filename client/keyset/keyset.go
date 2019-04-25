@@ -7,13 +7,10 @@ import (
 	"io/ioutil"
 	"istio.io/istio/pkg/log"
 	"net/http"
-	"sync"
-	"time"
 )
 
 // KeySet retrieves public keys from OAuth server
 type KeySet interface {
-	RetrievePublicKeys() error
 	PublicKeys() map[string]crypto.PublicKey
 	PublicKey(kid string) crypto.PublicKey
 }
@@ -23,26 +20,21 @@ type RemoteKeySet struct {
 	publicKeyURL string
 	httpClient   *http.Client
 
-	// guard all other fields
-	mu sync.Mutex
-
 	publicKeys map[string]crypto.PublicKey
 }
 
 ////////////////// constructor //////////////////////////
 
 // New creates a new Public Key Util
-func New(publicKeyURL string) KeySet {
+func New(publicKeyURL string, httpClient *http.Client) KeySet {
 	pku := RemoteKeySet{
 		publicKeyURL: publicKeyURL,
-		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
-		},
+		httpClient:   httpClient,
 	}
 
 	// Retrieve the public keys which are used to verify the tokens
 	for i := 0; i < 5; i++ {
-		if err := pku.RetrievePublicKeys(); err != nil {
+		if err := pku.updateKeys(); err != nil {
 			log.Infof("Failed to get Public Keys. Assuming failure is temporary, will retry later...")
 			log.Error(err.Error())
 			if i == 4 {
@@ -69,8 +61,8 @@ func (s *RemoteKeySet) PublicKeys() map[string]crypto.PublicKey {
 	return s.publicKeys
 }
 
-// RetrievePublicKeys retrieves public keys from the OIDC server for the instance
-func (s *RemoteKeySet) RetrievePublicKeys() error {
+// updateKeys retrieves public keys from the OIDC server for the instance
+func (s *RemoteKeySet) updateKeys() error {
 
 	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
 	if err != nil {
@@ -97,17 +89,17 @@ func (s *RemoteKeySet) RetrievePublicKeys() error {
 		return err
 	}
 
-	var keys []key
+	var jwks []key
 	var ks keySet
 
 	if err := json.Unmarshal(body, &ks); err == nil { // an RFC compliant JWK Set object, extract key array
-		keys = ks.Keys
-	} else if err := json.Unmarshal(body, &keys); err != nil { // attempt to decode as JWK array directly
+		jwks = ks.Keys
+	} else if err := json.Unmarshal(body, &jwks); err != nil { // attempt to decode as JWK array directly
 		return err
 	}
 
-	mkeys := make(map[string]crypto.PublicKey)
-	for _, k := range keys {
+	keymap := make(map[string]crypto.PublicKey)
+	for _, k := range jwks {
 		if k.Kid == "" {
 			log.Errorf("RetrievePublicKeys - public key missing kid %s", k)
 			continue
@@ -118,10 +110,10 @@ func (s *RemoteKeySet) RetrievePublicKeys() error {
 			log.Errorf("RetrievePublicKeys - could not decode public key err %s : %s", err, k)
 			continue
 		}
-		mkeys[k.Kid] = pubkey
+		keymap[k.Kid] = pubkey
 	}
 
-	s.publicKeys = mkeys
+	s.publicKeys = keymap
 
 	return nil
 }

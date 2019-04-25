@@ -42,13 +42,17 @@ type ProviderConfig struct {
 type Client struct {
 	Config
 	ProviderConfig
-	KeySet keyset.KeySet
+	KeySet     keyset.KeySet
+	httpClient *http.Client
 }
 
 // New creates a new policy
 func New(cfg Config) Client {
 	client := Client{
 		Config: cfg,
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 	}
 
 	err := client.load()
@@ -57,23 +61,20 @@ func New(cfg Config) Client {
 		return client
 	}
 	log.Infof("Loaded Client Successfully")
-	set := keyset.New(client.JWKSURL)
-	client.KeySet = set
+	client.KeySet = keyset.New(client.JWKSURL, client.httpClient)
 	return client
 }
 
 func (c *Client) load() error {
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
 	req, err := http.NewRequest("GET", c.DiscoveryURL, nil)
-
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("xFilterType", "IstioAdapter")
 
-	res, err := httpClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		log.Infof("Error %s", err)
 		return err

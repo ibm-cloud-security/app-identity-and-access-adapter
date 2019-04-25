@@ -9,5 +9,9 @@ spec:
   params:
     subject:
       properties:
-        authorization_header:  request.headers["authorization"]
-        destination_service_host: destination.service.host | ""
+        authorization_header: request.headers["authorization"]
+    action:
+      path: request.path | "/"
+      method: request.method | "get"
+      service: destination.service.host | ""
+      namespace: destination.namespace | "default"

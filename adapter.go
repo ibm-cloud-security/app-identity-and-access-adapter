@@ -26,7 +26,7 @@ import (
 
 const (
 	authorizationHeader    = "authorization_header"
-	destinationServiceHost = "destination_service_host"
+	destinationServiceHost = "service"
 )
 
 type (
@@ -57,8 +57,7 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	logInstanceVars(r)
 
 	// Get destination service
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	destinationService := strings.TrimSuffix(props[destinationServiceHost].(string), ".svc.cluster.local")
+	destinationService := strings.TrimSuffix(r.Instance.Action.Service, ".svc.cluster.local")
 
 	// Get policy to enforce
 	policies := s.manager.GetPolicies(destinationService)
@@ -134,10 +133,13 @@ func NewAppIDAdapter() (Server, error) {
 
 // Logs request instance properties
 func logInstanceVars(r *authorization.HandleAuthorizationRequest) {
-	props := decodeValueMap(r.Instance.Subject.Properties)
-	log.Debugf("Instance request properties:")
-	for key, val := range props {
-		log.Debugf("key: %s\nvalue: \t%s", key, val)
+	subjectProps := decodeValueMap(r.Instance.Subject.Properties)
+	log.Info("Instance request properties:\n\tAction")
+	log.Infof("\tNamespace : %s", r.Instance.Action.Namespace)
+	log.Infof("\tPath : %s", r.Instance.Action.Path)
+	log.Infof("\tService : %s", r.Instance.Action.Service)
+	for key, val := range subjectProps {
+		log.Infof("\tkey: %s\nvalue: \t%s", key, val)
 	}
 }
 

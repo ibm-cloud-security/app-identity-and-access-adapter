@@ -29,10 +29,6 @@ type APIStrategy struct {
 	parser validator.TokenValidator
 }
 
-// Options contains config info for ap strategy
-type Options struct {
-}
-
 // New constructs a new APIStrategy used to handle API Requests
 func New() *APIStrategy {
 	return &APIStrategy{
@@ -47,9 +43,9 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(props)
 	if err != nil {
-		log.Debug("Unauthorized - authorization header was not found.")
+		log.Debugf("Unauthorized: " + err.Error())
 		return &adapter.CheckResult{
-			Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - authorization header was not found."),
+			Status: status.WithMessage(rpc.UNAUTHENTICATED, err.Error()),
 		}, nil
 	}
 

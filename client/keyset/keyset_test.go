@@ -1,9 +1,11 @@
 package keyset
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
-	utils "istio.io/istio/mixer/adapter/ibmcloudappid/testing"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -35,13 +37,13 @@ func TestNew(t *testing.T) {
 		})
 
 		// Start a local HTTP server
-		_, server := utils.HTTPClient(h)
+		_, server := httpClient(h)
 
 		// Server URL
 		url := server.URL + "/publicKeys"
 
 		// Test
-		util := New(url).(*RemoteKeySet)
+		util := New(url, &http.Client{}).(*RemoteKeySet)
 		if util == nil {
 			t.Errorf("Could not convert KeySet interface to RemoteKeySet")
 			return
@@ -54,7 +56,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestRetrievePublicKeys(t *testing.T) {
+func TestUpdateKeys(t *testing.T) {
 	var tests = []struct {
 		name          string
 		res           string
@@ -75,16 +77,15 @@ func TestRetrievePublicKeys(t *testing.T) {
 			w.WriteHeader(e.status)
 			w.Write([]byte(e.res))
 		})
-		httpClient, server := utils.HTTPClient(h)
+		httpClient, server := httpClient(h)
 
 		// Generate new key util
-		util := New(testURL).(*RemoteKeySet)
-		util.httpClient = httpClient
+		util := New(testURL, httpClient).(*RemoteKeySet)
 
 		if e.shouldSucceed {
-			assert.Equal(t, util.RetrievePublicKeys(), nil)
+			assert.Equal(t, util.updateKeys(), nil)
 		} else {
-			assert.NotEqual(t, util.RetrievePublicKeys(), nil)
+			assert.NotEqual(t, util.updateKeys(), nil)
 		}
 		assert.Equal(t, len(util.PublicKeys()), e.length)
 		if e.length == 1 {
@@ -94,4 +95,19 @@ func TestRetrievePublicKeys(t *testing.T) {
 		// cleanup
 		server.Close()
 	}
+}
+
+// httpClient mock
+func httpClient(handler http.Handler) (*http.Client, *httptest.Server) {
+	s := httptest.NewServer(handler)
+
+	cli := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, network, _ string) (net.Conn, error) {
+				return net.Dial(network, s.Listener.Addr().String())
+			},
+		},
+	}
+
+	return cli, s
 }
