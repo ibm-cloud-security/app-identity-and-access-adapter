@@ -1,12 +1,12 @@
 package strategy
 
 import (
-	"ibmcloudappid/client"
+	"ibmcloudappid/policy/manager"
 	"istio.io/istio/mixer/pkg/adapter"
 	"istio.io/istio/mixer/template/authorization"
 )
 
 // Strategy defines the entry point to an authentiation handler
 type Strategy interface {
-	HandleAuthorizationRequest(*authorization.HandleAuthorizationRequest, *client.Client) (*adapter.CheckResult, error)
+	HandleAuthorizationRequest(*authorization.HandleAuthorizationRequest, []manager.PolicyAction) (*adapter.CheckResult, error)
 }

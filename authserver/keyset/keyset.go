@@ -11,7 +11,7 @@ import (
 
 // KeySet retrieves public keys from OAuth server
 type KeySet interface {
-	PublicKeys() map[string]crypto.PublicKey
+	PublicKeyURL() string
 	PublicKey(kid string) crypto.PublicKey
 }
 
@@ -56,9 +56,9 @@ func (s *RemoteKeySet) PublicKey(kid string) crypto.PublicKey {
 	return s.publicKeys[kid]
 }
 
-// PublicKeys returns the public keys for the instance
-func (s *RemoteKeySet) PublicKeys() map[string]crypto.PublicKey {
-	return s.publicKeys
+// PublicKeyURL returns the public key url for the instance
+func (s *RemoteKeySet) PublicKeyURL() string {
+	return s.publicKeyURL
 }
 
 // updateKeys retrieves public keys from the OIDC server for the instance

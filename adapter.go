@@ -51,12 +51,11 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 	log.Debugf("HandleAuthorization :: received request\n")
 
-	action := s.manager.Evaluate(r.Instance.Action)
+	actions := s.manager.Evaluate(r.Instance.Action)
 
-	switch action.Type {
+	switch actions.Type {
 	case policy.API:
-		fallthrough
-		//return s.apistrategy.HandleAuthorizationRequest(r, action.Keyset)
+		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)
 	case policy.WEB:
 		fallthrough
 	default:
