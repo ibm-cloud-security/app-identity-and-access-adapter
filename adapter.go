@@ -7,16 +7,15 @@ package ibmcloudappid
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 
 	"google.golang.org/grpc"
 	"ibmcloudappid/policy"
+	"ibmcloudappid/policy/initializer"
 	"ibmcloudappid/policy/manager"
 	apistrategy "ibmcloudappid/strategy/api"
 	"istio.io/api/mixer/adapter/model/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
 	//webstrategy "ibmcloudappid/strategy/web"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
@@ -53,9 +52,7 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	log.Debugf("HandleAuthorization :: received request\n")
 
 	action := s.manager.Evaluate(r.Instance.Action)
-	if runtime.IsMissingKind(errors.New("")) {
-		print("ah")
-	}
+
 	switch action.Type {
 	case policy.API:
 		fallthrough
@@ -109,7 +106,7 @@ func NewAppIDAdapter(port uint16) (Server, error) {
 		listener:    listener,
 		apistrategy: apistrategy.New(),
 		server:      grpc.NewServer(),
-		manager:     manager.New(),
+		manager:     initializer.New().GetManager(),
 	}
 
 	log.Infof("Listening on : \"%v\"\n", s.Addr())

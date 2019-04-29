@@ -19,16 +19,21 @@ import (
 )
 
 // Handler interface contains the methods that are required
-type Initializer interface {}
+type Initializer interface {
+	GetManager() manager.PolicyManager
+}
 
-type PolicyInitializer struct{
+type PolicyInitializer struct {
 	Manager manager.PolicyManager
 }
 
+func (pi *PolicyInitializer) GetManager() manager.PolicyManager {
+	return pi.Manager
+}
 
 func New() Initializer {
-	policyManager := manager.New();
-	policyInitializer := &PolicyInitializer{ policyManager}
+	policyManager := manager.New()
+	policyInitializer := &PolicyInitializer{policyManager}
 
 	client, myresourceClient := getKubernetesClient()
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
