@@ -52,7 +52,7 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	log.Debugf("HandleAuthorization :: received request\n")
 
 	actions := s.manager.Evaluate(r.Instance.Action)
-
+	log.Infof("Exectuing action : %v", actions.Type)
 	switch actions.Type {
 	case policy.API:
 		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)

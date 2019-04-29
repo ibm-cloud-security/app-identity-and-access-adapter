@@ -37,9 +37,9 @@ func New() Initializer {
 
 	client, myresourceClient := getKubernetesClient()
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
-	initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Manager)
-	initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Manager)
-	initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client, policyInitializer.Manager)
+	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Manager)
+	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Manager)
+	go initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client, policyInitializer.Manager)
 
 	return policyInitializer
 }

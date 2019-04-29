@@ -57,10 +57,10 @@ func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
 	ep := endpoint{
 		namespace: action.Namespace,
 		service:   destinationService,
-		path:      action.Path,
-		method:    action.Method,
+		path:      "*",
+		method:    "*",
 	}
-
+	log.Infof("Checking for policies on endpoint : %v", ep)
 	apiPolicies := m.apiPolicies[ep]
 	webPolicies := m.webPolicies[ep]
 	if (webPolicies == nil || len(webPolicies) == 0) && (apiPolicies == nil || len(apiPolicies) == 0) {
@@ -132,30 +132,29 @@ func New() PolicyManager {
 }
 
 func (m *Manager) HandleAddEvent(obj interface{}) {
-	switch obj.(type) {
+	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
-		log.Info("TestHandler.ObjectCreated : *v1.JwkPolicy")
-		jwk := obj.(*v1.JwtPolicy)
-		m.authservers[jwk.Spec.JwksURL] = authserver.New(jwk.Spec.JwksURL)
-		namespace := jwk.ObjectMeta.Namespace
-		endpoints := parseTarget(jwk.Spec.Target, namespace)
-		jwkSpec := jwk.Spec
+		log.Infof("TestHandler.ObjectCreated : *v1.JwkPolicy : ID: %s", crd.ObjectMeta.UID)
+		log.Infof("Object: %v", crd)
+		m.authservers[crd.Spec.JwksURL] = authserver.New(crd.Spec.JwksURL)
+		namespace := crd.ObjectMeta.Namespace
+		endpoints := parseTarget(crd.Spec.Target, namespace)
+		jwkSpec := crd.Spec
 		for _, ep := range endpoints {
 			if m.apiPolicies == nil {
-				m.apiPolicies[ep] = make([]v1.JwtPolicySpec,0)
+				m.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
 			}
 			m.apiPolicies[ep] = append(m.apiPolicies[ep], jwkSpec)
 		}
+		log.Debugf("%v", m.apiPolicies)
 		log.Debug("TestHandler.ObjectCreated JwkPolicy done---------")
 	case *v1.OidcPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcPolicy")
-		oidc := obj.(*v1.OidcPolicy)
-		log.Debugf("%r", oidc)
+		log.Debugf("%v", crd)
 		log.Debug("TestHandler.ObjectCreated OidcPolicy done---------")
 	case *v1.OidcClient:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcClient")
-		client := obj.(*v1.OidcClient)
-		log.Debugf("%r", client)
+		log.Debugf("%v", crd)
 		log.Debug("TestHandler.ObjectCreated OidcClient done---------")
 	default:
 		log.Error("Unknown Object")
@@ -163,14 +162,13 @@ func (m *Manager) HandleAddEvent(obj interface{}) {
 }
 
 func (m *Manager) HandleDeleteEvent(obj interface{}) {
-	switch obj.(type) {
+	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
-		log.Info("TestHandler.HandleDeleteEvent : *v1.JwkPolicy")
-		jwk := obj.(*v1.JwtPolicy)
-		namespace := jwk.ObjectMeta.Namespace
-		endpoints := parseTarget(jwk.Spec.Target, namespace)
+		log.Infof("TestHandler.HandleDeleteEvent : *v1.JwkPolicy : ID: %s", crd.ObjectMeta.UID)
+		namespace := crd.ObjectMeta.Namespace
+		endpoints := parseTarget(crd.Spec.Target, namespace)
 		for _, ep := range endpoints {
-			if m.apiPolicies != nil || len(m.apiPolicies) > 0  {
+			if m.apiPolicies != nil || len(m.apiPolicies) > 0 {
 				delete(m.apiPolicies, ep)
 			}
 		}
@@ -185,17 +183,18 @@ func (m *Manager) HandleDeleteEvent(obj interface{}) {
 	}
 }
 
-func parseTarget(target []v1.TargetElement, namespace string) []endpoint{
+func parseTarget(target []v1.TargetElement, namespace string) []endpoint {
+	log.Infof("%v", target)
 	endpoints := make([]endpoint, 0)
 	if target != nil || len(target) != 0 {
 		for _, items := range target {
 			service := items.ServiceName
-			if items.Paths != nil || len(items.Paths) !=0 {
+			if items.Paths != nil || len(items.Paths) != 0 {
 				for _, path := range items.Paths {
-					endpoints = append(endpoints, endpoint{namespace:namespace, service: service, path: path, method:""})
+					endpoints = append(endpoints, endpoint{namespace: namespace, service: service, path: path, method: "*"})
 				}
 			} else {
-				endpoints = append(endpoints, endpoint{namespace:namespace, service: service, path: "*", method:""})
+				endpoints = append(endpoints, endpoint{namespace: namespace, service: service, path: "*", method: "*"})
 			}
 		}
 	}
