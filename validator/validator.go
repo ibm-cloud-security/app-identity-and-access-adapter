@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
 	"istio.io/istio/pkg/log"
 )
 
@@ -15,7 +15,7 @@ const (
 
 // TokenValidator parses and validates JWT tokens
 type TokenValidator interface {
-	Validate(client client.Client, token string) error
+	Validate(token string, jwks keyset.KeySet) error
 }
 
 // Validator implements the TokenValidator
@@ -31,7 +31,7 @@ func New() TokenValidator {
 ////////////////// interface //////////////////////////
 
 // parse parses the given token and verifies the ExpiresAt, NotBefore, and signature
-func (*Validator) parse(client client.Client, token string) (*jwt.Token, error) {
+func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 	log.Debugf("Parsing token %s", token)
 
 	// Method used by token library to get public key for signature validation
@@ -44,7 +44,7 @@ func (*Validator) parse(client client.Client, token string) (*jwt.Token, error) 
 		}
 
 		// Find public key in client
-		key := client.KeySet.PublicKey(keyID)
+		key := jwks.PublicKey(keyID)
 		if key == nil {
 			log.Debugf("Token validation error - key not found for kid: %s", token.Header[kid])
 			return nil, fmt.Errorf("token validation error - key not found for kid: %s", token.Header[kid])
@@ -56,10 +56,10 @@ func (*Validator) parse(client client.Client, token string) (*jwt.Token, error) 
 }
 
 // Validate validates a given JWT's signature, expiration, and given claims
-func (parser *Validator) Validate(client client.Client, token string) error {
+func (parser *Validator) Validate(token string, jwks keyset.KeySet) error {
 	// Parse the token - validate expiration and signature
 	log.Debugf("Validating token %s", token)
-	tkn, err := parser.parse(client, token)
+	tkn, err := parser.parse(token, jwks)
 
 	// Check if base token is valid.
 	if err != nil {
@@ -67,16 +67,13 @@ func (parser *Validator) Validate(client client.Client, token string) error {
 	}
 
 	// Retreive claims map from token
-	claims, ok := getClaims(tkn)
+	_, ok := getClaims(tkn)
 	if !ok {
 		log.Debug("Token validation error - error obtaining claims from token")
 		return errors.New("token validation error - error obtaining claims from token")
 	}
 
-	// Validate Policies - currently only tenant ID - TODO: How are we getting the tenant ID
-	if err := validateClaim(tenant, client.Name, claims); err != nil {
-		return err
-	}
+	// Validate Rules
 
 	return nil
 

@@ -2,6 +2,7 @@
 package manager
 
 import (
+	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"os"
@@ -13,9 +14,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	c "istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
 	policiesClientSet "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned"
-	policiesInformer "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/policy"
 	policyController "istio.io/istio/mixer/adapter/ibmcloudappid/policy/controller"
 	policyHandler "istio.io/istio/mixer/adapter/ibmcloudappid/policy/handler"
@@ -26,8 +27,6 @@ import (
 // PolicyManager is responsible for storing and managing policy/client data
 type PolicyManager interface {
 	Evaluate(*authorization.ActionMsg) Action
-	Policies(string) []policy.Policy
-	Client(string) *client.Client
 }
 
 // Manager is responsible for storing and managing policy/client data
@@ -35,73 +34,105 @@ type Manager struct {
 	kube      kubernetes.Interface
 	clientset policiesClientSet.Interface
 	// clients maps client_name -> client_config
-	clients map[string]*client.Client
-	// services maps service -> client_config
-	services map[string]*client.Client
-	// policies maps client_name -> list of policies
-	policies map[endpoint][]policy.Policy
+	clients map[string]*c.Client
+	// authserver maps jwksurl -> AuthorizationServers
+	authservers map[string]authserver.AuthorizationServer
+	// policies maps endpoint -> list of policies
+	apiPolicies map[endpoint][]v1.JwtPolicySpec
+	// policies maps endpoint -> list of policies
+	webPolicies map[endpoint][]v1.OidcPolicySpec
 }
 
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
-	Type   policy.Type
-	Client *client.Client
+	Type     policy.Type
+	policies []PolicyAction
+}
+
+type PolicyAction struct {
+	KeySet keyset.KeySet
+	// Rule []Rule
 }
 
 type endpoint struct {
-	namespace string
-	service   string
-	path      string
-	method    string
+	namespace, service, path, method string
 }
 
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
 func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
 	// Get destination service
-	destinationService := strings.TrimSuffix(action.Service, ".svc.cluster.local")
+	destinationService := strings.TrimSuffix(action.Service, "."+action.Namespace+".svc.cluster.local")
 
-	// Get policy to enforce
-	policies := m.Policies(destinationService)
-	if policies == nil || len(policies) == 0 {
+	ep := endpoint{
+		namespace: action.Namespace,
+		service:   destinationService,
+		path:      action.Path,
+		method:    action.Method,
+	}
+
+	apiPolicies := m.apiPolicies[ep]
+	webPolicies := m.webPolicies[ep]
+	if (webPolicies == nil || len(webPolicies) == 0) && (apiPolicies == nil || len(apiPolicies) == 0) {
 		return Action{
-			Type:   policy.NONE,
-			Client: nil,
+			Type: policy.NONE,
 		}
 	}
-	policyToEnforce := policies[0]
-	client := m.Client(policyToEnforce.ClientName)
+
+	if (webPolicies != nil && len(webPolicies) >= 0) && (apiPolicies != nil && len(apiPolicies) > 0) {
+		// Make decision
+		return Action{
+			Type: policy.NONE,
+		}
+	}
+
+	if webPolicies != nil && len(webPolicies) >= 0 {
+		// Make decision
+		return m.GetWebStrategyAction(webPolicies)
+	}
+
+	return m.GetAPIStrategyAction(apiPolicies)
+}
+
+func (m *Manager) GetAPIStrategyAction(policies []v1.JwtPolicySpec) Action {
 	return Action{
-		Type:   policyToEnforce.Type,
-		Client: client,
+		Type: policy.API,
+		policies: []PolicyAction{
+			PolicyAction{
+				KeySet: m.AuthServer(policies[0].JwksURL).KeySet(),
+			},
+		},
 	}
 }
 
-// Policies returns the policies associated with a particular service
-func (m *Manager) Policies(svc string) []policy.Policy {
-	return m.policies[svc]
+func (m *Manager) GetWebStrategyAction(policies []v1.OidcPolicySpec) Action {
+	return Action{
+		Type: policy.WEB,
+		policies: []PolicyAction{
+			PolicyAction{
+				KeySet: m.Client(policies[0].ClientName).AuthServer.KeySet(),
+			},
+		},
+	}
 }
 
 // Client returns the client instance given its name
-func (m *Manager) Client(clientName string) *client.Client {
+func (m *Manager) Client(clientName string) *c.Client {
 	return m.clients[clientName]
+}
+
+// AuthServer returns the client instance given its name
+func (m *Manager) AuthServer(jwksurl string) authserver.AuthorizationServer {
+	return m.authservers[jwksurl]
 }
 
 // New creates a PolicyManager
 func New() PolicyManager {
-	// Temporary Hardcode Setup
-	client, myresourceClient := getKubernetesClient()
-	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
-	initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client)
-	initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client)
-	initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client)
-
 	return &Manager{
-		kube:        kubernetes.Interface,
-		clientset:   policiesClientSet.Interface,
-		clients:     make(map[string]*client.Client),
-		authservers: make(map[string]*authserver.AuthorizationServer),
-		policies:    make(map[endpoint]*policy.Policy),
+		clients:     make(map[string]*c.Client),
+		authservers: make(map[string]authserver.AuthorizationServer),
+		apiPolicies: make(map[endpoint][]v1.JwtPolicySpec),
+		webPolicies: make(map[endpoint][]v1.OidcPolicySpec),
 	}
 }
 
@@ -131,7 +162,7 @@ func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface) {
 	return client, policiesClient
 }
 
-func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface) {
+func (m *Manager) initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface) {
 	// create a new queue so that when the informer gets a resource that is either
 	// a result of listing or watching, we can add an idenfitying key to the queue
 	// so that it can be handled in the handler

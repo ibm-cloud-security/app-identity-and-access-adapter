@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"istio.io/istio/pkg/log"
 	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
+	"istio.io/istio/pkg/log"
 )
 
 // Handler interface contains the methods that are required
@@ -23,7 +23,7 @@ func (t *PolicyHandler) Init() error {
 
 // ObjectCreated is called when an object is created
 func (t *PolicyHandler) ObjectCreated(obj interface{}) {
-	switch obj.(type){
+	switch obj.(type) {
 	case *v1.JwtPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.JwkPolicy")
 		jwk := obj.(*v1.JwtPolicy)
@@ -39,7 +39,7 @@ func (t *PolicyHandler) ObjectCreated(obj interface{}) {
 		client := obj.(*v1.OidcClient)
 		log.Debugf("%r", client)
 		log.Debug("TestHandler.ObjectCreated OidcClient done---------")
-	default :
+	default:
 		log.Error("Unknown Object")
 	}
 }

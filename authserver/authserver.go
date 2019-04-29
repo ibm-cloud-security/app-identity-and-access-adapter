@@ -5,18 +5,18 @@ import (
 )
 
 type AuthorizationServer interface {
-	KeySet() *keyset.KeySet
+	KeySet() keyset.KeySet
 }
 
 type RemoteServer struct {
-	keyset *keyset.KeySet
+	keyset keyset.KeySet
 }
 
-func (a *RemoteServer) KeySet() *keyset.KeySet {
+func (a *RemoteServer) KeySet() keyset.KeySet {
 	return a.keyset
 }
 
-func New(keyset *keyset.KeySet) AuthorizationServer {
+func New(keyset keyset.KeySet) AuthorizationServer {
 	return &RemoteServer{
 		keyset: keyset,
 	}

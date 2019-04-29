@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver"
 	"istio.io/istio/pkg/log"
 	"net/http"
 	"time"
@@ -30,6 +31,7 @@ type ProviderConfig struct {
 type Client struct {
 	Config
 	ProviderConfig
+	AuthServer authserver.AuthorizationServer
 	httpClient *http.Client
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
 	"istio.io/istio/mixer/adapter/ibmcloudappid/validator"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
@@ -37,7 +37,7 @@ func New() *APIStrategy {
 }
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, client *client.Client) (*adapter.CheckResult, error) {
+func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, jwks keyset.KeySet) (*adapter.CheckResult, error) {
 	props := decodeValueMap(r.Instance.Subject.Properties)
 
 	// Parse Authorization Header
@@ -52,7 +52,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	log.Debug("Found valid authorization header")
 
 	// Validate access token
-	err = s.parser.Validate(*client, tokens.access)
+	err = s.parser.Validate(tokens.access, jwks)
 	if err != nil {
 		log.Debugf("Unauthorized - invalid access token - %s", err)
 		return &adapter.CheckResult{
@@ -62,7 +62,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 
 	// If necessary, validate ID token
 	if tokens.id != "" {
-		err = s.parser.Validate(*client, tokens.id)
+		err = s.parser.Validate(tokens.id, jwks)
 		if err != nil {
 			log.Debugf("Unauthorized - invalid ID token - %s", err)
 			return &adapter.CheckResult{
