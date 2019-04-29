@@ -54,7 +54,8 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 
 	switch action.Type {
 	case policy.API:
-		return s.apistrategy.HandleAuthorizationRequest(r, action.Keyset)
+		fallthrough
+		//return s.apistrategy.HandleAuthorizationRequest(r, action.Keyset)
 	case policy.WEB:
 		fallthrough
 	default:
