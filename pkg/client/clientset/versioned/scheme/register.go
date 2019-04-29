@@ -19,7 +19,8 @@ limitations under the License.
 package scheme
 
 import (
-	appidv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
+	appidv1 "ibmcloudappid/pkg/apis/policies/v1"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -19,7 +19,8 @@ limitations under the License.
 package versioned
 
 import (
-	appidv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
+	appidv1 "ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
+
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

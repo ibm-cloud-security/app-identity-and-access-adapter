@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"istio.io/istio/mixer/adapter/ibmcloudappid"
+	"ibmcloudappid"
 	"istio.io/istio/pkg/log"
 	"os"
 )

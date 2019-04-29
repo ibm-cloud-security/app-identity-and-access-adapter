@@ -1,7 +1,7 @@
 package authserver
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
+	"ibmcloudappid/authserver/keyset"
 )
 
 type AuthorizationServer interface {

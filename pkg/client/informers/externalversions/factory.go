@@ -19,13 +19,13 @@ limitations under the License.
 package externalversions
 
 import (
+	versioned "ibmcloudappid/pkg/client/clientset/versioned"
+	internalinterfaces "ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
+	policies "ibmcloudappid/pkg/client/informers/externalversions/policies"
 	reflect "reflect"
 	sync "sync"
 	time "time"
 
-	versioned "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned"
-	internalinterfaces "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
-	policies "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions/policies"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

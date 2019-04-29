@@ -2,3 +2,4 @@ bin/ibmcloudappid
 .idea/**
 ./env.sh
 .vscode/**
+vendor

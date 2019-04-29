@@ -19,7 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
+	v1 "ibmcloudappid/pkg/apis/policies/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"

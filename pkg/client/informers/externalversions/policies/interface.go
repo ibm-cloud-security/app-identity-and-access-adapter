@@ -19,8 +19,8 @@ limitations under the License.
 package appid
 
 import (
-	internalinterfaces "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions/policies/v1"
+	internalinterfaces "ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "ibmcloudappid/pkg/client/informers/externalversions/policies/v1"
 )
 
 // Interface provides access to each of this group's versions.

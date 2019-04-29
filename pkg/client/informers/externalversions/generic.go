@@ -20,8 +20,8 @@ package externalversions
 
 import (
 	"fmt"
+	v1 "ibmcloudappid/pkg/apis/policies/v1"
 
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
+	"ibmcloudappid/authserver/keyset"
 	"istio.io/istio/pkg/log"
 )
 

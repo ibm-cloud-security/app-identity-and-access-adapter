@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
+	v1 "ibmcloudappid/pkg/apis/policies/v1"
+	scheme "ibmcloudappid/pkg/client/clientset/versioned/scheme"
 	"time"
 
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
-	scheme "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

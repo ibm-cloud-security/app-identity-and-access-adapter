@@ -5,7 +5,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	"ibmcloudappid/client"
 	"testing"
 )
 

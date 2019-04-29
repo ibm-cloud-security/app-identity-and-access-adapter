@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
+	"ibmcloudappid/policy/manager"
 	"istio.io/istio/pkg/log"
 )
 

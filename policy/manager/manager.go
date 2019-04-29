@@ -2,15 +2,15 @@
 package manager
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver/keyset"
+	"ibmcloudappid/authserver/keyset"
 	"strings"
 
-	c "istio.io/istio/mixer/adapter/ibmcloudappid/client"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/policy"
+	c "ibmcloudappid/client"
+	"ibmcloudappid/authserver"
+	"ibmcloudappid/policy"
 	"istio.io/istio/mixer/template/authorization"
 
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
+	v1 "ibmcloudappid/pkg/apis/policies/v1"
 	"istio.io/istio/pkg/log"
 )
 

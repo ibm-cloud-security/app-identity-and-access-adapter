@@ -19,9 +19,10 @@ limitations under the License.
 package fake
 
 import (
-	clientset "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned"
-	appidv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
-	fakeappidv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1/fake"
+	clientset "ibmcloudappid/pkg/client/clientset/versioned"
+	appidv1 "ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
+	fakeappidv1 "ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1/fake"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -41,7 +42,7 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 	}
 
-	cs := &Clientset{tracker: o}
+	cs := &Clientset{}
 	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
 	cs.AddReactor("*", "*", testing.ObjectReaction(o))
 	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
@@ -63,15 +64,10 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 type Clientset struct {
 	testing.Fake
 	discovery *fakediscovery.FakeDiscovery
-	tracker   testing.ObjectTracker
 }
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
-}
-
-func (c *Clientset) Tracker() testing.ObjectTracker {
-	return c.tracker
 }
 
 var _ clientset.Interface = &Clientset{}

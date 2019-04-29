@@ -19,7 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	policiesv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
+	policiesv1 "ibmcloudappid/pkg/apis/policies/v1"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

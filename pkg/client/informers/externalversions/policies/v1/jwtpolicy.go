@@ -19,12 +19,12 @@ limitations under the License.
 package v1
 
 import (
+	policiesv1 "ibmcloudappid/pkg/apis/policies/v1"
+	versioned "ibmcloudappid/pkg/client/clientset/versioned"
+	internalinterfaces "ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "ibmcloudappid/pkg/client/listers/policies/v1"
 	time "time"
 
-	policiesv1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/apis/policies/v1"
-	versioned "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned"
-	internalinterfaces "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/listers/policies/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

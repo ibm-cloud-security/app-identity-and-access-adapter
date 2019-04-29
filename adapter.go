@@ -7,15 +7,17 @@ package ibmcloudappid
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
 	"google.golang.org/grpc"
+	"ibmcloudappid/policy"
+	"ibmcloudappid/policy/manager"
+	apistrategy "ibmcloudappid/strategy/api"
 	"istio.io/api/mixer/adapter/model/v1beta1"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/policy"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
-	apistrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/api"
-	//webstrategy "istio.io/istio/mixer/adapter/ibmcloudappid/strategy/web"
+	"k8s.io/apimachinery/pkg/runtime"
+	//webstrategy "ibmcloudappid/strategy/web"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
@@ -51,7 +53,9 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	log.Debugf("HandleAuthorization :: received request\n")
 
 	action := s.manager.Evaluate(r.Instance.Action)
-
+	if runtime.IsMissingKind(errors.New("")) {
+		print("ah")
+	}
 	switch action.Type {
 	case policy.API:
 		fallthrough

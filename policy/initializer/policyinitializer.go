@@ -8,13 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	manager "istio.io/istio/mixer/adapter/ibmcloudappid/policy/manager"
+	manager "ibmcloudappid/policy/manager"
 	"k8s.io/client-go/kubernetes"
 
-	policiesClientSet "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned"
-	policiesInformer "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/informers/externalversions"
-	policyController "istio.io/istio/mixer/adapter/ibmcloudappid/policy/controller"
-	policyHandler "istio.io/istio/mixer/adapter/ibmcloudappid/policy/handler"
+	policiesClientSet "ibmcloudappid/pkg/client/clientset/versioned"
+	policiesInformer "ibmcloudappid/pkg/client/informers/externalversions"
+	policyController "ibmcloudappid/policy/controller"
+	policyHandler "ibmcloudappid/policy/handler"
 	"istio.io/istio/pkg/log"
 )
 

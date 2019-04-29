@@ -1,7 +1,7 @@
 package strategy
 
 import (
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client"
+	"ibmcloudappid/client"
 	"istio.io/istio/mixer/pkg/adapter"
 	"istio.io/istio/mixer/template/authorization"
 )

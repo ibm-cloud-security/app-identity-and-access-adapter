@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/authserver"
+	"ibmcloudappid/authserver"
 	"istio.io/istio/pkg/log"
 	"net/http"
 	"time"

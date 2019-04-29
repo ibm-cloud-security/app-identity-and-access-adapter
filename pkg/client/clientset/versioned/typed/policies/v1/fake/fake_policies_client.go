@@ -19,7 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	v1 "istio.io/istio/mixer/adapter/ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
+	v1 "ibmcloudappid/pkg/client/clientset/versioned/typed/policies/v1"
+
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
