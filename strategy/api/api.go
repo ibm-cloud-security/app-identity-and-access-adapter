@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/gogo/googleapis/google/rpc"
+	"ibmcloudappid/policy/manager"
+	"ibmcloudappid/validator"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
-	"ibmcloudappid/authserver/keyset"
-	"ibmcloudappid/validator"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
@@ -37,7 +37,7 @@ func New() *APIStrategy {
 }
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, jwks keyset.KeySet) (*adapter.CheckResult, error) {
+func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, policies []manager.PolicyAction) (*adapter.CheckResult, error) {
 	props := decodeValueMap(r.Instance.Subject.Properties)
 
 	// Parse Authorization Header
@@ -51,27 +51,37 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 
 	log.Debug("Found valid authorization header")
 
-	// Validate access token
-	err = s.parser.Validate(tokens.access, jwks)
-	if err != nil {
-		log.Debugf("Unauthorized - invalid access token - %s", err)
-		return &adapter.CheckResult{
-			Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid access token."),
-		}, nil
-	}
+	seen := make(map[string]bool)
 
-	// If necessary, validate ID token
-	if tokens.id != "" {
-		err = s.parser.Validate(tokens.id, jwks)
+	for _, p := range policies {
+
+		if wasSeen, ok := seen[p.KeySet.PublicKeyURL()]; ok && !wasSeen {
+
+			seen[p.KeySet.PublicKeyURL()] = true
+		}
+
+		// Validate access token
+		err = s.parser.Validate(tokens.access, p.KeySet)
 		if err != nil {
-			log.Debugf("Unauthorized - invalid ID token - %s", err)
+			log.Debugf("Unauthorized - invalid access token - %s", err)
 			return &adapter.CheckResult{
-				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid ID token."),
+				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid access token."),
 			}, nil
 		}
-	}
 
-	log.Debug("Authorized. Received valid authorization header.")
+		// If necessary, validate ID token
+		if tokens.id != "" {
+			err = s.parser.Validate(tokens.id, p.KeySet)
+			if err != nil {
+				log.Debugf("Unauthorized - invalid ID token - %s", err)
+				return &adapter.CheckResult{
+					Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid ID token."),
+				}, nil
+			}
+		}
+
+		log.Debug("Authorized. Received valid authorization header.")
+	}
 
 	return &adapter.CheckResult{Status: status.OK}, nil
 }

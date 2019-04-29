@@ -35,7 +35,7 @@ type Manager struct {
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
 	Type     policy.Type
-	policies []PolicyAction
+	Policies []PolicyAction
 }
 
 type PolicyAction struct {
@@ -76,32 +76,37 @@ func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
 	}
 
 	if webPolicies != nil && len(webPolicies) >= 0 {
-		// Make decision
 		return m.GetWebStrategyAction(webPolicies)
 	}
 
 	return m.GetAPIStrategyAction(apiPolicies)
 }
 
+// GetAPIStrategyAction creates api strategy actions
 func (m *Manager) GetAPIStrategyAction(policies []v1.JwtPolicySpec) Action {
+	actions := make([]PolicyAction, len(policies))
+	for i := 0; i < len(policies); i++ {
+		actions = append(actions, PolicyAction{
+			KeySet: m.AuthServer(policies[0].JwksURL).KeySet(),
+		})
+	}
 	return Action{
-		Type: policy.API,
-		policies: []PolicyAction{
-			PolicyAction{
-				KeySet: m.AuthServer(policies[0].JwksURL).KeySet(),
-			},
-		},
+		Type:     policy.API,
+		Policies: actions,
 	}
 }
 
+// GetWebStrategyAction creates web strategy actions
 func (m *Manager) GetWebStrategyAction(policies []v1.OidcPolicySpec) Action {
+	actions := make([]PolicyAction, len(policies))
+	for i := 0; i < len(policies); i++ {
+		actions = append(actions, PolicyAction{
+			KeySet: m.Client(policies[0].ClientName).AuthServer.KeySet(),
+		})
+	}
 	return Action{
-		Type: policy.WEB,
-		policies: []PolicyAction{
-			PolicyAction{
-				KeySet: m.Client(policies[0].ClientName).AuthServer.KeySet(),
-			},
-		},
+		Type:     policy.WEB,
+		Policies: actions,
 	}
 }
 
@@ -129,8 +134,9 @@ func (m *Manager) HandleEvent(obj interface{}) {
 	switch obj.(type) {
 	case *v1.JwtPolicy:
 		log.Info("TestHandler.ObjectCreated : *v1.JwkPolicy")
-		jwk := obj.(*v1.JwtPolicy)
-		log.Infof("%r", jwk)
+		log.Infof("%r", m.webPolicies)
+		log.Infof("%r", m.apiPolicies)
+		//jwk := obj.(*v1.JwtPolicy)
 		log.Info("TestHandler.ObjectCreated JwkPolicy done---------")
 	case *v1.OidcPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcPolicy")
