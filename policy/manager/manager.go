@@ -17,7 +17,8 @@ import (
 // PolicyManager is responsible for storing and managing policy/client data
 type PolicyManager interface {
 	Evaluate(*authorization.ActionMsg) Action
-	HandleEvent(obj interface{})
+	HandleAddEvent(obj interface{})
+	HandleDeleteEvent(obj interface{})
 }
 
 // Manager is responsible for storing and managing policy/client data
@@ -125,13 +126,22 @@ func New() PolicyManager {
 	}
 }
 
-func (m *Manager) HandleEvent(obj interface{}) {
+func (m *Manager) HandleAddEvent(obj interface{}) {
 	switch obj.(type) {
 	case *v1.JwtPolicy:
 		log.Info("TestHandler.ObjectCreated : *v1.JwkPolicy")
 		jwk := obj.(*v1.JwtPolicy)
-		log.Infof("%r", jwk)
-		log.Info("TestHandler.ObjectCreated JwkPolicy done---------")
+		m.authservers[jwk.Spec.JwksURL] = authserver.New(jwk.Spec.JwksURL)
+		namespace := jwk.ObjectMeta.Namespace
+		endpoints := parseTarget(jwk.Spec.Target, namespace)
+		jwkSpec := jwk.Spec
+		for _, ep := range endpoints {
+			if m.apiPolicies == nil {
+				m.apiPolicies[ep] = make([]v1.JwtPolicySpec,0)
+			}
+			m.apiPolicies[ep] = append(m.apiPolicies[ep], jwkSpec)
+		}
+		log.Debug("TestHandler.ObjectCreated JwkPolicy done---------")
 	case *v1.OidcPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcPolicy")
 		oidc := obj.(*v1.OidcPolicy)
@@ -145,4 +155,44 @@ func (m *Manager) HandleEvent(obj interface{}) {
 	default:
 		log.Error("Unknown Object")
 	}
+}
+
+func (m *Manager) HandleDeleteEvent(obj interface{}) {
+	switch obj.(type) {
+	case *v1.JwtPolicy:
+		log.Info("TestHandler.HandleDeleteEvent : *v1.JwkPolicy")
+		jwk := obj.(*v1.JwtPolicy)
+		namespace := jwk.ObjectMeta.Namespace
+		endpoints := parseTarget(jwk.Spec.Target, namespace)
+		for _, ep := range endpoints {
+			if m.apiPolicies != nil || len(m.apiPolicies) > 0  {
+				delete(m.apiPolicies, ep)
+			}
+		}
+		log.Debug("HandleDeleteEvent : *v1.JwkPolicy done")
+	case *v1.OidcPolicy:
+		log.Debug("HandleDeleteEvent : *v1.OidcPolicy")
+	case *v1.OidcClient:
+		log.Debug("HandleDeleteEvent : *v1.OidcClient")
+	default:
+		log.Error("Unknown Object")
+
+	}
+}
+
+func parseTarget(target []v1.TargetElement, namespace string) []endpoint{
+	endpoints := make([]endpoint, 0)
+	if target != nil || len(target) != 0 {
+		for _, items := range target {
+			service := items.ServiceName
+			if items.Paths != nil || len(items.Paths) !=0 {
+				for _, path := range items.Paths {
+					endpoints = append(endpoints, endpoint{namespace:namespace, service: service, path: path, method:""})
+				}
+			} else {
+				endpoints = append(endpoints, endpoint{namespace:namespace, service: service, path: "*", method:""})
+			}
+		}
+	}
+	return endpoints
 }

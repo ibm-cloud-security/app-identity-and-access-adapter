@@ -34,36 +34,14 @@
   revision = "d31c731455cb061f42baff3bda55bad0118b126b"
 
 [[projects]]
-  digest = "1:4e607398025573df3b11301e57482c5b77f759b0538cfc63c83477308aa00636"
+  digest = "1:c23ef5b1fa68d209f3a299f58f3de6ecf126c1724a8c2d28e7930c291eb32dd5"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
-    "plugin/compare",
-    "plugin/defaultcheck",
-    "plugin/description",
-    "plugin/embedcheck",
-    "plugin/enumstringer",
-    "plugin/equal",
-    "plugin/face",
-    "plugin/gostring",
-    "plugin/marshalto",
-    "plugin/oneofcheck",
-    "plugin/populate",
-    "plugin/size",
-    "plugin/stringer",
-    "plugin/testgen",
-    "plugin/union",
-    "plugin/unmarshal",
     "proto",
     "protoc-gen-gogo/descriptor",
-    "protoc-gen-gogo/generator",
-    "protoc-gen-gogo/generator/internal/remap",
-    "protoc-gen-gogo/grpc",
-    "protoc-gen-gogo/plugin",
     "sortkeys",
     "types",
-    "vanity",
-    "vanity/command",
   ]
   pruneopts = "UT"
   revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
@@ -321,59 +299,6 @@
   packages = ["rate"]
   pruneopts = "UT"
   revision = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef"
-
-[[projects]]
-  branch = "master"
-  digest = "1:93f3f17886abf8d17ff07ece88d6e1974226f5638d216041bd2234ca03ef848c"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "go/gcexportdata",
-    "go/internal/gcimporter",
-    "go/internal/packagesdriver",
-    "go/packages",
-    "go/types/typeutil",
-    "imports",
-    "internal/fastwalk",
-    "internal/gopathwalk",
-    "internal/module",
-    "internal/semver",
-  ]
-  pruneopts = "UT"
-  revision = "35c670923e21e5c3722e299a75d7cf2fb7daefac"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7e8feac751f1c5a77d1ff94f54db6b8bc9eefd6f600295d60b1e4d1adee3c18b"
-  name = "gonum.org/v1/gonum"
-  packages = [
-    "blas",
-    "blas/blas64",
-    "blas/cblas128",
-    "blas/gonum",
-    "floats",
-    "graph",
-    "graph/internal/linear",
-    "graph/internal/ordered",
-    "graph/internal/set",
-    "graph/internal/uid",
-    "graph/iterator",
-    "graph/simple",
-    "graph/topo",
-    "graph/traverse",
-    "internal/asm/c128",
-    "internal/asm/c64",
-    "internal/asm/f32",
-    "internal/asm/f64",
-    "internal/cmplx64",
-    "internal/math32",
-    "lapack",
-    "lapack/gonum",
-    "lapack/lapack64",
-    "mat",
-  ]
-  pruneopts = "UT"
-  revision = "2a1643c79af27cd1a01585fcd259873bd2e29328"
 
 [[projects]]
   digest = "1:6eb6e3b6d9fffb62958cf7f7d88dbbe1dd6839436b0802e194c590667a40412a"
@@ -654,55 +579,6 @@
   version = "v11.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:79898d48fb2c91c4b34ea01f7a771c46f25cc6fb8c63c63c8a8c335d0759bbde"
-  name = "k8s.io/code-generator"
-  packages = [
-    "cmd/client-gen/args",
-    "cmd/client-gen/generators",
-    "cmd/client-gen/generators/fake",
-    "cmd/client-gen/generators/scheme",
-    "cmd/client-gen/generators/util",
-    "cmd/client-gen/path",
-    "cmd/client-gen/types",
-    "cmd/conversion-gen/args",
-    "cmd/conversion-gen/generators",
-    "cmd/deepcopy-gen/args",
-    "cmd/defaulter-gen/args",
-    "cmd/go-to-protobuf/protobuf",
-    "cmd/informer-gen/args",
-    "cmd/informer-gen/generators",
-    "cmd/lister-gen/args",
-    "cmd/lister-gen/generators",
-    "cmd/register-gen/args",
-    "cmd/register-gen/generators",
-    "pkg/namer",
-    "pkg/util",
-    "third_party/forked/golang/reflect",
-  ]
-  pruneopts = "UT"
-  revision = "ff26e7842f9d5224562ef78defed0785ae8395cf"
-
-[[projects]]
-  branch = "master"
-  digest = "1:042764790129d530ed2db8ab2d593beb7ecd7dee51136122912101e55b601211"
-  name = "k8s.io/gengo"
-  packages = [
-    "args",
-    "examples/deepcopy-gen/generators",
-    "examples/defaulter-gen/generators",
-    "examples/import-boss/generators",
-    "examples/set-gen/generators",
-    "examples/set-gen/sets",
-    "generator",
-    "namer",
-    "parser",
-    "types",
-  ]
-  pruneopts = "UT"
-  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
-
-[[projects]]
   digest = "1:c696379ad201c1e86591785579e16bf6cf886c362e9a7534e8eb0d1028b20582"
   name = "k8s.io/klog"
   packages = ["."]
@@ -746,14 +622,8 @@
     "github.com/gogo/googleapis/google/rpc",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
-    "github.com/gogo/protobuf/sortkeys",
-    "github.com/gogo/protobuf/vanity/command",
     "github.com/spf13/cobra",
-    "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
-    "gonum.org/v1/gonum/graph",
-    "gonum.org/v1/gonum/graph/simple",
-    "gonum.org/v1/gonum/graph/topo",
     "google.golang.org/grpc",
     "istio.io/api/mixer/adapter/model/v1beta1",
     "istio.io/api/policy/v1beta1",
@@ -780,37 +650,6 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/workqueue",
-    "k8s.io/code-generator/cmd/client-gen/args",
-    "k8s.io/code-generator/cmd/client-gen/generators",
-    "k8s.io/code-generator/cmd/client-gen/generators/fake",
-    "k8s.io/code-generator/cmd/client-gen/generators/scheme",
-    "k8s.io/code-generator/cmd/client-gen/generators/util",
-    "k8s.io/code-generator/cmd/client-gen/path",
-    "k8s.io/code-generator/cmd/client-gen/types",
-    "k8s.io/code-generator/cmd/conversion-gen/args",
-    "k8s.io/code-generator/cmd/conversion-gen/generators",
-    "k8s.io/code-generator/cmd/deepcopy-gen/args",
-    "k8s.io/code-generator/cmd/defaulter-gen/args",
-    "k8s.io/code-generator/cmd/go-to-protobuf/protobuf",
-    "k8s.io/code-generator/cmd/informer-gen/args",
-    "k8s.io/code-generator/cmd/informer-gen/generators",
-    "k8s.io/code-generator/cmd/lister-gen/args",
-    "k8s.io/code-generator/cmd/lister-gen/generators",
-    "k8s.io/code-generator/cmd/register-gen/args",
-    "k8s.io/code-generator/cmd/register-gen/generators",
-    "k8s.io/code-generator/pkg/namer",
-    "k8s.io/code-generator/pkg/util",
-    "k8s.io/code-generator/third_party/forked/golang/reflect",
-    "k8s.io/gengo/args",
-    "k8s.io/gengo/examples/deepcopy-gen/generators",
-    "k8s.io/gengo/examples/defaulter-gen/generators",
-    "k8s.io/gengo/examples/import-boss/generators",
-    "k8s.io/gengo/examples/set-gen/generators",
-    "k8s.io/gengo/generator",
-    "k8s.io/gengo/namer",
-    "k8s.io/gengo/parser",
-    "k8s.io/gengo/types",
-    "k8s.io/klog",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

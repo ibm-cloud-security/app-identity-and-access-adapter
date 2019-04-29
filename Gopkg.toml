@@ -24,7 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-required = ["k8s.io/code_generation"]
 
 [[constraint]]
   name = "github.com/dgrijalva/jwt-go"
@@ -65,10 +64,6 @@ required = ["k8s.io/code_generation"]
 [[constraint]]
   name = "k8s.io/client-go"
   version = "11.0.0"
-
-[[constraint]]
-  branch = "release-1.14"
-  name = "k8s.io/code_generation"
 
 [prune]
   go-tests = true

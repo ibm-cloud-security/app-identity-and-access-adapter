@@ -26,13 +26,15 @@ func (t *PolicyHandler) Init() error {
 // ObjectCreated is called when an object is created
 func (t *PolicyHandler) ObjectCreated(obj interface{}) {
 	log.Debug("TestHandler.ObjectCreated")
-	t.Manager.HandleEvent(obj)
+	t.Manager.HandleAddEvent(obj)
 	log.Debug("TestHandler.ObjectCreated done")
 }
 
 // ObjectDeleted is called when an object is deleted
 func (t *PolicyHandler) ObjectDeleted(obj interface{}) {
 	log.Debug("TestHandler.ObjectDeleted")
+	t.Manager.HandleDeleteEvent(obj)
+	log.Debug("TestHandler.ObjectDeleted done")
 }
 
 // ObjectUpdated is called when an object is updated
