@@ -4,20 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"istio.io/istio/mixer/adapter/ibmcloudappid/client/keyset"
 	"istio.io/istio/pkg/log"
 	"net/http"
 	"time"
-)
-
-// Type represents a client type (OIDC/OAuth2)
-type Type int
-
-const (
-	// OAuth2 client
-	OAuth2 Type = iota
-	// OIDC client
-	OIDC
 )
 
 // Config encasulates an authn/z client definition
@@ -26,7 +15,6 @@ type Config struct {
 	ClientID     string
 	Secret       string
 	DiscoveryURL string
-	Type         Type `json:"type"`
 }
 
 // ProviderConfig encasulates the discovery endpoint configuration
@@ -42,7 +30,6 @@ type ProviderConfig struct {
 type Client struct {
 	Config
 	ProviderConfig
-	KeySet     keyset.KeySet
 	httpClient *http.Client
 }
 
@@ -61,7 +48,6 @@ func New(cfg Config) Client {
 		return client
 	}
 	log.Infof("Loaded Client Successfully")
-	client.KeySet = keyset.New(client.JWKSURL, client.httpClient)
 	return client
 }
 
