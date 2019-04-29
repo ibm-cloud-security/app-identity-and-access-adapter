@@ -1,0 +1,12 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: OidcClient
+metadata:
+  name: sampleconfig
+spec:
+  oidcClientName: oidcClientName
+  clientId: clientId
+  discoveryUrl: http://discovery.com
+  clientSecret : clientSecret
+  clientSecretRef:
+    name: name
+    key: key
