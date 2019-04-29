@@ -5,8 +5,8 @@ import (
 	"ibmcloudappid/authserver/keyset"
 	"strings"
 
-	c "ibmcloudappid/client"
 	"ibmcloudappid/authserver"
+	c "ibmcloudappid/client"
 	"ibmcloudappid/policy"
 	"istio.io/istio/mixer/template/authorization"
 
@@ -126,12 +126,12 @@ func New() PolicyManager {
 }
 
 func (m *Manager) HandleEvent(obj interface{}) {
-	switch obj.(type){
+	switch obj.(type) {
 	case *v1.JwtPolicy:
-		log.Debug("TestHandler.ObjectCreated : *v1.JwkPolicy")
+		log.Info("TestHandler.ObjectCreated : *v1.JwkPolicy")
 		jwk := obj.(*v1.JwtPolicy)
-		log.Debugf("%r", jwk)
-		log.Debug("TestHandler.ObjectCreated JwkPolicy done---------")
+		log.Infof("%r", jwk)
+		log.Info("TestHandler.ObjectCreated JwkPolicy done---------")
 	case *v1.OidcPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcPolicy")
 		oidc := obj.(*v1.OidcPolicy)
@@ -142,7 +142,7 @@ func (m *Manager) HandleEvent(obj interface{}) {
 		client := obj.(*v1.OidcClient)
 		log.Debugf("%r", client)
 		log.Debug("TestHandler.ObjectCreated OidcClient done---------")
-	default :
+	default:
 		log.Error("Unknown Object")
 	}
 }

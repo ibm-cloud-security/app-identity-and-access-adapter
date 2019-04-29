@@ -12,18 +12,13 @@ type OidcPolicy struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OidcPolicySpec   `json:"spec"`
-	Status OidcPolicyStatus `json:"status"`
+	Spec OidcPolicySpec `json:"spec"`
 }
 
 // OidcPolicySpec is the spec for a OidcPolicy resource
 type OidcPolicySpec struct {
-	ClientName string                          `json:"oidcClientName"`
-	Target []TargetElement `json:"target"`
-}
-
-type OidcPolicyStatus struct {
-	Zaa string `json:"zaa"`
+	ClientName string          `json:"oidcClientName"`
+	Target     []TargetElement `json:"target"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

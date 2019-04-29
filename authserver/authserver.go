@@ -1,6 +1,9 @@
 package authserver
 
 import (
+	"net/http"
+	"time"
+
 	"ibmcloudappid/authserver/keyset"
 )
 
@@ -9,15 +12,20 @@ type AuthorizationServer interface {
 }
 
 type RemoteServer struct {
-	keyset keyset.KeySet
+	keyset     keyset.KeySet
+	httpclient *http.Client
 }
 
 func (a *RemoteServer) KeySet() keyset.KeySet {
 	return a.keyset
 }
 
-func New(keyset keyset.KeySet) AuthorizationServer {
+func New(jwksURL string) AuthorizationServer {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
 	return &RemoteServer{
-		keyset: keyset,
+		httpclient: client,
+		keyset:     keyset.New(jwksURL, client),
 	}
 }

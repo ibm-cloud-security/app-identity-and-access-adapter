@@ -1,8 +1,8 @@
 package initializer
 
 import (
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 	"os"
 	"os/signal"
@@ -46,19 +46,17 @@ func New() Initializer {
 
 // retrieve the Kubernetes cluster client from outside of the cluster
 func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface) {
-	// construct the path to resolve to `~/.kube/config`
-	kubeConfigPath := os.Getenv("HOME") + "/.kube/config"
 
-	// create the config from the path
-	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("getClusterConfig: %v", err)
+		log.Errorf("Error creating a cluster config: %s", err)
 	}
 
-	// generate the client based off of the config
+	// creates the clientset
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("getClusterConfig: %v", err)
+		log.Errorf("Error creating a client set: %s", err)
 	}
 
 	policiesClient, err := policiesClientSet.NewForConfig(config)

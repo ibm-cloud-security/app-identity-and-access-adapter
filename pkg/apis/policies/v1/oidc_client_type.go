@@ -12,22 +12,17 @@ type OidcClient struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OidcClientSpec   `json:"spec"`
-	Status OidcClientStatus `json:"status"`
+	Spec OidcClientSpec `json:"spec"`
 }
 
 // OidcClientSpec is the spec for a OidcClient resource
 type OidcClientSpec struct {
-	ClientName string `json:"oidcClientName"`
-	ClientId string `json:"clientId"`
-	DiscoveryUrl string `json:"discoveryUrl"`
-	ClientSecret string `json:"clientSecret"`
+	ClientName       string `json:"oidcClientName"`
+	ClientId         string `json:"clientId"`
+	DiscoveryUrl     string `json:"discoveryUrl"`
+	ClientSecret     string `json:"clientSecret"`
 	ClientSecretName string `json:"clientSecretRef.name"`
-	ClientSecretKey string `json:"clientSecretRef.key"`
-}
-
-type OidcClientStatus struct {
-	Zaa string `json:"zaa"`
+	ClientSecretKey  string `json:"clientSecretRef.key"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
