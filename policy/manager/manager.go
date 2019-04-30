@@ -40,6 +40,7 @@ type Action struct {
 	Policies []PolicyAction
 }
 
+// PolicyAction captures data necessary to process a particular policy
 type PolicyAction struct {
 	KeySet keyset.KeySet
 	// Rule []Rule
@@ -86,14 +87,16 @@ func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
 
 // GetAPIStrategyAction creates api strategy actions
 func (m *Manager) GetAPIStrategyAction(policies []v1.JwtPolicySpec) Action {
-	actions := make([]PolicyAction, len(policies))
+	actions := make([]PolicyAction, 0)
 	for i := 0; i < len(policies); i++ {
 		actions = append(actions, PolicyAction{
-			KeySet: m.AuthServer(policies[0].JwksURL).KeySet(),
+			KeySet: m.AuthServer(policies[i].JwksURL).KeySet(),
 		})
 	}
+	log.Debugf("ACTIONS 2: %v", actions)
+
 	return Action{
-		Type:     policy.API,
+		Type:     policy.JWT,
 		Policies: actions,
 	}
 }
@@ -103,11 +106,11 @@ func (m *Manager) GetWebStrategyAction(policies []v1.OidcPolicySpec) Action {
 	actions := make([]PolicyAction, len(policies))
 	for i := 0; i < len(policies); i++ {
 		actions = append(actions, PolicyAction{
-			KeySet: m.Client(policies[0].ClientName).AuthServer.KeySet(),
+			KeySet: m.Client(policies[i].ClientName).AuthServer.KeySet(),
 		})
 	}
 	return Action{
-		Type:     policy.WEB,
+		Type:     policy.OIDC,
 		Policies: actions,
 	}
 }
@@ -135,20 +138,22 @@ func New() PolicyManager {
 func (m *Manager) HandleAddEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
-		log.Infof("TestHandler.ObjectCreated : *v1.JwkPolicy : ID: %s", crd.ObjectMeta.UID)
-		log.Infof("Object: %v", crd)
-		m.authservers[crd.Spec.JwksURL] = authserver.New(crd.Spec.JwksURL)
-		namespace := crd.ObjectMeta.Namespace
-		endpoints := parseTarget(crd.Spec.Target, namespace)
-		jwkSpec := crd.Spec
-		for _, ep := range endpoints {
+		log.Debugf("TestHandler.ObjectCreated : *v1.JwtPolicy : ID: %s", crd.ObjectMeta.UID)
+
+		// If we already are tracking this authentication server, skip
+		if _, ok := m.authservers[crd.Spec.JwksURL]; !ok {
+			m.authservers[crd.Spec.JwksURL] = authserver.New(crd.Spec.JwksURL)
+		}
+
+		// Process target endpoints
+		for _, ep := range parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace) {
 			if m.apiPolicies == nil {
 				m.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
 			}
-			m.apiPolicies[ep] = append(m.apiPolicies[ep], jwkSpec)
+			m.apiPolicies[ep] = append(m.apiPolicies[ep], crd.Spec)
 		}
-		log.Debugf("%v", m.apiPolicies)
-		log.Debug("TestHandler.ObjectCreated JwkPolicy done---------")
+
+		log.Infof("JwtPolicy Succesfully Created : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
 		log.Debug("TestHandler.ObjectCreated : *v1.OidcPolicy")
 		log.Debugf("%v", crd)

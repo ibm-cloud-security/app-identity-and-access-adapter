@@ -13,5 +13,5 @@ spec:
     action:
       path: request.path | "/"
       method: request.method | "get"
-      service: destination.service.host | ""
-      namespace: destination.service.namespace | "default:wtf"
+      service: destination.service.name | ""
+      namespace: destination.service.namespace | "default"

@@ -52,11 +52,13 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	log.Debugf("HandleAuthorization :: received request\n")
 
 	actions := s.manager.Evaluate(r.Instance.Action)
-	log.Infof("Exectuing action : %v", actions.Type)
+
 	switch actions.Type {
-	case policy.API:
+	case policy.JWT:
+		log.Info("Executing JWT policies")
 		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)
-	case policy.WEB:
+	case policy.OIDC:
+		log.Info("OIDC policies are not supported")
 		fallthrough
 	default:
 		return &v1beta1.CheckResult{Status: status.OK}, nil

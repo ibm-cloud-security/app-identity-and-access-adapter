@@ -55,9 +55,12 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	seen := make(map[string]bool)
 
 	for _, p := range policies {
+		if p.KeySet == nil {
+			log.Error("Internal Server Error: Missing policy keyset")
+			return buildErrorResponse(&errors.OAuthError{Code: errors.InternalServerError})
+		}
 
 		if wasSeen, ok := seen[p.KeySet.PublicKeyURL()]; ok && !wasSeen {
-
 			seen[p.KeySet.PublicKeyURL()] = true
 		}
 
