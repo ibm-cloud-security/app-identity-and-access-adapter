@@ -1,11 +1,12 @@
 package apistrategy
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/gogo/googleapis/google/rpc"
+	"github.com/gogo/protobuf/types"
+	"ibmcloudappid/errors"
 	"ibmcloudappid/policy/manager"
 	"ibmcloudappid/validator"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
@@ -17,6 +18,8 @@ import (
 
 const (
 	authorizationHeader = "authorization_header"
+	bearer              = "Bearer"
+	wwwAuthenticate     = "WWW-Authenticate"
 )
 
 type tokens struct {
@@ -44,9 +47,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	tokens, err := getAuthTokensFromRequest(props)
 	if err != nil {
 		log.Debugf("Unauthorized: " + err.Error())
-		return &adapter.CheckResult{
-			Status: status.WithMessage(rpc.UNAUTHENTICATED, err.Error()),
-		}, nil
+		return buildErrorResponse(err)
 	}
 
 	log.Debug("Found valid authorization header")
@@ -64,9 +65,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 		err = s.parser.Validate(tokens.access, p.KeySet)
 		if err != nil {
 			log.Debugf("Unauthorized - invalid access token - %s", err)
-			return &adapter.CheckResult{
-				Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid access token."),
-			}, nil
+			return buildErrorResponse(err)
 		}
 
 		// If necessary, validate ID token
@@ -74,9 +73,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 			err = s.parser.Validate(tokens.id, p.KeySet)
 			if err != nil {
 				log.Debugf("Unauthorized - invalid ID token - %s", err)
-				return &adapter.CheckResult{
-					Status: status.WithMessage(rpc.UNAUTHENTICATED, "Unauthorized - invalid ID token."),
-				}, nil
+				return buildErrorResponse(err)
 			}
 		}
 
@@ -87,7 +84,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 }
 
 // Parse authorization header from gRPC props
-func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, error) {
+func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OAuthError) {
 
 	if v, found := props[authorizationHeader]; found {
 
@@ -95,18 +92,19 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, error) {
 
 			// Authorization header should exist
 			if authHeader == "" {
-				return nil, errors.New("missing authorization header")
+				return nil, errors.NewInvalidRequestError("missing authorization header")
+
 			}
 
 			// Authorization header must be in the format Bearer <access_token> <optional id_token>
 			parts := strings.SplitN(authHeader, " ", 3)
 			if len(parts) != 2 && len(parts) != 3 {
-				return nil, errors.New("authorization header malformed - expected 'Bearer <access_token> <optional id_token>'")
+				return nil, errors.NewInvalidRequestError("authorization header malformed - expected 'Bearer <access_token> <optional id_token>'")
 			}
 
 			// Authorization header must begin with bearer
 			if parts[0] != "Bearer" && parts[0] != "bearer" {
-				return nil, errors.New("invalid authorization header format - expected 'bearer'")
+				return nil, errors.NewInvalidRequestError("invalid authorization header format - expected 'bearer'")
 			}
 
 			var idToken = ""
@@ -120,8 +118,7 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, error) {
 			}, nil
 		}
 	}
-
-	return nil, errors.New("authorization header does not exist")
+	return nil, errors.NewInvalidRequestError("authorization header does not exist")
 }
 
 //// SHARED TODO MOVE ////
@@ -149,4 +146,32 @@ func decodeValue(in interface{}) interface{} {
 	default:
 		return fmt.Sprintf("%v", in)
 	}
+}
+
+// buildErrorResponse creates the rfc specified OAuth 2.0 error result
+func buildErrorResponse(err *errors.OAuthError) (*adapter.CheckResult, error) {
+	header := bearer + " realm=\"token\""
+	if err != nil {
+		scopes := err.ScopeStr()
+		if scopes != "" {
+			header += ", scopes=\"" + scopes + "\""
+		}
+		if err.Code != "" {
+			header += ", error=\"" + err.Code + "\""
+		}
+		if err.Msg != "" {
+			header += ", error_description=\"" + err.Msg + "\""
+		}
+	}
+	return &adapter.CheckResult{
+		Status: rpc.Status{
+			Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
+			Message: err.Error(),
+			Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
+				Code:    err.HTTPCode(), // Response Mixer remaps on request
+				Body:    err.ShortDescription(),
+				Headers: map[string]string{wwwAuthenticate: header},
+			})},
+		},
+	}, nil
 }

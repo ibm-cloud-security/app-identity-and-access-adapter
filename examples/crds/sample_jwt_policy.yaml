@@ -1,13 +1,10 @@
 apiVersion: "appid.cloud.ibm.com/v1"
 kind: JwtPolicy
 metadata:
-  name: sampljwtpolicy
+  name: samplejwtpolicy
+  namespace: multi-cloud-tech-preview
 spec:
-  jwksUrl: https://publickeyurl.com
+  jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
+
   target:
-    - serviceName: serviceA
-      paths:
-        - /path1
-        - /path2
-    - serviceName: serviceB
-      paths: []
+    - serviceName: svc-hello-world-backend

@@ -2,11 +2,12 @@
 package manager
 
 import (
-	"ibmcloudappid/authserver/keyset"
+	"reflect"
 	"strings"
 
 	"ibmcloudappid/authserver"
-	c "ibmcloudappid/client"
+	"ibmcloudappid/authserver/keyset"
+	"ibmcloudappid/client"
 	"ibmcloudappid/policy"
 	"istio.io/istio/mixer/template/authorization"
 
@@ -24,7 +25,7 @@ type PolicyManager interface {
 // Manager is responsible for storing and managing policy/client data
 type Manager struct {
 	// clients maps client_name -> client_config
-	clients map[string]*c.Client
+	clients map[string]*client.Client
 	// authserver maps jwksurl -> AuthorizationServers
 	authservers map[string]authserver.AuthorizationServer
 	// policies maps endpoint -> list of policies
@@ -112,7 +113,7 @@ func (m *Manager) GetWebStrategyAction(policies []v1.OidcPolicySpec) Action {
 }
 
 // Client returns the client instance given its name
-func (m *Manager) Client(clientName string) *c.Client {
+func (m *Manager) Client(clientName string) *client.Client {
 	return m.clients[clientName]
 }
 
@@ -124,7 +125,7 @@ func (m *Manager) AuthServer(jwksurl string) authserver.AuthorizationServer {
 // New creates a PolicyManager
 func New() PolicyManager {
 	return &Manager{
-		clients:     make(map[string]*c.Client),
+		clients:     make(map[string]*client.Client),
 		authservers: make(map[string]authserver.AuthorizationServer),
 		apiPolicies: make(map[endpoint][]v1.JwtPolicySpec),
 		webPolicies: make(map[endpoint][]v1.OidcPolicySpec),
@@ -178,8 +179,7 @@ func (m *Manager) HandleDeleteEvent(obj interface{}) {
 	case *v1.OidcClient:
 		log.Debug("HandleDeleteEvent : *v1.OidcClient")
 	default:
-		log.Error("Unknown Object")
-
+		log.Errorf("Unknown Object : %r", reflect.TypeOf(crd))
 	}
 }
 

@@ -1,10 +1,10 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
 	"ibmcloudappid/authserver/keyset"
+	"ibmcloudappid/errors"
 	"istio.io/istio/pkg/log"
 )
 
@@ -15,7 +15,7 @@ const (
 
 // TokenValidator parses and validates JWT tokens
 type TokenValidator interface {
-	Validate(token string, jwks keyset.KeySet) error
+	Validate(token string, jwks keyset.KeySet) *errors.OAuthError
 }
 
 // Validator implements the TokenValidator
@@ -56,21 +56,21 @@ func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 }
 
 // Validate validates a given JWT's signature, expiration, and given claims
-func (parser *Validator) Validate(token string, jwks keyset.KeySet) error {
+func (parser *Validator) Validate(token string, jwks keyset.KeySet) *errors.OAuthError {
 	// Parse the token - validate expiration and signature
 	log.Debugf("Validating token %s", token)
 	tkn, err := parser.parse(token, jwks)
 
 	// Check if base token is valid.
 	if err != nil {
-		return err
+		return errors.NewInvalidTokenError(err.Error(), nil)
 	}
 
 	// Retreive claims map from token
 	_, ok := getClaims(tkn)
 	if !ok {
 		log.Debug("Token validation error - error obtaining claims from token")
-		return errors.New("token validation error - error obtaining claims from token")
+		return errors.NewInvalidTokenError("token validation error - error obtaining claims from token", nil)
 	}
 
 	// Validate Rules
