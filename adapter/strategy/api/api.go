@@ -22,14 +22,9 @@ const (
 	wwwAuthenticate     = "WWW-Authenticate"
 )
 
-type tokens struct {
-	access string
-	id     string
-}
-
 // APIStrategy handles authorization requests
 type APIStrategy struct {
-	parser validator.TokenValidator
+	tokenUtil validator.TokenValidator
 }
 
 ////////////////// constructor //////////////////
@@ -37,7 +32,7 @@ type APIStrategy struct {
 // New constructs a new APIStrategy used to handle API Requests
 func New() *APIStrategy {
 	return &APIStrategy{
-		parser: validator.New(),
+		tokenUtil: validator.New(),
 	}
 }
 
@@ -54,38 +49,14 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 		return buildErrorResponse(err)
 	}
 
-	log.Debug("Found valid authorization header")
-
-	seen := make(map[string]bool)
-
-	for _, p := range policies {
-		if p.KeySet == nil {
-			log.Error("Internal Server Error: Missing policy keyset")
-			return buildErrorResponse(&errors.OAuthError{Code: errors.InternalServerError})
-		}
-
-		if wasSeen, ok := seen[p.KeySet.PublicKeyURL()]; ok && !wasSeen {
-			seen[p.KeySet.PublicKeyURL()] = true
-		}
-
-		// Validate access token
-		err = s.parser.Validate(tokens.access, p.KeySet)
-		if err != nil {
-			log.Debugf("Unauthorized - invalid access token - %s", err)
-			return buildErrorResponse(err)
-		}
-
-		// If necessary, validate ID token
-		if tokens.id != "" {
-			err = s.parser.Validate(tokens.id, p.KeySet)
-			if err != nil {
-				log.Debugf("Unauthorized - invalid ID token - %s", err)
-				return buildErrorResponse(err)
-			}
-		}
-
-		log.Debug("Authorized. Received valid authorization header.")
+	// Validate Authorization Tokens
+	err = s.tokenUtil.Validate(*tokens, policies)
+	if err != nil {
+		log.Debugf("Unauthorized: " + err.Error())
+		return buildErrorResponse(err)
 	}
+
+	log.Debug("Found valid authorization header")
 
 	return &adapter.CheckResult{Status: status.OK}, nil
 }
@@ -93,7 +64,7 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 ////////////////// utilities //////////////////
 
 // Parse authorization header from gRPC props
-func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OAuthError) {
+func getAuthTokensFromRequest(props map[string]interface{}) (*validator.RawTokens, *errors.OAuthError) {
 
 	if v, found := props[authorizationHeader]; found {
 
@@ -120,9 +91,9 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OA
 				idToken = parts[2]
 			}
 
-			return &tokens{
-				access: parts[1],
-				id:     idToken,
+			return &validator.RawTokens{
+				Access: parts[1],
+				ID:     idToken,
 			}, nil
 		}
 	}

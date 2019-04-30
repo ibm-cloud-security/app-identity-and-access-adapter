@@ -5,6 +5,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/errors"
+	"ibmcloudappid/adapter/policy/manager"
 	"istio.io/istio/pkg/log"
 )
 
@@ -15,11 +16,17 @@ const (
 
 // TokenValidator parses and validates JWT tokens
 type TokenValidator interface {
-	Validate(token string, jwks keyset.KeySet) *errors.OAuthError
+	Validate(tokens RawTokens, policies []manager.PolicyAction) *errors.OAuthError
 }
 
 // Validator implements the TokenValidator
 type Validator struct{}
+
+// RawTokens -
+type RawTokens struct {
+	Access string
+	ID     string
+}
 
 ////////////////// constructor //////////////////
 
@@ -30,8 +37,44 @@ func New() TokenValidator {
 
 ////////////////// interface //////////////////////////
 
+// Validate validates tokens according to the specified policies
+func (*Validator) Validate(tokens RawTokens, policies []manager.PolicyAction) *errors.OAuthError {
+	seen := make(map[string]bool)
+
+	for _, p := range policies {
+		if p.KeySet == nil {
+			log.Error("Internal Server Error: Missing policy keyset")
+			return &errors.OAuthError{Code: errors.InternalServerError}
+		}
+
+		if wasSeen, ok := seen[p.KeySet.PublicKeyURL()]; ok && !wasSeen {
+			seen[p.KeySet.PublicKeyURL()] = true
+		}
+
+		// Validate access token
+		err := parseAndvalidate(tokens.Access, p.KeySet)
+		if err != nil {
+			log.Debugf("Unauthorized - invalid access token - %s", err)
+			return err
+		}
+
+		// If necessary, validate ID token
+		if tokens.ID != "" {
+			err = parseAndvalidate(tokens.ID, p.KeySet)
+			if err != nil {
+				log.Debugf("Unauthorized - invalid ID token - %s", err)
+				return err
+			}
+		}
+	}
+
+	log.Debug("Authorized. Received valid tokens")
+
+	return nil
+}
+
 // parse parses the given token and verifies the ExpiresAt, NotBefore, and signature
-func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
+func parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 	log.Debugf("Parsing token: %s", token)
 
 	// Method used by token library to get public key for signature validation
@@ -57,12 +100,12 @@ func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 	return jwt.Parse(token, getKey)
 }
 
-// Validate validates a given JWT's signature, expiration, and given claims
-func (parser *Validator) Validate(token string, jwks keyset.KeySet) *errors.OAuthError {
+// parseAndvalidate validates a given JWT's signature, expiration, and given claims
+func parseAndvalidate(token string, jwks keyset.KeySet) *errors.OAuthError {
 	log.Debugf("Validating token: %s", token)
 
 	// Parse the token - validate expiration and signature
-	tkn, err := parser.parse(token, jwks)
+	tkn, err := parse(token, jwks)
 
 	// Check if base token is valid.
 	if err != nil {

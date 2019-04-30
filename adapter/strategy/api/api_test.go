@@ -46,8 +46,8 @@ func TestParseRequest(t *testing.T) {
 	for _, e := range tests {
 		tokens, err := getAuthTokensFromRequest(e.props)
 		if !e.expectErr && tokens != nil {
-			assert.Equal(t, "access", tokens.access)
-			assert.Equal(t, "id", tokens.id)
+			assert.Equal(t, "access", tokens.Access)
+			assert.Equal(t, "id", tokens.ID)
 		} else {
 			assert.EqualError(t, err, e.expectedMsg)
 		}

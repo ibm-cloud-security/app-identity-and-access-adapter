@@ -2,11 +2,13 @@ package validator
 
 import (
 	"crypto"
+	"io/ioutil"
+	"testing"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 	"ibmcloudappid/adapter/authserver/keyset"
-	"io/ioutil"
-	"testing"
+	"ibmcloudappid/adapter/policy/manager"
 )
 
 const (
@@ -59,7 +61,7 @@ func TestTokenValidation(t *testing.T) {
 	v := New()
 
 	for _, e := range tests {
-		err := v.Validate(e.token, testKeySet)
+		err := v.Validate(RawTokens{Access: e.token, ID: e.token}, []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}})
 		if err != nil && e.expectErr {
 			assert.Equal(t, e.expectedMsg, err.Error())
 		} else if err != nil && !e.expectErr {
