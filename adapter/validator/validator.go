@@ -32,10 +32,11 @@ func New() TokenValidator {
 
 // parse parses the given token and verifies the ExpiresAt, NotBefore, and signature
 func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
-	log.Debugf("Parsing token %s", token)
+	log.Debugf("Parsing token: %s", token)
 
 	// Method used by token library to get public key for signature validation
 	getKey := func(token *jwt.Token) (interface{}, error) {
+
 		// Validate token signature against
 		keyID, ok := token.Header[kid].(string)
 		if keyID == "" || !ok {
@@ -49,6 +50,7 @@ func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 			log.Debugf("Token validation error - key not found for kid: %s", token.Header[kid])
 			return nil, fmt.Errorf("token validation error - key not found for kid: %s", token.Header[kid])
 		}
+
 		return key, nil
 	}
 
@@ -57,8 +59,9 @@ func (*Validator) parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 
 // Validate validates a given JWT's signature, expiration, and given claims
 func (parser *Validator) Validate(token string, jwks keyset.KeySet) *errors.OAuthError {
+	log.Debugf("Validating token: %s", token)
+
 	// Parse the token - validate expiration and signature
-	log.Debugf("Validating token %s", token)
 	tkn, err := parser.parse(token, jwks)
 
 	// Check if base token is valid.

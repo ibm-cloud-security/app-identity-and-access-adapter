@@ -4,8 +4,8 @@ import (
 	"crypto"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
+	"ibmcloudappid/adapter/authserver/keyset"
 	"io/ioutil"
-	"ibmcloudappid/adapter/client"
 	"testing"
 )
 
@@ -20,39 +20,26 @@ const (
 	testAlternateKid    = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJvdGhlciIsInZlciI6M30.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.Gyan705Sy_HC_1iHSdyBhFepysB4Gf8WeJmxgf-WQeytaZa8dXjv_VdZrTaX-OtVfRPZEn-FGLr-KKRbEad8jl-of-A6fc6U10JBA8zT5tx5yYTBeCWxBOrJAN4bYZIUKdcRX24-iMoyrm1wt3jCuA3Z3fGnncBq4ndwIhVUqpf_hrivcQlhXk9JEYMzwxydYaWI_ZRhQT21lAC8H1DaLwNbMe_0AfBGhyO4Yk3boa68Mhd3uhYFZQ_NIemXa2oXI3R_gWLdM43qrNkBs_7YFEWIa6hI6A3Yyzz95ZbiZv23lFEym_lAFoqkCt9MAcWhitnG1Gg-IWEr_C-uPTNknw"
 )
 
-var testProviderConfig = client.ProviderConfig{
-	Issuer:      "localhost:6002",
-	AuthURL:     "",
-	TokenURL:    "",
-	JWKSURL:     "",
-	UserInfoURL: "",
-}
-var testConfig = client.Config{
-	Name:         "71b34890-a94f-4ef2-a4b6-ce094aa68092",
-	ClientID:     "",
-	Secret:       "",
-	DiscoveryURL: "",
-	Type:         client.OIDC,
+type localServer struct {
+	ks keyset.KeySet
 }
 
-var testClient = client.Client{
-	Config:         testConfig,
-	ProviderConfig: testProviderConfig,
-	KeySet:         &localKeySet{},
-}
+func (s *localServer) KeySet() keyset.KeySet { return s.ks }
 
 type localKeySet struct{}
 
-func (k *localKeySet) RetrievePublicKeys() error               { return nil }
-func (k *localKeySet) PublicKeys() map[string]crypto.PublicKey { return nil }
+func (k *localKeySet) PublicKeyURL() string { return "https://url.com" }
 func (k *localKeySet) PublicKey(kid string) crypto.PublicKey {
 	if kid == testKid {
-		keyData, _ := ioutil.ReadFile("../test/key.pub")
+		keyData, _ := ioutil.ReadFile("../../test/key.pub")
 		key, _ := jwt.ParseRSAPublicKeyFromPEM(keyData)
 		return key
 	}
 	return nil
 }
+
+var testKeySet = &localKeySet{}
+var testLocalServer = localServer{ks: testKeySet}
 
 /////// Token Validation ///////
 
@@ -65,7 +52,6 @@ func TestTokenValidation(t *testing.T) {
 		{testValidToken, false, ""},
 		{testExpiredToken, true, "Token is expired"},
 		{testValidToken + "other", true, "crypto/rsa: verification error"},
-		{testMissingTenant, true, "token validation error - expected claim `tenant` to exist"},
 		{testTokenMissingKid, true, "token validation error - kid is missing"},
 		{testAlternateKid, true, "token validation error - key not found for kid: other"},
 		{"p1.p2", true, "token contains an invalid number of segments"},
@@ -73,7 +59,7 @@ func TestTokenValidation(t *testing.T) {
 	v := New()
 
 	for _, e := range tests {
-		err := v.Validate(testClient, e.token)
+		err := v.Validate(e.token, testKeySet)
 		if err != nil && e.expectErr {
 			assert.Equal(t, e.expectedMsg, err.Error())
 		} else if err != nil && !e.expectErr {

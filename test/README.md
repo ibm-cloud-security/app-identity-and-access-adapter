@@ -7,17 +7,7 @@ Prototype of App ID integration with Istio.
 #### Set Environment
 
 ```
-// Mandataory Adapter Configuration Fields
-export APPID_URL="https://appid-multi-cloud-manager.anton-dev.us-south.containers.mybluemix.net/api"
-export APPID_APIKEY="m5pou9gyvw8psqlgnyi9a34fpgbndaidfgr9zs4r"
-export CLUSTER_GUID="78901234-aaaa-bbbb-bd0a-f01df6a1f000"
-export CLUSTER_NAME="local-test-of-ibmcloudappid-adapter-aaron"
-export CLUSTER_LOCATION="aaron's mac"
-
-// Export a path that points to your personal go workspace
 export GOPATH=/Users/AaronLiberatore/go-workspace
-
-// Go and Istio Paths
 export ISTIO=$GOPATH/src/istio.io
 export MIXER_REPO=$GOPATH/src/istio.io/istio/mixer
 ```
@@ -34,7 +24,7 @@ go build . && go run cmd/main.go 47304
 #### Start the Istio Mixer
 
 ```
-$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/ibmcloudappid/adapter/testdata --log_output_level=attributes:debug
+$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/ibmcloudappid/test/testdata --log_output_level=attributes:debug
 ```
 
 ### Testing
@@ -52,12 +42,11 @@ Istio runs inside the `istio-system` kube namespace with each component run in i
 
 #### Deploying
 
-1. Update `cicd.sh` with the locatin of your personal kube configuration
-2. Run `sh ./cicd.sh` to build the image, push to docker, and deploy to kubernetes
+1. Create executable `sh build_executable.sh`
+2. Deploy docker images `sh build_executable.sh`
+3. Apply helm chart
 
-If you modified the adapters configuration information located under `testdata/sample_operator_cfg.yaml` run the following command:
-
-`kubectl apply -f ./testdata/sample_operator_cfg.yaml`
+`helm install ./helm/ibmcloudappid --name ibmcloudappid`
 
 #### Logs
 ```

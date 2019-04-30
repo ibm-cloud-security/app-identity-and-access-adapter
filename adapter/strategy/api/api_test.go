@@ -14,12 +14,12 @@ func TestParseRequest(t *testing.T) {
 		{
 			map[string]interface{}{"dummy": "value"},
 			true,
-			"authorization header does not exist",
+			"authorization header not provided",
 		},
 		{
 			map[string]interface{}{"authorization_header": ""},
 			true,
-			"missing authorization header",
+			"authorization header not provided",
 		},
 		{
 			map[string]interface{}{"authorization_header": "bearer"},
@@ -29,7 +29,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			map[string]interface{}{"authorization_header": "b access id"},
 			true,
-			"invalid authorization header format - expected 'bearer'",
+			"unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
 			map[string]interface{}{"authorization_header": "Bearer access id"},

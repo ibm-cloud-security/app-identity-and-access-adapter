@@ -81,13 +81,13 @@ func TestUpdateKeys(t *testing.T) {
 
 		// Generate new key util
 		util := New(testURL, httpClient).(*RemoteKeySet)
-
+		assert.Equal(t, util.PublicKeyURL(), testURL)
 		if e.shouldSucceed {
 			assert.Equal(t, util.updateKeys(), nil)
 		} else {
 			assert.NotEqual(t, util.updateKeys(), nil)
 		}
-		assert.Equal(t, len(util.PublicKeys()), e.length)
+		assert.Equal(t, len(util.publicKeys), e.length)
 		if e.length == 1 {
 			assert.NotNil(t, util.PublicKey(testKid))
 		}

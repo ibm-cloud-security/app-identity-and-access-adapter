@@ -48,7 +48,7 @@ func BadRequestHTTPException(msg string) *OAuthError {
 }
 
 func (o *OAuthError) Error() string {
-	return "error - code: " + o.Code + " Message: " + o.Msg
+	return o.Msg
 }
 
 // ShortDescription returns the prettified HTTP Errors
