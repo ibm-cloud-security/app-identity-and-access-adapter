@@ -2,16 +2,13 @@
 package manager
 
 import (
-	"reflect"
-	"strings"
-
 	"ibmcloudappid/authserver"
 	"ibmcloudappid/authserver/keyset"
 	"ibmcloudappid/client"
+	"ibmcloudappid/pkg/apis/policies/v1"
 	"ibmcloudappid/policy"
-	"istio.io/istio/mixer/template/authorization"
 
-	v1 "ibmcloudappid/pkg/apis/policies/v1"
+	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
 
@@ -50,80 +47,7 @@ type endpoint struct {
 	namespace, service, path, method string
 }
 
-// Evaluate makes authn/z decision based on authorization action
-// being performed.
-func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
-	// Get destination service
-	destinationService := strings.TrimSuffix(action.Service, "."+action.Namespace+".svc.cluster.local")
-
-	ep := endpoint{
-		namespace: action.Namespace,
-		service:   destinationService,
-		path:      "*",
-		method:    "*",
-	}
-	log.Infof("Checking for policies on endpoint : %v", ep)
-	apiPolicies := m.apiPolicies[ep]
-	webPolicies := m.webPolicies[ep]
-	if (webPolicies == nil || len(webPolicies) == 0) && (apiPolicies == nil || len(apiPolicies) == 0) {
-		return Action{
-			Type: policy.NONE,
-		}
-	}
-
-	if (webPolicies != nil && len(webPolicies) >= 0) && (apiPolicies != nil && len(apiPolicies) > 0) {
-		// Make decision
-		return Action{
-			Type: policy.NONE,
-		}
-	}
-
-	if webPolicies != nil && len(webPolicies) >= 0 {
-		return m.GetWebStrategyAction(webPolicies)
-	}
-
-	return m.GetAPIStrategyAction(apiPolicies)
-}
-
-// GetAPIStrategyAction creates api strategy actions
-func (m *Manager) GetAPIStrategyAction(policies []v1.JwtPolicySpec) Action {
-	actions := make([]PolicyAction, 0)
-	for i := 0; i < len(policies); i++ {
-		actions = append(actions, PolicyAction{
-			KeySet: m.AuthServer(policies[i].JwksURL).KeySet(),
-		})
-	}
-	log.Debugf("ACTIONS 2: %v", actions)
-
-	return Action{
-		Type:     policy.JWT,
-		Policies: actions,
-	}
-}
-
-// GetWebStrategyAction creates web strategy actions
-func (m *Manager) GetWebStrategyAction(policies []v1.OidcPolicySpec) Action {
-	actions := make([]PolicyAction, len(policies))
-	for i := 0; i < len(policies); i++ {
-		actions = append(actions, PolicyAction{
-			KeySet: m.Client(policies[i].ClientName).AuthServer.KeySet(),
-		})
-	}
-	return Action{
-		Type:     policy.OIDC,
-		Policies: actions,
-	}
-}
-
-// Client returns the client instance given its name
-func (m *Manager) Client(clientName string) *client.Client {
-	return m.clients[clientName]
-}
-
-// AuthServer returns the client instance given its name
-func (m *Manager) AuthServer(jwksurl string) authserver.AuthorizationServer {
-	return m.authservers[jwksurl]
-}
+////////////////// constructor //////////////////
 
 // New creates a PolicyManager
 func New() PolicyManager {
@@ -135,6 +59,37 @@ func New() PolicyManager {
 	}
 }
 
+////////////////// interface //////////////////
+
+// Evaluate makes authn/z decision based on authorization action
+// being performed.
+func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
+	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
+	jwtPolicies := m.getJWTPolicies(endpoints)
+	oidcPolicies := m.getOIDCPolicies(endpoints)
+	log.Debugf("JWT policies: %v", jwtPolicies)
+	log.Debugf("OIDC policies: %v", oidcPolicies)
+	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
+		return Action{
+			Type: policy.NONE,
+		}
+	}
+
+	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
+		// Make decision
+		return Action{
+			Type: policy.NONE,
+		}
+	}
+
+	if oidcPolicies != nil && len(oidcPolicies) > 0 {
+		return m.createOIDCAction(oidcPolicies)
+	}
+
+	return m.createJWTAction(jwtPolicies)
+}
+
+// HandleAddEvent updates the store after a CRD has been added
 func (m *Manager) HandleAddEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
@@ -163,10 +118,11 @@ func (m *Manager) HandleAddEvent(obj interface{}) {
 		log.Debugf("%v", crd)
 		log.Debug("TestHandler.ObjectCreated OidcClient done---------")
 	default:
-		log.Error("Unknown Object")
+		log.Errorf("Unknown Object : %f", crd)
 	}
 }
 
+// HandleDeleteEvent updates the store after a CRD has been deleted
 func (m *Manager) HandleDeleteEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
@@ -184,24 +140,83 @@ func (m *Manager) HandleDeleteEvent(obj interface{}) {
 	case *v1.OidcClient:
 		log.Debug("HandleDeleteEvent : *v1.OidcClient")
 	default:
-		log.Errorf("Unknown Object : %r", reflect.TypeOf(crd))
+		log.Errorf("Unknown Object : %f", crd)
 	}
 }
 
-func parseTarget(target []v1.TargetElement, namespace string) []endpoint {
-	log.Infof("%v", target)
-	endpoints := make([]endpoint, 0)
-	if target != nil || len(target) != 0 {
-		for _, items := range target {
-			service := items.ServiceName
-			if items.Paths != nil || len(items.Paths) != 0 {
-				for _, path := range items.Paths {
-					endpoints = append(endpoints, endpoint{namespace: namespace, service: service, path: path, method: "*"})
-				}
-			} else {
-				endpoints = append(endpoints, endpoint{namespace: namespace, service: service, path: "*", method: "*"})
-			}
+////////////////// instance utils //////////////////
+
+// getJWTPolicies returns JWT for the given endpoints
+func (m *Manager) getJWTPolicies(endpoints []endpoint) []v1.JwtPolicySpec {
+	size := 0
+	for _, e := range endpoints {
+		if list, ok := m.apiPolicies[e]; ok {
+			size += len(list)
 		}
 	}
-	return endpoints
+	tmp := make([]v1.JwtPolicySpec, size)
+	var i int
+	for _, e := range endpoints {
+		if list, ok := m.apiPolicies[e]; ok && len(list) > 0 {
+			i += copy(tmp[i:], list)
+		}
+	}
+	return tmp
+}
+
+// getOIDCPolicies returns OIDC for the given endpoints
+func (m *Manager) getOIDCPolicies(endpoints []endpoint) []v1.OidcPolicySpec {
+	size := 0
+	for _, e := range endpoints {
+		if list, ok := m.webPolicies[e]; ok {
+			size += len(list)
+		}
+	}
+	tmp := make([]v1.OidcPolicySpec, size)
+	var i int
+	for _, e := range endpoints {
+		if list, ok := m.webPolicies[e]; ok && len(list) > 0 {
+			i += copy(tmp[i:], list)
+		}
+	}
+	return tmp
+}
+
+// createJWTAction creates api strategy actions
+func (m *Manager) createJWTAction(policies []v1.JwtPolicySpec) Action {
+	actions := make([]PolicyAction, 0)
+	for i := 0; i < len(policies); i++ {
+		actions = append(actions, PolicyAction{
+			KeySet: m.authServer(policies[i].JwksURL).KeySet(),
+		})
+	}
+
+	return Action{
+		Type:     policy.JWT,
+		Policies: actions,
+	}
+}
+
+// createOIDCAction creates web strategy actions
+func (m *Manager) createOIDCAction(policies []v1.OidcPolicySpec) Action {
+	actions := make([]PolicyAction, len(policies))
+	for i := 0; i < len(policies); i++ {
+		actions = append(actions, PolicyAction{
+			KeySet: m.client(policies[i].ClientName).AuthServer.KeySet(),
+		})
+	}
+	return Action{
+		Type:     policy.OIDC,
+		Policies: actions,
+	}
+}
+
+// Client returns the client instance given its name
+func (m *Manager) client(clientName string) *client.Client {
+	return m.clients[clientName]
+}
+
+// AuthServer returns the client instance given its name
+func (m *Manager) authServer(jwksurl string) authserver.AuthorizationServer {
+	return m.authservers[jwksurl]
 }

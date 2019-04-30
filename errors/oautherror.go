@@ -28,8 +28,8 @@ type OAuthError struct {
 	Scopes []string
 }
 
-// NewInvalidTokenError creates a new invalid token error
-func NewInvalidTokenError(msg string, scopes []string) *OAuthError {
+// UnauthorizedHTTPException creates a new invalid token error
+func UnauthorizedHTTPException(msg string, scopes []string) *OAuthError {
 	return &OAuthError{
 		Msg:    msg,
 		Code:   InvalidToken,
@@ -37,8 +37,8 @@ func NewInvalidTokenError(msg string, scopes []string) *OAuthError {
 	}
 }
 
-// NewInvalidRequestError creates a new invalid request error
-func NewInvalidRequestError(msg string) *OAuthError {
+// BadRequestHTTPException creates a new invalid request error
+func BadRequestHTTPException(msg string) *OAuthError {
 	return &OAuthError{
 		Msg:    msg,
 		Code:   InvalidRequest,

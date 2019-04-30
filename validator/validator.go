@@ -21,7 +21,7 @@ type TokenValidator interface {
 // Validator implements the TokenValidator
 type Validator struct{}
 
-////////////////// constructor //////////////////////////
+////////////////// constructor //////////////////
 
 // New creates a New TokenValidator
 func New() TokenValidator {
@@ -63,14 +63,14 @@ func (parser *Validator) Validate(token string, jwks keyset.KeySet) *errors.OAut
 
 	// Check if base token is valid.
 	if err != nil {
-		return errors.NewInvalidTokenError(err.Error(), nil)
+		return errors.UnauthorizedHTTPException(err.Error(), nil)
 	}
 
 	// Retreive claims map from token
 	_, ok := getClaims(tkn)
 	if !ok {
 		log.Debug("Token validation error - error obtaining claims from token")
-		return errors.NewInvalidTokenError("token validation error - error obtaining claims from token", nil)
+		return errors.UnauthorizedHTTPException("token validation error - error obtaining claims from token", nil)
 	}
 
 	// Validate Rules

@@ -59,8 +59,9 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)
 	case policy.OIDC:
 		log.Info("OIDC policies are not supported")
-		fallthrough
+		return &v1beta1.CheckResult{Status: status.OK}, nil
 	default:
+		log.Debug("No OIDC/JWT policies configured")
 		return &v1beta1.CheckResult{Status: status.OK}, nil
 	}
 }

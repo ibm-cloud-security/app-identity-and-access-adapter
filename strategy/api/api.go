@@ -32,12 +32,16 @@ type APIStrategy struct {
 	parser validator.TokenValidator
 }
 
+////////////////// constructor //////////////////
+
 // New constructs a new APIStrategy used to handle API Requests
 func New() *APIStrategy {
 	return &APIStrategy{
 		parser: validator.New(),
 	}
 }
+
+////////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
 func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, policies []manager.PolicyAction) (*adapter.CheckResult, error) {
@@ -86,6 +90,8 @@ func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	return &adapter.CheckResult{Status: status.OK}, nil
 }
 
+////////////////// utilities //////////////////
+
 // Parse authorization header from gRPC props
 func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OAuthError) {
 
@@ -95,19 +101,18 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OA
 
 			// Authorization header should exist
 			if authHeader == "" {
-				return nil, errors.NewInvalidRequestError("missing authorization header")
-
+				return nil, errors.UnauthorizedHTTPException("authorization header not provided", nil)
 			}
 
 			// Authorization header must be in the format Bearer <access_token> <optional id_token>
 			parts := strings.SplitN(authHeader, " ", 3)
 			if len(parts) != 2 && len(parts) != 3 {
-				return nil, errors.NewInvalidRequestError("authorization header malformed - expected 'Bearer <access_token> <optional id_token>'")
+				return nil, errors.UnauthorizedHTTPException("authorization header malformed - expected 'Bearer <access_token> <optional id_token>'", nil)
 			}
 
 			// Authorization header must begin with bearer
 			if parts[0] != "Bearer" && parts[0] != "bearer" {
-				return nil, errors.NewInvalidRequestError("invalid authorization header format - expected 'bearer'")
+				return nil, errors.UnauthorizedHTTPException("unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'", nil)
 			}
 
 			var idToken = ""
@@ -121,34 +126,7 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*tokens, *errors.OA
 			}, nil
 		}
 	}
-	return nil, errors.NewInvalidRequestError("authorization header does not exist")
-}
-
-//// SHARED TODO MOVE ////
-
-// Decodes gRPC values into string interface
-func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, v := range in {
-		out[k] = decodeValue(v.GetValue())
-	}
-	return out
-}
-
-// Decodes policy value into standard type
-func decodeValue(in interface{}) interface{} {
-	switch t := in.(type) {
-	case *policy.Value_StringValue:
-		return t.StringValue
-	case *policy.Value_Int64Value:
-		return t.Int64Value
-	case *policy.Value_DoubleValue:
-		return t.DoubleValue
-	case *policy.Value_IpAddressValue:
-		return t.IpAddressValue
-	default:
-		return fmt.Sprintf("%v", in)
-	}
+	return nil, errors.UnauthorizedHTTPException("authorization header not provided", nil)
 }
 
 // buildErrorResponse creates the rfc specified OAuth 2.0 error result
@@ -177,4 +155,31 @@ func buildErrorResponse(err *errors.OAuthError) (*adapter.CheckResult, error) {
 			})},
 		},
 	}, nil
+}
+
+//// SHARED ////
+
+// Decodes gRPC values into string interface
+func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = decodeValue(v.GetValue())
+	}
+	return out
+}
+
+// Decodes policy value into standard type
+func decodeValue(in interface{}) interface{} {
+	switch t := in.(type) {
+	case *policy.Value_StringValue:
+		return t.StringValue
+	case *policy.Value_Int64Value:
+		return t.Int64Value
+	case *policy.Value_DoubleValue:
+		return t.DoubleValue
+	case *policy.Value_IpAddressValue:
+		return t.IpAddressValue
+	default:
+		return fmt.Sprintf("%v", in)
+	}
 }

@@ -1,3 +1,4 @@
+// package keyset contains entities to control JSON Web Key Sets (JWKS)
 package keyset
 
 import (
