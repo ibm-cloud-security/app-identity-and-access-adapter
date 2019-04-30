@@ -34,7 +34,7 @@ go build . && go run cmd/main.go 47304
 #### Start the Istio Mixer
 
 ```
-$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/ibmcloudappid/testdata --log_output_level=attributes:debug
+$GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/ibmcloudappid/adapter/testdata --log_output_level=attributes:debug
 ```
 
 ### Testing

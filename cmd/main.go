@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"ibmcloudappid"
-	"istio.io/istio/pkg/log"
 	"os"
+
+	"github.com/spf13/cobra"
+	"ibmcloudappid/adapter"
+	"istio.io/istio/pkg/log"
 )
 
 // args represents args consumed by IBMCloudAppID OOP adapter.
@@ -58,7 +59,7 @@ func runServer(args *args) {
 	}
 
 	// Configure Adapter
-	s, err := ibmcloudappid.NewAppIDAdapter(args.adapterPort)
+	s, err := adapter.NewAppIDAdapter(args.adapterPort)
 	if err != nil {
 		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
 		os.Exit(-1)
