@@ -2,11 +2,14 @@ package keyset
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -82,10 +85,11 @@ func TestUpdateKeys(t *testing.T) {
 		// Generate new key util
 		util := New(testURL, httpClient).(*RemoteKeySet)
 		assert.Equal(t, util.PublicKeyURL(), testURL)
+		_, err := util.updateKeys()
 		if e.shouldSucceed {
-			assert.Equal(t, util.updateKeys(), nil)
+			assert.Equal(t, err, nil)
 		} else {
-			assert.NotEqual(t, util.updateKeys(), nil)
+			assert.NotEqual(t, err, nil)
 		}
 		assert.Equal(t, len(util.publicKeys), e.length)
 		if e.length == 1 {
@@ -95,6 +99,31 @@ func TestUpdateKeys(t *testing.T) {
 		// cleanup
 		server.Close()
 	}
+}
+
+func TestUpdateKeysGroup(t *testing.T) {
+	var count = 0
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count++
+		time.Sleep(1000)
+		w.Write([]byte(publicKeysOkResponse))
+	})
+	httpClient, server := httpClient(h)
+	util := New(server.URL, httpClient).(*RemoteKeySet)
+	assert.Equal(t, 1, count)
+	count = 0
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			err := util.updateKeyGroup()
+			assert.Nil(t, err)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	assert.Equal(t, 1, count)
+	server.Close()
 }
 
 // httpClient mock
