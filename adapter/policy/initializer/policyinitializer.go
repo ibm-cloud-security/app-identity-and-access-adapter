@@ -14,7 +14,6 @@ import (
 	policiesClientSet "ibmcloudappid/adapter/pkg/client/clientset/versioned"
 	policiesInformer "ibmcloudappid/adapter/pkg/client/informers/externalversions"
 	policyController "ibmcloudappid/adapter/policy/controller"
-	policyHandler "ibmcloudappid/adapter/policy/handler"
 	"ibmcloudappid/adapter/policy/manager"
 	"istio.io/istio/pkg/log"
 )
@@ -145,7 +144,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 		Clientset: client,
 		Informer:  informer,
 		Queue:     queue,
-		Handler:   &policyHandler.PolicyHandler{policyManager},
+		Handler:   policyManager,
 	}
 
 	stopCh := make(chan struct{})

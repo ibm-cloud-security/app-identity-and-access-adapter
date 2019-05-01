@@ -16,7 +16,7 @@ import (
 // PolicyManager is responsible for storing and managing policy/client data
 type PolicyManager interface {
 	Evaluate(*authorization.ActionMsg) Action
-	HandleAddEvent(obj interface{})
+	HandleAddUpdateEvent(obj interface{})
 	HandleDeleteEvent(obj interface{})
 }
 
@@ -100,10 +100,10 @@ func (m *Manager) Evaluate(action *authorization.ActionMsg) Action {
 }
 
 // HandleAddEvent updates the store after a CRD has been added
-func (m *Manager) HandleAddEvent(obj interface{}) {
+func (m *Manager) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
-		log.Debugf("Created JwtPolicy : ID: %s", crd.ObjectMeta.UID)
+		log.Debugf("Create/Update JwtPolicy : ID: %s", crd.ObjectMeta.UID)
 
 		// If we already are tracking this authentication server, skip
 		if _, ok := m.authservers[crd.Spec.JwksURL]; !ok {
@@ -124,7 +124,7 @@ func (m *Manager) HandleAddEvent(obj interface{}) {
 			}
 			m.apiPolicies[ep] = append(m.apiPolicies[ep], crd.Spec)
 		}
-		log.Infof("JwtPolicy created : ID %s", crd.ObjectMeta.UID)
+		log.Infof("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
 		log.Debugf("OidcPolicy created : ID: %s", crd.ObjectMeta.UID)
 		log.Infof("OidcPolicy created : ID %s", crd.ObjectMeta.UID)
