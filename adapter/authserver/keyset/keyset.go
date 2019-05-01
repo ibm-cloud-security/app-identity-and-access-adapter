@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"istio.io/istio/pkg/log"
 	"net/http"
@@ -45,6 +46,10 @@ func New(publicKeyURL string, httpClient *http.Client) KeySet {
 
 // PublicKey returns the public key with the specified kid
 func (s *RemoteKeySet) PublicKey(kid string) crypto.PublicKey {
+	if key := s.publicKeys[kid]; key != nil {
+		return key
+	}
+	s.updateKeysGrouped()
 	return s.publicKeys[kid]
 }
 
@@ -55,12 +60,13 @@ func (s *RemoteKeySet) PublicKeyURL() string {
 
 // updateKeyGroup issues /publicKeys request using shared request group
 func (s *RemoteKeySet) updateKeysGrouped() error {
+	log.Info("updateKeysGrouped", zap.Int("int", 1), zap.Bool("bool", true))
 	_, err, _ := s.requestGroup.Do(s.publicKeyURL, func() (interface{}, error) {
 		return s.updateKeys()
 	})
 
 	if err != nil {
-		log.Debugf("Error request public keys: %v", err)
+		log.Debugf("An error occurred requesting public keys: %v", err)
 		return err
 	}
 

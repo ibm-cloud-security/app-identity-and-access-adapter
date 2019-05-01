@@ -45,9 +45,6 @@ func getCmd() *cobra.Command {
 	f.Uint16VarP(&sa.adapterPort, "port", "p", sa.adapterPort, "TCP port to use for gRPC Adapter API")
 	f.BoolVarP(&sa.verbose, "verbose", "v", sa.verbose, "Use verbose logging")
 
-	scope := log.Scopes()["default"]
-	scope.SetOutputLevel(log.DebugLevel)
-
 	return cmd
 }
 
@@ -59,7 +56,8 @@ func runServer(args *args) {
 	}
 
 	// Configure Adapter
-	s, err := adapter.NewAppIDAdapter(args.adapterPort)
+	addr := fmt.Sprintf(":%d", args.adapterPort)
+	s, err := adapter.NewAppIDAdapter(addr)
 	if err != nil {
 		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
 		os.Exit(-1)

@@ -96,11 +96,10 @@ func (s *AppidAdapter) Close() error {
 ////////////////// constructor //////////////////////////
 
 // NewAppIDAdapter creates a new App ID Adapter listening on the provided port.
-func NewAppIDAdapter(port uint16) (Server, error) {
-	saddr := fmt.Sprintf(":%d", port)
+func NewAppIDAdapter(addr string) (Server, error) {
 
-	// Ensure we have correct configuration
-	listener, err := net.Listen("tcp", saddr)
+	// Being listening for requests
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Errorf("Unable to listen on socket: %v", err)
 		return nil, fmt.Errorf("unable to listen on socket: %v", err)
