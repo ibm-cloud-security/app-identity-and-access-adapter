@@ -36,19 +36,7 @@ func New(publicKeyURL string, httpClient *http.Client) KeySet {
 		httpClient:   httpClient,
 	}
 
-	// Retrieve the public keys which are used to verify the tokens
-	for i := 0; i < 5; i++ {
-		if err := pku.updateKeyGroup(); err != nil {
-			log.Infof("Failed to get public keys. Assuming failure is temporary, will retry later...")
-			log.Error(err.Error())
-			if i == 4 {
-				log.Errorf("Unable to obtain public keys after multiple attempts. Please restart the Ingress Pods.")
-			}
-		} else {
-			log.Infof("Successfully obtained public keys...")
-			break
-		}
-	}
+	pku.updateKeysGrouped()
 
 	return &pku
 }
@@ -66,7 +54,7 @@ func (s *RemoteKeySet) PublicKeyURL() string {
 }
 
 // updateKeyGroup issues /publicKeys request using shared request group
-func (s *RemoteKeySet) updateKeyGroup() error {
+func (s *RemoteKeySet) updateKeysGrouped() error {
 	_, err, _ := s.requestGroup.Do(s.publicKeyURL, func() (interface{}, error) {
 		return s.updateKeys()
 	})

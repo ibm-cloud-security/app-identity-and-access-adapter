@@ -101,7 +101,7 @@ func TestUpdateKeys(t *testing.T) {
 	}
 }
 
-func TestUpdateKeysGroup(t *testing.T) {
+func TestUpdateKeysGrouped(t *testing.T) {
 	var count = 0
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count++
@@ -116,7 +116,7 @@ func TestUpdateKeysGroup(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
-			err := util.updateKeyGroup()
+			err := util.updateKeysGrouped()
 			assert.Nil(t, err)
 			wg.Done()
 		}()
