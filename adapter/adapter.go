@@ -14,6 +14,7 @@ import (
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/initializer"
 	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/strategy"
 	apistrategy "ibmcloudappid/adapter/strategy/api"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	//webstrategy "ibmcloudappid/adapter/strategy/web"
@@ -38,7 +39,7 @@ type (
 	AppidAdapter struct {
 		listener    net.Listener
 		server      *grpc.Server
-		apistrategy *apistrategy.APIStrategy
+		apistrategy strategy.Strategy
 		manager     manager.PolicyManager
 	}
 )

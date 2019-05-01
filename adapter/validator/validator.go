@@ -22,7 +22,7 @@ type TokenValidator interface {
 // Validator implements the TokenValidator
 type Validator struct{}
 
-// RawTokens -
+// RawTokens - holds references to raw access and id tokens
 type RawTokens struct {
 	Access string
 	ID     string
@@ -39,20 +39,42 @@ func New() TokenValidator {
 
 // Validate validates tokens according to the specified policies
 func (*Validator) Validate(tokens RawTokens, policies []manager.PolicyAction) *errors.OAuthError {
-	seen := make(map[string]bool)
+	seenSet := make(map[string]struct{})
+
+	var accessToken *jwt.Token
+	var idToken *jwt.Token
+	var err error
 
 	for _, p := range policies {
 		if p.KeySet == nil {
 			log.Error("Internal Server Error: Missing policy keyset")
-			return &errors.OAuthError{Code: errors.InternalServerError}
+			return &errors.OAuthError{Msg: errors.InternalServerError}
 		}
 
-		if wasSeen, ok := seen[p.KeySet.PublicKeyURL()]; ok && !wasSeen {
-			seen[p.KeySet.PublicKeyURL()] = true
+		// only validate signature for new endpoints
+		if _, ok := seenSet[p.KeySet.PublicKeyURL()]; !ok {
+			if len(seenSet) == 1 {
+				log.Warn("Conflicting policies: requesting signature validation against multiple authorization servers.")
+			}
+			// Parse the access token - validate expiration and signature
+			accessToken, err = validateSignature(tokens.Access, p.KeySet)
+			if err != nil {
+				return errors.UnauthorizedHTTPException(err.Error(), nil)
+			}
+
+			// Parse the id token - validate expiration and signature
+			if tokens.ID != "" {
+				idToken, err = validateSignature(tokens.ID, p.KeySet)
+				if err != nil {
+					return errors.UnauthorizedHTTPException(err.Error(), nil)
+				}
+			}
+
+			seenSet[p.KeySet.PublicKeyURL()] = struct{}{}
 		}
 
 		// Validate access token
-		err := parseAndvalidate(tokens.Access, p.KeySet)
+		err := validateClaims(accessToken)
 		if err != nil {
 			log.Debugf("Unauthorized - invalid access token - %s", err)
 			return err
@@ -60,22 +82,23 @@ func (*Validator) Validate(tokens RawTokens, policies []manager.PolicyAction) *e
 
 		// If necessary, validate ID token
 		if tokens.ID != "" {
-			err = parseAndvalidate(tokens.ID, p.KeySet)
+			err = validateClaims(idToken)
 			if err != nil {
-				log.Debugf("Unauthorized - invalid ID token - %s", err)
+				log.Debugf("Unauthorized - invalid ID token : %s", err)
 				return err
 			}
 		}
 	}
 
-	log.Debug("Authorized. Received valid tokens")
+	log.Debug("Authorized")
 
 	return nil
 }
 
-// parse parses the given token and verifies the ExpiresAt, NotBefore, and signature
-func parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
-	log.Debugf("Parsing token: %s", token)
+////////////////// utils //////////////////////////
+
+// validateSignature parses the given token and verifies the ExpiresAt, NotBefore, and signature
+func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 
 	// Method used by token library to get public key for signature validation
 	getKey := func(token *jwt.Token) (interface{}, error) {
@@ -100,32 +123,22 @@ func parse(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 	return jwt.Parse(token, getKey)
 }
 
-// parseAndvalidate validates a given JWT's signature, expiration, and given claims
-func parseAndvalidate(token string, jwks keyset.KeySet) *errors.OAuthError {
-	log.Debugf("Validating token: %s", token)
-
-	// Parse the token - validate expiration and signature
-	tkn, err := parse(token, jwks)
-
-	// Check if base token is valid.
-	if err != nil {
-		return errors.UnauthorizedHTTPException(err.Error(), nil)
+// validateClaims validates claims based on policies
+func validateClaims(token *jwt.Token) *errors.OAuthError {
+	if token == nil {
+		log.Error("Unexpectantly received nil token during validation")
+		return &errors.OAuthError{Msg: errors.InternalServerError}
 	}
 
 	// Retreive claims map from token
-	_, ok := getClaims(tkn)
-	if !ok {
+	_, err := getClaims(token)
+	if err != nil {
 		log.Debug("Token validation error - error obtaining claims from token")
-		return errors.UnauthorizedHTTPException("token validation error - error obtaining claims from token", nil)
+		return err
 	}
-
 	// Validate Rules
-
 	return nil
-
 }
-
-////////////////// utils //////////////////////////
 
 // validateClaim given claim
 func validateClaim(name string, expected string, claims jwt.MapClaims) error {
@@ -142,10 +155,12 @@ func validateClaim(name string, expected string, claims jwt.MapClaims) error {
 }
 
 // getClaims retrieves claims map from JWT
-func getClaims(token *jwt.Token) (jwt.MapClaims, bool) {
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, true
+func getClaims(token *jwt.Token) (jwt.MapClaims, *errors.OAuthError) {
+	if token != nil {
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			return claims, nil
+		}
 	}
 	log.Debugf("Token validation error - invalid JWT token: %v", token)
-	return nil, false
+	return nil, &errors.OAuthError{Msg: errors.InternalServerError}
 }

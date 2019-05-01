@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	testKid = "appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497"
-	// Test keys signed with ../test/key.private
+	testKid         = "appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497"
+	pathToPublicKey = "../../test/key.pub"
+	// Test keys signed with ../../test/key.private
 	// Expires year: 5148
 	testValidToken      = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6OTk5OTk5OTk5OTksImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.aAR5nZ4S5nifq1Y5_CZpO-s0RD8Mqy6Y_4WJCqoMv5ZIu8D6Ski061rC1Y_sNHVJ283c-qANc0TCAXPGse7vDelkGO2kyo67PzzefZMLXWf-bXZsLfKx_Ivoj7caevq7mP3m0_M4hpkKpiP6KTlW5BlpoLTnroje2ZmTIwSeJ_5Fvx7pwmhmATrVG-zYx3wvDUHNVAQJcxpuPL6ngjuS8KhlWeOdp4wpoyk--DwllNOTjR1m-TuICQ9sL_ioDTZmJtXO3w1KKFzN79H35Ia30jIuqaPBd8SiNTZDuDdaZZt1XSfCLC4ovZvkhYfxk97AKNddr75lzMHUHEAk8SIk3w"
 	testExpiredToken    = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.c8J_IzG8aH4eq2vBrhOAv7v4JrugxwC8rrZCtMNp0qFbshfOWbNlWLzXYsBNBA_mCpbkP9ChH77Vb0iVY3tnjvatOXyd5udPqn5ETwlU6jS9f3OAqM5xgGUc78BgujlHGxsWUK-IvM8yNwHc18mj9iRQpIvKLxjLn2asha6UR9QwWCpuDIjfXy_Fnn65-3s6riVJ9dgJnHtKDRYmmvJCICfZYXdDSMQmQXcjxALNd1uuJIar4dhakfzQoiCVQZf7SXkseWye5ghDCdIU0oGBxuFcMypSd6bCUJrOnZHGOeS_F6OBvNPGn20EqpfnL8nCYr5wTugArmaRy65XI-PccQ"
@@ -22,46 +23,102 @@ const (
 	testAlternateKid    = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJvdGhlciIsInZlciI6M30.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.Gyan705Sy_HC_1iHSdyBhFepysB4Gf8WeJmxgf-WQeytaZa8dXjv_VdZrTaX-OtVfRPZEn-FGLr-KKRbEad8jl-of-A6fc6U10JBA8zT5tx5yYTBeCWxBOrJAN4bYZIUKdcRX24-iMoyrm1wt3jCuA3Z3fGnncBq4ndwIhVUqpf_hrivcQlhXk9JEYMzwxydYaWI_ZRhQT21lAC8H1DaLwNbMe_0AfBGhyO4Yk3boa68Mhd3uhYFZQ_NIemXa2oXI3R_gWLdM43qrNkBs_7YFEWIa6hI6A3Yyzz95ZbiZv23lFEym_lAFoqkCt9MAcWhitnG1Gg-IWEr_C-uPTNknw"
 )
 
+////// Mocks /////
 type localServer struct {
 	ks keyset.KeySet
 }
 
 func (s *localServer) KeySet() keyset.KeySet { return s.ks }
 
-type localKeySet struct{}
+type localKeySet struct{ url string }
 
-func (k *localKeySet) PublicKeyURL() string { return "https://url.com" }
+func (k *localKeySet) PublicKeyURL() string { return k.url }
 func (k *localKeySet) PublicKey(kid string) crypto.PublicKey {
-	if kid == testKid {
-		keyData, _ := ioutil.ReadFile("../../test/key.pub")
+	if kid == testKid && k.url != "ignore" {
+		keyData, _ := ioutil.ReadFile(pathToPublicKey)
 		key, _ := jwt.ParseRSAPublicKeyFromPEM(keyData)
 		return key
 	}
 	return nil
 }
 
-var testKeySet = &localKeySet{}
+var testKeySet = &localKeySet{url: "https://keys.com/publickeys"}
+var testKeySet2 = &localKeySet{url: "ignore"}
 var testLocalServer = localServer{ks: testKeySet}
+
+// Policy arrays
+var emptyPolicy = []manager.PolicyAction{}
+var singlePolicy = []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}}
+var missingKeySet = []manager.PolicyAction{manager.PolicyAction{KeySet: nil}}
+var conflictingPolicies = []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}, manager.PolicyAction{KeySet: testKeySet2}}
 
 /////// Token Validation ///////
 
-func TestTokenValidation(t *testing.T) {
+func TestAccessTokenValidation(t *testing.T) {
 	var tests = []struct {
-		token       string
+		accessToken string
+		idToken     string
 		expectErr   bool
 		expectedMsg string
+		policies    []manager.PolicyAction
 	}{
-		{testValidToken, false, ""},
-		{testExpiredToken, true, "Token is expired"},
-		{testValidToken + "other", true, "crypto/rsa: verification error"},
-		{testTokenMissingKid, true, "token validation error - kid is missing"},
-		{testAlternateKid, true, "token validation error - key not found for kid: other"},
-		{"p1.p2", true, "token contains an invalid number of segments"},
+		{testValidToken, "", false, "", nil},
+		{testValidToken, "", false, "", emptyPolicy},
+		{testValidToken, "", true, "Internal Server Error", missingKeySet},
+
+		// Access token
+		{testValidToken, "", false, "", singlePolicy},
+		{testExpiredToken, "", true, "Token is expired", singlePolicy},
+		{testValidToken + "other", "", true, "crypto/rsa: verification error", singlePolicy},
+		{testTokenMissingKid, "", true, "token validation error - kid is missing", singlePolicy},
+		{testAlternateKid, "", true, "token validation error - key not found for kid: other", singlePolicy},
+		{"p1.p2", "", true, "token contains an invalid number of segments", singlePolicy},
+		{testValidToken, "", true, "token validation error - key not found for kid: appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497", conflictingPolicies},
+
+		// ID Token
+		{testValidToken, testValidToken, false, "", singlePolicy},
+		{testValidToken, testExpiredToken, true, "Token is expired", singlePolicy},
+		{testValidToken, testValidToken + "other", true, "crypto/rsa: verification error", singlePolicy},
+		{testValidToken, testTokenMissingKid, true, "token validation error - kid is missing", singlePolicy},
+		{testValidToken, testAlternateKid, true, "token validation error - key not found for kid: other", singlePolicy},
+		{testValidToken, "p1.p2", true, "token contains an invalid number of segments", singlePolicy},
+		{testValidToken, testValidToken, true, "token validation error - key not found for kid: appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497", conflictingPolicies},
 	}
 	v := New()
 
 	for _, e := range tests {
-		err := v.Validate(RawTokens{Access: e.token, ID: e.token}, []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}})
+		err := v.Validate(RawTokens{Access: e.accessToken, ID: e.idToken}, e.policies)
+		if err != nil && e.expectErr {
+			assert.Equal(t, e.expectedMsg, err.Error())
+		} else if err != nil && !e.expectErr {
+			assert.Fail(t, "Unexpected error: "+err.Error())
+		} else if err == nil && e.expectErr {
+			assert.Fail(t, "Expected to receive error: "+e.expectedMsg)
+		}
+	}
+}
+
+func TestIDTokenValidation(t *testing.T) {
+	var tests = []struct {
+		accessToken string
+		idToken     string
+		expectErr   bool
+		expectedMsg string
+		policies    []manager.PolicyAction
+	}{
+		// ID Token
+		{testValidToken, testValidToken, false, "", singlePolicy},
+		{testValidToken, testExpiredToken, true, "Token is expired", singlePolicy},
+		{testValidToken, testValidToken + "other", true, "crypto/rsa: verification error", singlePolicy},
+		{testValidToken, testTokenMissingKid, true, "token validation error - kid is missing", singlePolicy},
+		{testValidToken, testAlternateKid, true, "token validation error - key not found for kid: other", singlePolicy},
+		{testValidToken, "p1.p2", true, "token contains an invalid number of segments", singlePolicy},
+		{testValidToken, testValidToken, true, "token validation error - key not found for kid: appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497", conflictingPolicies},
+	}
+	v := New()
+
+	for _, e := range tests {
+		err := v.Validate(RawTokens{Access: e.accessToken, ID: e.idToken}, e.policies)
 		if err != nil && e.expectErr {
 			assert.Equal(t, e.expectedMsg, err.Error())
 		} else if err != nil && !e.expectErr {
@@ -97,4 +154,15 @@ func TestClaimValidation(t *testing.T) {
 			assert.Nil(t, err)
 		}
 	}
+}
+
+func TestValidateClaims(t *testing.T) {
+	err := validateClaims(nil)
+	assert.Equal(t, err.Error(), "Internal Server Error")
+}
+
+func TestGetClaims(t *testing.T) {
+	claims, err := getClaims(nil)
+	assert.Nil(t, claims)
+	assert.NotNil(t, err)
 }

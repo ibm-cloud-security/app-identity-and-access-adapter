@@ -1,13 +1,13 @@
 package apistrategy
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"ibmcloudappid/adapter/errors"
 	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/strategy"
 	"ibmcloudappid/adapter/validator"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
@@ -30,7 +30,7 @@ type APIStrategy struct {
 ////////////////// constructor //////////////////
 
 // New constructs a new APIStrategy used to handle API Requests
-func New() *APIStrategy {
+func New() strategy.Strategy {
 	return &APIStrategy{
 		tokenUtil: validator.New(),
 	}
@@ -40,20 +40,20 @@ func New() *APIStrategy {
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
 func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, policies []manager.PolicyAction) (*adapter.CheckResult, error) {
-	props := decodeValueMap(r.Instance.Subject.Properties)
+	props := strategy.DecodeValueMap(r.Instance.Subject.Properties)
 
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(props)
 	if err != nil {
 		log.Debugf("Unauthorized: " + err.Error())
-		return buildErrorResponse(err)
+		return buildErrorResponse(err), nil
 	}
 
 	// Validate Authorization Tokens
 	err = s.tokenUtil.Validate(*tokens, policies)
 	if err != nil {
 		log.Debugf("Unauthorized: " + err.Error())
-		return buildErrorResponse(err)
+		return buildErrorResponse(err), nil
 	}
 
 	log.Debug("Found valid authorization header")
@@ -101,7 +101,7 @@ func getAuthTokensFromRequest(props map[string]interface{}) (*validator.RawToken
 }
 
 // buildErrorResponse creates the rfc specified OAuth 2.0 error result
-func buildErrorResponse(err *errors.OAuthError) (*adapter.CheckResult, error) {
+func buildErrorResponse(err *errors.OAuthError) *adapter.CheckResult {
 	header := bearer + " realm=\"token\""
 	if err != nil {
 		scopes := err.ScopeStr()
@@ -125,32 +125,5 @@ func buildErrorResponse(err *errors.OAuthError) (*adapter.CheckResult, error) {
 				Headers: map[string]string{wwwAuthenticate: header},
 			})},
 		},
-	}, nil
-}
-
-//// SHARED ////
-
-// Decodes gRPC values into string interface
-func decodeValueMap(in map[string]*policy.Value) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, v := range in {
-		out[k] = decodeValue(v.GetValue())
-	}
-	return out
-}
-
-// Decodes policy value into standard type
-func decodeValue(in interface{}) interface{} {
-	switch t := in.(type) {
-	case *policy.Value_StringValue:
-		return t.StringValue
-	case *policy.Value_Int64Value:
-		return t.Int64Value
-	case *policy.Value_DoubleValue:
-		return t.DoubleValue
-	case *policy.Value_IpAddressValue:
-		return t.IpAddressValue
-	default:
-		return fmt.Sprintf("%v", in)
 	}
 }
