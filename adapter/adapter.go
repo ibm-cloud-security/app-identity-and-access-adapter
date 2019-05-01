@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/initializer"
-	"ibmcloudappid/adapter/policy/manager"
 	"ibmcloudappid/adapter/strategy"
 	apistrategy "ibmcloudappid/adapter/strategy/api"
 	"istio.io/api/mixer/adapter/model/v1beta1"
@@ -40,7 +39,7 @@ type (
 		listener    net.Listener
 		server      *grpc.Server
 		apistrategy strategy.Strategy
-		manager     manager.PolicyManager
+		manager     handler.PolicyManager
 	}
 )
 

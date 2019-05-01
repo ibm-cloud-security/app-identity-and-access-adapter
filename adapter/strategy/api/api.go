@@ -6,7 +6,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/handler"
 	"ibmcloudappid/adapter/strategy"
 	"ibmcloudappid/adapter/validator"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
@@ -39,7 +39,7 @@ func New() strategy.Strategy {
 ////////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, policies []manager.PolicyAction) (*adapter.CheckResult, error) {
+func (s *APIStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, policies []handler.PolicyAction) (*adapter.CheckResult, error) {
 	props := strategy.DecodeValueMap(r.Instance.Subject.Properties)
 
 	// Parse Authorization Header

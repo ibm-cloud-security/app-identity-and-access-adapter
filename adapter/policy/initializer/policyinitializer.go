@@ -14,25 +14,25 @@ import (
 	policiesClientSet "ibmcloudappid/adapter/pkg/client/clientset/versioned"
 	policiesInformer "ibmcloudappid/adapter/pkg/client/informers/externalversions"
 	policyController "ibmcloudappid/adapter/policy/controller"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/handler"
 	"istio.io/istio/pkg/log"
 )
 
 // Initializer interface contains the methods that are required
 type Initializer interface {
-	GetManager() manager.PolicyManager
+	GetManager() handler.PolicyManager
 }
 
 type PolicyInitializer struct {
-	Manager manager.PolicyManager
+	Manager handler.PolicyManager
 }
 
-func (pi *PolicyInitializer) GetManager() manager.PolicyManager {
+func (pi *PolicyInitializer) GetManager() handler.PolicyManager {
 	return pi.Manager
 }
 
 func New() (Initializer, error) {
-	policyManager := manager.New()
+	policyManager := handler.New()
 	policyInitializer := &PolicyInitializer{policyManager}
 
 	client, myresourceClient, err := getKubernetesClient()
@@ -95,7 +95,7 @@ func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface, e
 	return client, policiesClient, nil
 }
 
-func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyManager manager.PolicyManager) {
+func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyManager handler.PolicyManager) {
 	// create a new queue so that when the informer gets a resource that is either
 	// a result of listing or watching, we can add an idenfitying key to the queue
 	// so that it can be handled in the handler

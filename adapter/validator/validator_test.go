@@ -8,7 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 	"ibmcloudappid/adapter/authserver/keyset"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/handler"
 )
 
 const (
@@ -47,10 +47,10 @@ var testKeySet2 = &localKeySet{url: "ignore"}
 var testLocalServer = localServer{ks: testKeySet}
 
 // Policy arrays
-var emptyPolicy = []manager.PolicyAction{}
-var singlePolicy = []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}}
-var missingKeySet = []manager.PolicyAction{manager.PolicyAction{KeySet: nil}}
-var conflictingPolicies = []manager.PolicyAction{manager.PolicyAction{KeySet: testKeySet}, manager.PolicyAction{KeySet: testKeySet2}}
+var emptyPolicy = []handler.PolicyAction{}
+var singlePolicy = []handler.PolicyAction{handler.PolicyAction{KeySet: testKeySet}}
+var missingKeySet = []handler.PolicyAction{handler.PolicyAction{KeySet: nil}}
+var conflictingPolicies = []handler.PolicyAction{handler.PolicyAction{KeySet: testKeySet}, handler.PolicyAction{KeySet: testKeySet2}}
 
 /////// Token Validation ///////
 
@@ -60,7 +60,7 @@ func TestAccessTokenValidation(t *testing.T) {
 		idToken     string
 		expectErr   bool
 		expectedMsg string
-		policies    []manager.PolicyAction
+		policies    []handler.PolicyAction
 	}{
 		{testValidToken, "", false, "", nil},
 		{testValidToken, "", false, "", emptyPolicy},
@@ -104,7 +104,7 @@ func TestIDTokenValidation(t *testing.T) {
 		idToken     string
 		expectErr   bool
 		expectedMsg string
-		policies    []manager.PolicyAction
+		policies    []handler.PolicyAction
 	}{
 		// ID Token
 		{testValidToken, testValidToken, false, "", singlePolicy},

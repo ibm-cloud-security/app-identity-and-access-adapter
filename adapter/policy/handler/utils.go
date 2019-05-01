@@ -1,4 +1,4 @@
-package manager
+package handler
 
 import (
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
@@ -6,12 +6,12 @@ import (
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []endpoint {
-	log.Infof("%v", target)
+	log.Infof("target %v", target)
 	endpoints := make([]endpoint, 0)
 	if target != nil || len(target) != 0 {
 		for _, items := range target {
 			service := items.ServiceName
-			if items.Paths != nil || len(items.Paths) != 0 {
+			if items.Paths != nil || len(items.Paths) > 0 {
 				for _, path := range items.Paths {
 					endpoints = append(endpoints, endpoint{namespace: namespace, service: service, path: path, method: "*"})
 				}

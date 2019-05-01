@@ -3,7 +3,7 @@ package controller
 import (
 	"fmt"
 	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/handler"
 	"time"
 
 	"istio.io/istio/pkg/log"
@@ -22,7 +22,7 @@ type Controller struct {
 	Clientset kubernetes.Interface
 	Queue     workqueue.RateLimitingInterface
 	Informer  cache.SharedIndexInformer
-	Handler   manager.PolicyManager
+	Handler   handler.PolicyManager
 }
 
 // Run is the main path of execution for the controller loop
