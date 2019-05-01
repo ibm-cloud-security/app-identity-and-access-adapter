@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"ibmcloudappid/adapter/policy"
 	"time"
 
 	"istio.io/istio/pkg/log"
@@ -110,7 +111,7 @@ func (c *Controller) processNextItem() bool {
 	// a code path of successful queue key processing
 	if !exists {
 		log.Debugf("Controller.processNextItem: object deleted detected: %s", keyRaw)
-		c.Handler.ObjectDeleted(item)
+		c.Handler.ObjectDeleted(policy.CrdKey{Id:keyRaw})
 		c.Queue.Forget(key)
 	} else {
 		log.Debugf("Controller.processNextItem: object created detected: %s", keyRaw)

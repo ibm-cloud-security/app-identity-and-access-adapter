@@ -25,7 +25,7 @@
 
 ```
 helm init
-helm install ./helm/ibmcloudappid -f ./helm/config.yaml --name ibmcloudappid
+helm install ./helm/ibmcloudappid --name ibmcloudappid
 ```
 ### Logging
 

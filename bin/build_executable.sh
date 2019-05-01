@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This script builds the imcloudappid adapter executable
 
 echo Building Linux Executable

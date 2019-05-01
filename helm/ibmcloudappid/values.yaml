@@ -2,7 +2,7 @@ appName: ibmcloudappid
 
 replicaCount: 1
 image:
-  repository: aliberat1/istio-adapter-ibmcloudappid
+  repository: ishangulhane/istio-adapter-ibmcloudappid
   tag: latest
   pullPolicy: Always
 

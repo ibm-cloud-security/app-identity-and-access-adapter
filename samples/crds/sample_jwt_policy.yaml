@@ -2,7 +2,7 @@ apiVersion: "appid.cloud.ibm.com/v1"
 kind: JwtPolicy
 metadata:
   name: samplejwtpolicy
-  namespace: multi-cloud-tech-preview
+  namespace: istio-system
 spec:
   jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v3/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
 

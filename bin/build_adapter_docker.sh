@@ -1,9 +1,10 @@
+#!/usr/bin/env bash
 # This script builds the docker image and pushes it to the container registry
 # 
 
 APP_NAME=istio-adapter-ibmcloudappid
 APP_VERSION=latest
-IMAGE_REGISTRY_NAMESPACE=aliberat1
+IMAGE_REGISTRY_NAMESPACE=ishangulhane
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${APP_VERSION}
 
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${APP_VERSION}

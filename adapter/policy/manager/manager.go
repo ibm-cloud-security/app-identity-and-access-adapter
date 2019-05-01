@@ -2,6 +2,7 @@
 package manager
 
 import (
+	"reflect"
 	"ibmcloudappid/adapter/authserver"
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/client"
@@ -29,6 +30,8 @@ type Manager struct {
 	apiPolicies map[endpoint][]v1.JwtPolicySpec
 	// policies maps endpoint -> list of policies
 	webPolicies map[endpoint][]v1.OidcPolicySpec
+	// policyMappings maps policy(namespace/name) -> list of created endpoints
+	policyMappings map[string]PolicyMapping
 }
 
 // Action encapsulates information needed to begin executing a policy
@@ -47,8 +50,15 @@ type endpoint struct {
 	namespace, service, path, method string
 }
 
-////////////////// constructor //////////////////
+// PolicyMapping captures information of created endpoints by policy
+type PolicyMapping struct {
+	Type     	policy.Type
+	Endpoints 	[]endpoint
+	Spec 		interface{}
+}
 
+////////////////// constructor //////////////////
+//map[int]bool
 // New creates a PolicyManager
 func New() PolicyManager {
 	return &Manager{
@@ -56,6 +66,7 @@ func New() PolicyManager {
 		authservers: make(map[string]authserver.AuthorizationServer),
 		apiPolicies: make(map[endpoint][]v1.JwtPolicySpec),
 		webPolicies: make(map[endpoint][]v1.OidcPolicySpec),
+		policyMappings: make(map[string]PolicyMapping),
 	}
 }
 
@@ -98,15 +109,21 @@ func (m *Manager) HandleAddEvent(obj interface{}) {
 		if _, ok := m.authservers[crd.Spec.JwksURL]; !ok {
 			m.authservers[crd.Spec.JwksURL] = authserver.New(crd.Spec.JwksURL)
 		}
-
+		mappingKey := crd.ObjectMeta.Namespace + "/" + crd.ObjectMeta.Name
 		// Process target endpoints
-		for _, ep := range parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace) {
+		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
+		if _, ok := m.policyMappings[mappingKey]; ok {
+			// for update delete the old object mappings
+			log.Debugf("Update event for Policy. Calling Delete to remove the old mappings")
+			m.HandleDeleteEvent(policy.CrdKey{Id : mappingKey})
+		}
+		m.policyMappings[mappingKey] = PolicyMapping{Type: policy.JWT, Endpoints: policyEndpoints, Spec: crd.Spec}
+		for _, ep := range policyEndpoints {
 			if m.apiPolicies == nil {
 				m.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
 			}
 			m.apiPolicies[ep] = append(m.apiPolicies[ep], crd.Spec)
 		}
-
 		log.Infof("JwtPolicy created : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
 		log.Debugf("OidcPolicy created : ID: %s", crd.ObjectMeta.UID)
@@ -121,25 +138,45 @@ func (m *Manager) HandleAddEvent(obj interface{}) {
 
 // HandleDeleteEvent updates the store after a CRD has been deleted
 func (m *Manager) HandleDeleteEvent(obj interface{}) {
-	switch crd := obj.(type) {
-	case *v1.JwtPolicy:
-		log.Debugf("Deleting JwkPolicy : ID: %s", crd.ObjectMeta.UID)
-		namespace := crd.ObjectMeta.Namespace
-		endpoints := parseTarget(crd.Spec.Target, namespace)
-		for _, ep := range endpoints {
-			if m.apiPolicies != nil || len(m.apiPolicies) > 0 {
-				delete(m.apiPolicies, ep)
+	mappingId := obj.(policy.CrdKey)
+	mapping := m.policyMappings[mappingId.Id]
+	switch mapping.Type {
+	case policy.JWT:
+		log.Debugf("Deleting Object of type : %f", policy.JWT)
+		for _, ep := range mapping.Endpoints {
+			loc := -1
+			for index , value := range m.apiPolicies[ep] {
+				if reflect.DeepEqual(value, mapping.Spec) {
+					loc = index
+					break
+				}
+			}
+			if loc >= 0 {
+				copy(m.apiPolicies[ep][loc:],  m.apiPolicies[ep][loc+1:])
+				m.apiPolicies[ep] = m.apiPolicies[ep][:len(m.apiPolicies[ep])-1]
 			}
 		}
-		log.Infof("JwkPolicy deleting : ID %s", crd.ObjectMeta.UID)
-	case *v1.OidcPolicy:
-		log.Debugf("Deleting OidcPolicy : ID: %s", crd.ObjectMeta.UID)
-		log.Infof("OidcPolicy deleted : ID %s", crd.ObjectMeta.UID)
-	case *v1.OidcClient:
-		log.Debugf("Deleting OidcClient : ID: %s", crd.ObjectMeta.UID)
-		log.Infof("OidcClient deleted : ID %s", crd.ObjectMeta.UID)
+		delete(m.policyMappings, mappingId.Id)
+		log.Debug("Delete Complete")
+	case policy.OIDC:
+		log.Debugf("Deleting Object of type : %f", policy.OIDC)
+		for _, ep := range mapping.Endpoints {
+			loc := -1
+			for index , value := range m.webPolicies[ep] {
+				if reflect.DeepEqual(value, mapping.Spec) {
+					loc = index
+					break
+				}
+			}
+			if loc >= 0 {
+				copy(m.webPolicies[ep][loc:],  m.webPolicies[ep][loc+1:])
+				m.webPolicies[ep] = m.webPolicies[ep][:len(m.webPolicies[ep])-1]
+			}
+		}
+		log.Debug("Delete Complete")
+
 	default:
-		log.Errorf("Could not delete object. Unknown type : %f", crd)
+		log.Errorf("Could not delete object. Unknown type : %f", mapping.Type)
 	}
 }
 
