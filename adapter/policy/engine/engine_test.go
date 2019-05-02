@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"ibmcloudappid/adapter/client"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -134,6 +135,120 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		result, err := eng.Evaluate(test.input)
 
 		// Result
+		if test.err != nil {
+			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
+		} else {
+			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))
+		}
+	}
+}
+
+func TestEvaluateOIDCPolicies(t *testing.T) {
+	tests := []struct {
+		input               *authorization.ActionMsg
+		oidcpolicies        []v1.OidcPolicySpec
+		endpoints           []policy.Endpoint
+		expectedAction      policy.Type
+		expectedPolicyCount int
+		err                 error
+	}{
+		{
+			// 0 - No policies
+			input:               generateActionMessage("namespace", "svc", "/path", "POST"),
+			oidcpolicies:        []v1.OidcPolicySpec{},
+			endpoints:           []policy.Endpoint{},
+			expectedAction:      policy.NONE,
+			expectedPolicyCount: 0,
+			err:                 nil,
+		},
+		{
+			// 1 - Error
+			input: generateActionMessage("namespace", "svc", "/path", "POST"),
+			oidcpolicies: []v1.OidcPolicySpec{
+				v1.OidcPolicySpec{ClientName: "unknown_client"},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:      policy.OIDC,
+			expectedPolicyCount: 0,
+			err:                 errors.New("missing OIDC client : cannot authenticate user") ,
+		},
+		{
+			// 1 - 1 policy
+			input: generateActionMessage("namespace", "svc", "/path", "POST"),
+			oidcpolicies: []v1.OidcPolicySpec{
+				v1.OidcPolicySpec{ClientName: "client"},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:      policy.OIDC,
+			expectedPolicyCount: 1,
+			err:                nil,
+		},
+	}
+
+	for i, test := range tests {
+		/// Create new engine
+		store := store.New().(*store.LocalStore)
+		store.AddClient("client", &client.Client{ AuthServer: &mockAuthServer{} })
+		eng := &engine{store: store}
+		for _, ep := range test.endpoints {
+			store.SetWebPolicies(ep, test.oidcpolicies)
+		}
+		// Result
+		result, err := eng.Evaluate(test.input)
+		if test.err != nil {
+			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
+		} else {
+			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))
+		}
+	}
+}
+
+// FUTURE no rules in place for collision
+func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
+	tests := []struct {
+		input               *authorization.ActionMsg
+		jwtpolicies         []v1.JwtPolicySpec
+		oidcpolicies        []v1.OidcPolicySpec
+		endpoints           []policy.Endpoint
+		expectedAction      policy.Type
+		expectedPolicyCount int
+		err                 error
+	}{
+		{
+			// 1 - 1 policy
+			input: generateActionMessage("namespace", "svc", "/path", "POST"),
+			jwtpolicies: []v1.JwtPolicySpec{
+				v1.JwtPolicySpec{JwksURL: "serverurl"},
+			},
+			oidcpolicies: []v1.OidcPolicySpec{
+				v1.OidcPolicySpec{ClientName: "client"},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:      policy.NONE,
+			expectedPolicyCount: 0,
+		},
+	}
+
+	for i, test := range tests {
+		/// Create new engine
+		store := store.New().(*store.LocalStore)
+		store.AddAuthServer("serverurl", &mockAuthServer{})
+		store.AddClient("client", &client.Client{ AuthServer: store.GetAuthServer("serverurl") })
+		eng := &engine{store: store}
+		for _, ep := range test.endpoints {
+			store.SetApiPolicies(ep, test.jwtpolicies)
+			store.SetWebPolicies(ep, test.oidcpolicies)
+		}
+		// Result
+		result, err := eng.Evaluate(test.input)
 		if test.err != nil {
 			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
 		} else {

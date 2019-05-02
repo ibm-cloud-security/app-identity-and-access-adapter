@@ -95,7 +95,21 @@ func (m *engine) getJWTPolicies(endpoints []policy.Endpoint) []v1.JwtPolicySpec 
 
 // getOIDCPolicies returns OIDC for the given endpoints
 func (m *engine) getOIDCPolicies(endpoints []policy.Endpoint) []v1.OidcPolicySpec {
-	return []v1.OidcPolicySpec{}
+	size := 0
+	for _, e := range endpoints {
+		if list := m.store.GetWebPolicies(e); list != nil {
+			size += len(list)
+		}
+	}
+	tmp := make([]v1.OidcPolicySpec, size)
+	var i int
+	for _, e := range endpoints {
+		list := m.store.GetWebPolicies(e)
+		if list != nil && len(list) > 0 {
+			i += copy(tmp[i:], list)
+		}
+	}
+	return tmp
 }
 
 // createJWTAction creates api strategy actions
@@ -120,11 +134,16 @@ func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) (*Action, error) {
 
 // createOIDCAction creates web strategy actions
 func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error) {
-	actions := make([]PolicyAction, len(policies))
+	actions := make([]PolicyAction, 0)
 	for i := 0; i < len(policies); i++ {
-		actions = append(actions, PolicyAction{
-			KeySet: m.store.GetClient(policies[i].ClientName).AuthServer.KeySet(),
-		})
+		if client := m.store.GetClient(policies[i].ClientName); client != nil {
+			actions = append(actions, PolicyAction{
+				KeySet: client.AuthServer.KeySet(),
+			})
+		} else {
+			log.Errorf("Missing OIDC client : cannot authenticate user")
+			return nil, errors.New("missing OIDC client : cannot authenticate user")
+		}
 	}
 	return &Action{
 		Type:     policy.OIDC,
