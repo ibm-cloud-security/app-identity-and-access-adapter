@@ -25,6 +25,7 @@ func GetObjctMeta() meta_v1.ObjectMeta {
 func GetTypeMeta() meta_v1.TypeMeta{
 	return meta_v1.TypeMeta{APIVersion: "v1", Kind: "JwtPolicy"}
 }
+
 func GetEndpoint(ns string, service string, path string, method string) policy.Endpoint{
 	return policy.Endpoint{Namespace: ns, Service: service, Path: path, Method: method}
 }
