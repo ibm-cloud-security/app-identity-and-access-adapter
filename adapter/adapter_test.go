@@ -7,7 +7,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
 	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/engine"
 	"istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 	s := server.(*AppidAdapter)
 	assert.NotNil(t, s.apistrategy)
 	assert.NotNil(t, s.listener)
-	assert.NotNil(t, s.manager)
+	assert.NotNil(t, s.engine)
 	assert.NotNil(t, s.server)
 }
 
@@ -28,30 +28,30 @@ func TestHandleAuthorization(t *testing.T) {
 	server, err := NewAppIDAdapter("")
 	defer server.Close()
 	assert.Nil(t, err)
-	mock := &mockManager{}
+	mock := &mockEngine{}
 
 	s := server.(*AppidAdapter)
-	s.manager = mock
+	s.engine = mock
 
 	tests := []struct {
 		req    *authorization.HandleAuthorizationRequest
 		status rpc.Status
-		action manager.Action
+		action engine.Action
 	}{
 		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
-			action: manager.Action{Type: policy.NONE},
+			action: engine.Action{Type: policy.NONE},
 		},
 		{
 			req:    generateAuthRequest("bearer token1 token2"),
 			status: status.OK,
-			action: manager.Action{Type: policy.JWT},
+			action: engine.Action{Type: policy.JWT},
 		},
 		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
-			action: manager.Action{Type: policy.OIDC}, // Not yet supported
+			action: engine.Action{Type: policy.OIDC}, // Not yet supported
 		},
 	}
 
@@ -63,15 +63,13 @@ func TestHandleAuthorization(t *testing.T) {
 	}
 }
 
-type mockManager struct {
-	action manager.Action
+type mockEngine struct {
+	action engine.Action
 }
 
-func (m *mockManager) Evaluate(*authorization.ActionMsg) manager.Action {
+func (m *mockEngine) Evaluate(*authorization.ActionMsg) engine.Action {
 	return m.action
 }
-func (m *mockManager) HandleAddEvent(obj interface{})    {}
-func (m *mockManager) HandleDeleteEvent(obj interface{}) {}
 
 func generateAuthRequest(header string) *authorization.HandleAuthorizationRequest {
 	return &authorization.HandleAuthorizationRequest{

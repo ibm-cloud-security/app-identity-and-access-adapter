@@ -6,7 +6,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
 	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/handler"
+	"ibmcloudappid/adapter/policy/engine"
 	"ibmcloudappid/adapter/validator"
 	"istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/template/authorization"
@@ -20,42 +20,42 @@ func TestNew(t *testing.T) {
 func TestHandleAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req           *authorization.HandleAuthorizationRequest
-		policies      []handler.PolicyAction
+		policies      []engine.PolicyAction
 		message       string
 		code          int32
 		validationErr *errors.OAuthError
 	}{
 		{
 			generateAuthRequest(""),
-			make([]handler.PolicyAction, 0),
+			make([]engine.PolicyAction, 0),
 			"authorization header not provided",
 			int32(16),
 			nil,
 		},
 		{
 			generateAuthRequest("bearer"),
-			make([]handler.PolicyAction, 0),
+			make([]engine.PolicyAction, 0),
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer invalid"),
-			make([]handler.PolicyAction, 0),
+			make([]engine.PolicyAction, 0),
 			"invalid token",
 			int32(16),
 			errors.UnauthorizedHTTPException("invalid token", nil),
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			make([]handler.PolicyAction, 0),
+			make([]engine.PolicyAction, 0),
 			"",
 			int32(0),
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer access id"),
-			make([]handler.PolicyAction, 0),
+			make([]engine.PolicyAction, 0),
 			"",
 			int32(0),
 			nil,
@@ -175,6 +175,6 @@ type MockValidator struct {
 	err *errors.OAuthError
 }
 
-func (v MockValidator) Validate(tokens validator.RawTokens, policies []handler.PolicyAction) *errors.OAuthError {
+func (v MockValidator) Validate(tokens validator.RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
 	return v.err
 }
