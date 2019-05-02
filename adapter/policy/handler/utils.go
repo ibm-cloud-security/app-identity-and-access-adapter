@@ -3,16 +3,14 @@ package handler
 import (
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
 	"ibmcloudappid/adapter/policy"
-	"istio.io/istio/pkg/log"
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint {
-	log.Infof("target %v", target)
 	endpoints := make([]policy.Endpoint, 0)
-	if target != nil || len(target) != 0 {
+	if target != nil && len(target) > 0 {
 		for _, items := range target {
 			service := items.ServiceName
-			if items.Paths != nil || len(items.Paths) > 0 {
+			if items.Paths != nil && len(items.Paths) > 0 {
 				for _, path := range items.Paths {
 					endpoints = append(endpoints, policy.Endpoint{Namespace: namespace, Service: service, Path: path, Method: "*"})
 				}

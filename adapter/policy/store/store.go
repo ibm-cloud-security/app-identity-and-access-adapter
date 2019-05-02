@@ -15,11 +15,12 @@ type PolicyStore interface {
 	AddAuthServer(serverName string, server authserver.AuthorizationServer)
 	GetApiPolicies(ep policy.Endpoint) []v1.JwtPolicySpec
 	SetApiPolicy(ep policy.Endpoint, policy v1.JwtPolicySpec)
-	DeleteApiPolicy(ep policy.Endpoint, obj interface{})
 	SetApiPolicies(ep policy.Endpoint, policy []v1.JwtPolicySpec)
-	//GetWebPolicies(ep handler.Endpoint) []v1.OidcPolicySpec
-	//SetWebPolicy(ep handler.Endpoint,policy v1.OidcPolicySpec)
-	//SetWebPolicies(ep handler.Endpoint,policy []v1.OidcPolicySpec)
+	DeleteApiPolicy(ep policy.Endpoint, obj interface{})
+	GetWebPolicies(ep policy.Endpoint) []v1.OidcPolicySpec
+	SetWebPolicy(ep policy.Endpoint, policy v1.OidcPolicySpec)
+	SetWebPolicies(ep policy.Endpoint, policy []v1.OidcPolicySpec)
+	DeleteWebPolicy(ep policy.Endpoint, obj interface{})
 	GetPolicyMapping(policy string) *policy.PolicyMapping
 	DeletePolicyMapping(policy string)
 	AddPolicyMapping(policy string, mapping *policy.PolicyMapping)

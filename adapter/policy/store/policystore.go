@@ -61,6 +61,7 @@ func (l *LocalStore) AddAuthServer(serverName string, server authserver.Authoriz
 	}
 	l.authservers[serverName] = server
 }
+
 func (l *LocalStore) GetApiPolicies(ep policy.Endpoint) []v1.JwtPolicySpec {
 	if l.apiPolicies != nil {
 		return l.apiPolicies[ep]
@@ -100,6 +101,47 @@ func (s *LocalStore) SetApiPolicies(ep policy.Endpoint, policies []v1.JwtPolicyS
 		s.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
 	}
 	s.apiPolicies[ep] = append(s.apiPolicies[ep], policies...)
+}
+
+func (l *LocalStore) GetWebPolicies(ep policy.Endpoint) []v1.OidcPolicySpec {
+	if l.webPolicies != nil {
+		return l.webPolicies[ep]
+	}
+	return nil
+}
+
+func (s *LocalStore) SetWebPolicy(ep policy.Endpoint, spec v1.OidcPolicySpec) {
+	if s.webPolicies == nil {
+		s.webPolicies = make(map[policy.Endpoint][]v1.OidcPolicySpec)
+	}
+	if s.webPolicies[ep] == nil {
+		s.webPolicies[ep] = make([]v1.OidcPolicySpec, 0)
+	}
+	s.webPolicies[ep] = append(s.webPolicies[ep], spec)
+}
+
+func (s *LocalStore) DeleteWebPolicy(ep policy.Endpoint, obj interface{}) {
+	loc := -1
+	for index, value := range s.webPolicies[ep] {
+		if reflect.DeepEqual(value, obj) {
+			loc = index
+			break
+		}
+	}
+	if loc >= 0 {
+		copy(s.webPolicies[ep][loc:], s.webPolicies[ep][loc+1:])
+		s.webPolicies[ep] = s.webPolicies[ep][:len(s.webPolicies[ep])-1]
+	}
+}
+
+func (s *LocalStore) SetWebPolicies(ep policy.Endpoint, policies []v1.OidcPolicySpec) {
+	if s.webPolicies == nil {
+		s.webPolicies = make(map[policy.Endpoint][]v1.OidcPolicySpec)
+	}
+	if s.webPolicies[ep] == nil {
+		s.webPolicies[ep] = make([]v1.OidcPolicySpec, 0)
+	}
+	s.webPolicies[ep] = append(s.webPolicies[ep], policies...)
 }
 
 func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {
