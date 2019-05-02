@@ -54,7 +54,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		for _, ep := range policyEndpoints {
 			c.store.SetApiPolicy(ep, crd.Spec)
 		}
-		log.Infof("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
+		log.Debugf("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
 		log.Debugf("OidcPolicy created : ID: %s", crd.ObjectMeta.UID)
 		log.Infof("OidcPolicy created : ID %s", crd.ObjectMeta.UID)
@@ -87,9 +87,6 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 			c.store.DeleteApiPolicy(ep, mapping.Spec)
 		}
 		c.store.DeletePolicyMapping(crdKey.Id)
-		log.Debug("Delete Complete")
-	case policy.OIDC:
-		log.Debugf("Deleting Object of type : %d", policy.OIDC)
 		log.Debug("Delete Complete")
 	default:
 		log.Errorf("Could not delete object. Unknown type : %d", mapping.Type)
