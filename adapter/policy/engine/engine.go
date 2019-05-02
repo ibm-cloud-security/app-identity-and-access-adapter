@@ -2,7 +2,8 @@
 package engine
 
 import (
-	//"ibmcloudappid/adapter/authserver"
+	"errors"
+
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
 	"ibmcloudappid/adapter/policy"
@@ -26,7 +27,7 @@ type PolicyAction struct {
 
 // PolicyEngine is responsible for making policy decisions
 type PolicyEngine interface {
-	Evaluate(*authorization.ActionMsg) Action
+	Evaluate(*authorization.ActionMsg) (*Action, error)
 }
 
 type engine struct {
@@ -34,32 +35,34 @@ type engine struct {
 }
 
 // New creates a PolicyEngine
-func New(store store.PolicyStore) PolicyEngine {
-	return &engine{
-		store: store,
+func New(store store.PolicyStore) (PolicyEngine, error) {
+	if store == nil {
+		log.Errorf("Trying to create PolicyEngine with an undefined.")
+		return nil, errors.New("could not create policy engine using undefined store")
 	}
+	return &engine{store: store}, nil
 }
 
 ////////////////// interface //////////////////
 
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
-func (m *engine) Evaluate(action *authorization.ActionMsg) Action {
+func (m *engine) Evaluate(action *authorization.ActionMsg) (*Action, error) {
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)
 	log.Debugf("JWT policies: %v | OIDC policies: %v", len(jwtPolicies), len(oidcPolicies))
 	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
-		return Action{
+		return &Action{
 			Type: policy.NONE,
-		}
+		}, nil
 	}
 
 	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
 		// Make decision
-		return Action{
+		return &Action{
 			Type: policy.NONE,
-		}
+		}, nil
 	}
 
 	if oidcPolicies != nil && len(oidcPolicies) > 0 {
@@ -92,52 +95,41 @@ func (m *engine) getJWTPolicies(endpoints []policy.Endpoint) []v1.JwtPolicySpec 
 
 // getOIDCPolicies returns OIDC for the given endpoints
 func (m *engine) getOIDCPolicies(endpoints []policy.Endpoint) []v1.OidcPolicySpec {
-	/*
-		size := 0
-		for _, e := range endpoints {
-			if list, ok := m.webPolicies[e]; ok {
-				size += len(list)
-			}
-		}
-		tmp := make([]v1.OidcPolicySpec, size)
-		var i int
-		for _, e := range endpoints {
-			if list, ok := m.webPolicies[e]; ok && len(list) > 0 {
-				i += copy(tmp[i:], list)
-			}
-		}
-		return tmp
-	*/
 	return []v1.OidcPolicySpec{}
 }
 
 // createJWTAction creates api strategy actions
-func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) Action {
+func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) (*Action, error) {
 	actions := make([]PolicyAction, 0)
 	for i := 0; i < len(policies); i++ {
-		actions = append(actions, PolicyAction{
-			KeySet: m.store.GetAuthServer(policies[i].JwksURL).KeySet(),
-		})
+		if server := m.store.GetAuthServer(policies[i].JwksURL); server != nil {
+			actions = append(actions, PolicyAction{
+				KeySet: server.KeySet(),
+			})
+		} else {
+			log.Errorf("Missing authentication server : cannot authenticate user")
+			return nil, errors.New("missing authentication server : cannot authenticate user")
+		}
 	}
 
-	return Action{
+	return &Action{
 		Type:     policy.JWT,
 		Policies: actions,
-	}
+	}, nil
 }
 
 // createOIDCAction creates web strategy actions
-func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) Action {
+func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error) {
 	actions := make([]PolicyAction, len(policies))
 	for i := 0; i < len(policies); i++ {
 		actions = append(actions, PolicyAction{
 			KeySet: m.store.GetClient(policies[i].ClientName).AuthServer.KeySet(),
 		})
 	}
-	return Action{
+	return &Action{
 		Type:     policy.OIDC,
 		Policies: actions,
-	}
+	}, nil
 }
 
 ////////////////// utils //////////////////

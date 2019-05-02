@@ -53,7 +53,11 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 
 	// Check policy
-	actions := s.engine.Evaluate(r.Instance.Action)
+	actions, err := s.engine.Evaluate(r.Instance.Action)
+	if err != nil {
+		log.Errorf("Could not check policies")
+		return nil, err
+	}
 
 	switch actions.Type {
 	case policy.JWT:
@@ -114,11 +118,17 @@ func NewAppIDAdapter(addr string) (Server, error) {
 		return nil, err
 	}
 
+	eng, err := engine.New(store)
+	if err != nil {
+		log.Errorf("Unable to initialize policy engine: %v", err)
+		return nil, err
+	}
+
 	s := &AppidAdapter{
 		listener:    listener,
 		apistrategy: apistrategy.New(),
 		server:      grpc.NewServer(),
-		engine:      engine.New(store),
+		engine:      eng,
 	}
 
 	log.Infof("Listening on : \"%v\"\n", s.Addr())

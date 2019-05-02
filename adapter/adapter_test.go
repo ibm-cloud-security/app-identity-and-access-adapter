@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -36,39 +37,55 @@ func TestHandleAuthorization(t *testing.T) {
 	tests := []struct {
 		req    *authorization.HandleAuthorizationRequest
 		status rpc.Status
-		action engine.Action
+		action *engine.Action
+		err    error
 	}{
 		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
-			action: engine.Action{Type: policy.NONE},
+			action: &engine.Action{Type: policy.NONE},
+			err:    nil,
 		},
 		{
 			req:    generateAuthRequest("bearer token1 token2"),
 			status: status.OK,
-			action: engine.Action{Type: policy.JWT},
+			action: &engine.Action{Type: policy.JWT},
+			err:    nil,
 		},
 		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
-			action: engine.Action{Type: policy.OIDC}, // Not yet supported
+			action: &engine.Action{Type: policy.OIDC}, // Not yet supported
+			err:    nil,
+		},
+		{
+			req:    generateAuthRequest(""),
+			status: status.OK,
+			action: nil,
+			err:    errors.New(""),
 		},
 	}
 
 	for _, test := range tests {
 		mock.action = test.action
+		mock.err = test.err
 		result, err := s.HandleAuthorization(context.Background(), test.req)
-		assert.Nil(t, err)
-		assert.Equal(t, result.Status, test.status)
+		if test.err != nil {
+			assert.Equal(t, err, test.err)
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, result.Status, test.status)
+		}
 	}
 }
 
 type mockEngine struct {
-	action engine.Action
+	action *engine.Action
+	err    error
 }
 
-func (m *mockEngine) Evaluate(*authorization.ActionMsg) engine.Action {
-	return m.action
+func (m *mockEngine) Evaluate(*authorization.ActionMsg) (*engine.Action, error) {
+	return m.action, m.err
 }
 
 func generateAuthRequest(header string) *authorization.HandleAuthorizationRequest {

@@ -8,3 +8,5 @@ spec:
 
   target:
     - serviceName: svc-hello-world-backend
+      paths:
+        - /api/user/data
