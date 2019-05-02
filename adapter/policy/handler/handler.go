@@ -10,8 +10,8 @@ import (
 	"istio.io/istio/pkg/log"
 )
 
-// Handler is responsible for storing and managing policy/client data
-type Handler interface {
+// PolicyHandler is responsible for storing and managing policy/client data
+type PolicyHandler interface {
 	HandleAddUpdateEvent(obj interface{})
 	HandleDeleteEvent(obj interface{})
 }
@@ -21,21 +21,10 @@ type CrdHandler struct {
 	store store.PolicyStore
 }
 
-type Endpoint struct {
-	namespace, service, path, method string
-}
-
-// PolicyMapping captures information of created endpoints by policy
-type PolicyMapping struct {
-	Type     	policy.Type
-	Endpoints 	[]Endpoint
-	Spec 		interface{}
-}
-
 ////////////////// constructor //////////////////
-//map[int]bool
+
 // New creates a PolicyManager
-func New(store store.PolicyStore) Handler {
+func New(store store.PolicyStore) PolicyHandler {
 	return &CrdHandler{
 		store: store,
 	}
@@ -43,7 +32,7 @@ func New(store store.PolicyStore) Handler {
 
 ////////////////// interface //////////////////
 
-// HandleAddEvent updates the store after a CRD has been added
+// HandleAddUpdateEvent updates the store after a CRD has been added
 func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
@@ -53,15 +42,15 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		if c.store.GetAuthServer(crd.Spec.JwksURL) == nil {
 			c.store.AddAuthServer(crd.Spec.JwksURL, authserver.New(crd.Spec.JwksURL))
 		}
+
 		mappingKey := crd.ObjectMeta.Namespace + "/" + crd.ObjectMeta.Name
-		// Process target endpoints
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		if c.store.GetPolicyMapping(mappingKey) != nil {
 			// for update delete the old object mappings
 			log.Debugf("Update event for Policy. Calling Delete to remove the old mappings")
-			c.HandleDeleteEvent(policy.CrdKey{Id : mappingKey})
+			c.HandleDeleteEvent(policy.CrdKey{Id: mappingKey})
 		}
-		c.store.AddPolicyMapping(mappingKey, &PolicyMapping{Type: policy.JWT, Endpoints: policyEndpoints, Spec: crd.Spec})
+		c.store.AddPolicyMapping(mappingKey, &policy.PolicyMapping{Type: policy.JWT, Endpoints: policyEndpoints, Spec: crd.Spec})
 		for _, ep := range policyEndpoints {
 			c.store.SetApiPolicy(ep, crd.Spec)
 		}
@@ -79,20 +68,29 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 
 // HandleDeleteEvent updates the store after a CRD has been deleted
 func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
-	mappingId := obj.(policy.CrdKey)
-	mapping := c.store.GetPolicyMapping(mappingId.Id)
+	crdKey, ok := obj.(policy.CrdKey)
+	if !ok {
+		log.Errorf("Expected to receive CrdKey")
+		return
+	}
+
+	mapping := c.store.GetPolicyMapping(crdKey.Id)
+	if mapping == nil {
+		log.Errorf("CRD was not found.") // happens with OIDC policies at the moment
+		return
+	}
+
 	switch mapping.Type {
 	case policy.JWT:
 		log.Debugf("Deleting Object of type : %d", policy.JWT)
 		for _, ep := range mapping.Endpoints {
 			c.store.DeleteApiPolicy(ep, mapping.Spec)
 		}
-		c.store.DeletePolicyMapping(mappingId.Id)
+		c.store.DeletePolicyMapping(crdKey.Id)
 		log.Debug("Delete Complete")
 	case policy.OIDC:
 		log.Debugf("Deleting Object of type : %d", policy.OIDC)
 		log.Debug("Delete Complete")
-
 	default:
 		log.Errorf("Could not delete object. Unknown type : %d", mapping.Type)
 	}

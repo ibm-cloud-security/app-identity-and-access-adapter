@@ -5,7 +5,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/handler"
+	"ibmcloudappid/adapter/policy/engine"
 	"istio.io/istio/pkg/log"
 )
 
@@ -16,7 +16,7 @@ const (
 
 // TokenValidator parses and validates JWT tokens
 type TokenValidator interface {
-	Validate(tokens RawTokens, policies []handler.PolicyAction) *errors.OAuthError
+	Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError
 }
 
 // Validator implements the TokenValidator
@@ -38,7 +38,7 @@ func New() TokenValidator {
 ////////////////// interface //////////////////////////
 
 // Validate validates tokens according to the specified policies
-func (*Validator) Validate(tokens RawTokens, policies []handler.PolicyAction) *errors.OAuthError {
+func (*Validator) Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
 	seenSet := make(map[string]struct{})
 
 	var accessToken *jwt.Token

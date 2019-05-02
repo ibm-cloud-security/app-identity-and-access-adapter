@@ -1,34 +1,36 @@
 package store
 
 import (
+	"reflect"
+
 	"ibmcloudappid/adapter/authserver"
 	"ibmcloudappid/adapter/client"
-	v1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy/handler"
-	"reflect"
+	"ibmcloudappid/adapter/pkg/apis/policies/v1"
+	"ibmcloudappid/adapter/policy"
 )
 
-// Manager is responsible for storing and managing policy/client data
+// LocalStore is responsible for storing and managing policy/client data
 type LocalStore struct {
 	// clients maps client_name -> client_config
 	clients map[string]*client.Client
 	// authserver maps jwksurl -> AuthorizationServers
 	authservers map[string]authserver.AuthorizationServer
 	// policies maps endpoint -> list of policies
-	apiPolicies map[handler.Endpoint][]v1.JwtPolicySpec
+	apiPolicies map[policy.Endpoint][]v1.JwtPolicySpec
 	// policies maps endpoint -> list of policies
-	webPolicies map[handler.Endpoint][]v1.OidcPolicySpec
+	webPolicies map[policy.Endpoint][]v1.OidcPolicySpec
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
-	policyMappings map[string]*handler.PolicyMapping
+	policyMappings map[string]*policy.PolicyMapping
 }
 
+// New creates a new local store
 func New() PolicyStore {
 	return &LocalStore{
-		clients:     make(map[string]*client.Client),
-		authservers: make(map[string]authserver.AuthorizationServer),
-		apiPolicies: make(map[handler.Endpoint][]v1.JwtPolicySpec),
-		webPolicies: make(map[handler.Endpoint][]v1.OidcPolicySpec),
-		policyMappings: make(map[string]*handler.PolicyMapping),
+		clients:        make(map[string]*client.Client),
+		authservers:    make(map[string]authserver.AuthorizationServer),
+		apiPolicies:    make(map[policy.Endpoint][]v1.JwtPolicySpec),
+		webPolicies:    make(map[policy.Endpoint][]v1.OidcPolicySpec),
+		policyMappings: make(map[string]*policy.PolicyMapping),
 	}
 }
 
@@ -38,7 +40,6 @@ func (l *LocalStore) GetClient(clientName string) *client.Client {
 	}
 	return nil
 }
-
 
 func (l *LocalStore) AddClient(clientName string, clientObject *client.Client) {
 	if l.clients != nil {
@@ -60,28 +61,26 @@ func (l *LocalStore) AddAuthServer(serverName string, server authserver.Authoriz
 	}
 	l.authservers[serverName] = server
 }
-func (l *LocalStore) GetApiPolicies(ep handler.Endpoint) []v1.JwtPolicySpec {
+func (l *LocalStore) GetApiPolicies(ep policy.Endpoint) []v1.JwtPolicySpec {
 	if l.apiPolicies != nil {
 		return l.apiPolicies[ep]
 	}
 	return nil
 }
 
-
-func (s *LocalStore) SetApiPolicy(ep handler.Endpoint, policy v1.JwtPolicySpec) {
+func (s *LocalStore) SetApiPolicy(ep policy.Endpoint, spec v1.JwtPolicySpec) {
 	if s.apiPolicies == nil {
-		s.apiPolicies = make(map[handler.Endpoint][]v1.JwtPolicySpec)
+		s.apiPolicies = make(map[policy.Endpoint][]v1.JwtPolicySpec)
 	}
 	if s.apiPolicies[ep] == nil {
 		s.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
 	}
-	s.apiPolicies[ep] = append(s.apiPolicies[ep], policy)
+	s.apiPolicies[ep] = append(s.apiPolicies[ep], spec)
 }
-//DeleteApiPolicy(ep handler.Endpoint)
 
-func (s *LocalStore) DeleteApiPolicy(ep handler.Endpoint, obj interface{}) {
+func (s *LocalStore) DeleteApiPolicy(ep policy.Endpoint, obj interface{}) {
 	loc := -1
-	for index , value := range s.apiPolicies[ep] {
+	for index, value := range s.apiPolicies[ep] {
 		if reflect.DeepEqual(value, obj) {
 			loc = index
 			break
@@ -93,9 +92,9 @@ func (s *LocalStore) DeleteApiPolicy(ep handler.Endpoint, obj interface{}) {
 	}
 }
 
-func (s *LocalStore) SetApiPolicies(ep handler.Endpoint, policies []v1.JwtPolicySpec) {
+func (s *LocalStore) SetApiPolicies(ep policy.Endpoint, policies []v1.JwtPolicySpec) {
 	if s.apiPolicies == nil {
-		s.apiPolicies = make(map[handler.Endpoint][]v1.JwtPolicySpec)
+		s.apiPolicies = make(map[policy.Endpoint][]v1.JwtPolicySpec)
 	}
 	if s.apiPolicies[ep] == nil {
 		s.apiPolicies[ep] = make([]v1.JwtPolicySpec, 0)
@@ -103,8 +102,7 @@ func (s *LocalStore) SetApiPolicies(ep handler.Endpoint, policies []v1.JwtPolicy
 	s.apiPolicies[ep] = append(s.apiPolicies[ep], policies...)
 }
 
-
-func (s *LocalStore) GetPolicyMapping(policy string) *handler.PolicyMapping {
+func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {
 	if s.policyMappings != nil {
 		return s.policyMappings[policy]
 	}
@@ -117,9 +115,9 @@ func (s *LocalStore) DeletePolicyMapping(policy string) {
 	}
 }
 
-func (s *LocalStore) AddPolicyMapping(policy string, mapping *handler.PolicyMapping) {
+func (s *LocalStore) AddPolicyMapping(name string, mapping *policy.PolicyMapping) {
 	if s.policyMappings == nil {
-		s.policyMappings = make(map[string]*handler.PolicyMapping)
+		s.policyMappings = make(map[string]*policy.PolicyMapping)
 	}
-	s.policyMappings[policy] = mapping
+	s.policyMappings[name] = mapping
 }

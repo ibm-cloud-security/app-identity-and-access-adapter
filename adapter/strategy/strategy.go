@@ -2,7 +2,7 @@ package strategy
 
 import (
 	"fmt"
-	"ibmcloudappid/adapter/policy/handler"
+	"ibmcloudappid/adapter/policy/engine"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/template/authorization"
@@ -10,7 +10,7 @@ import (
 
 // Strategy defines the entry point to an authentication handler
 type Strategy interface {
-	HandleAuthorizationRequest(*authorization.HandleAuthorizationRequest, []handler.PolicyAction) (*v1beta1.CheckResult, error)
+	HandleAuthorizationRequest(*authorization.HandleAuthorizationRequest, []engine.PolicyAction) (*v1beta1.CheckResult, error)
 }
 
 // DecodeValueMap decodes gRPC values into string interface

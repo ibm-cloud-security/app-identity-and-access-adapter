@@ -15,34 +15,35 @@ import (
 	policiesInformer "ibmcloudappid/adapter/pkg/client/informers/externalversions"
 	policyController "ibmcloudappid/adapter/policy/controller"
 	"ibmcloudappid/adapter/policy/handler"
+	"ibmcloudappid/adapter/policy/store"
 	"istio.io/istio/pkg/log"
 )
 
 // Initializer interface contains the methods that are required
 type Initializer interface {
-	GetManager() handler.PolicyManager
+	GetHandler() handler.PolicyHandler
 }
 
 type PolicyInitializer struct {
-	Manager handler.PolicyManager
+	Handler handler.PolicyHandler
 }
 
-func (pi *PolicyInitializer) GetManager() handler.PolicyManager {
-	return pi.Manager
+func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
+	return pi.Handler
 }
 
-func New() (Initializer, error) {
-	policyManager := handler.New()
-	policyInitializer := &PolicyInitializer{policyManager}
+func New(store store.PolicyStore) (Initializer, error) {
+	handler := handler.New(store)
+	policyInitializer := &PolicyInitializer{handler}
 
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
-	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Manager)
-	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Manager)
-	go initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client, policyInitializer.Manager)
+	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Handler)
+	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Handler)
+	go initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client, policyInitializer.Handler)
 
 	return policyInitializer, nil
 }
@@ -95,7 +96,7 @@ func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface, e
 	return client, policiesClient, nil
 }
 
-func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyManager handler.PolicyManager) {
+func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyHandler handler.PolicyHandler) {
 	// create a new queue so that when the informer gets a resource that is either
 	// a result of listing or watching, we can add an idenfitying key to the queue
 	// so that it can be handled in the handler
@@ -144,7 +145,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 		Clientset: client,
 		Informer:  informer,
 		Queue:     queue,
-		Handler:   policyManager,
+		Handler:   policyHandler,
 	}
 
 	stopCh := make(chan struct{})
