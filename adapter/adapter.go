@@ -12,8 +12,9 @@ import (
 
 	"google.golang.org/grpc"
 	"ibmcloudappid/adapter/policy"
+	"ibmcloudappid/adapter/policy/engine"
 	"ibmcloudappid/adapter/policy/initializer"
-	"ibmcloudappid/adapter/policy/manager"
+	"ibmcloudappid/adapter/policy/store"
 	"ibmcloudappid/adapter/strategy"
 	apistrategy "ibmcloudappid/adapter/strategy/api"
 	"istio.io/api/mixer/adapter/model/v1beta1"
@@ -40,7 +41,7 @@ type (
 		listener    net.Listener
 		server      *grpc.Server
 		apistrategy strategy.Strategy
-		manager     manager.PolicyManager
+		engine      engine.PolicyEngine
 	}
 )
 
@@ -50,10 +51,9 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
 // HandleAuthorization evaulates authoroization policy using api/web strategy
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
-	log.Debugf("Handling authorization request : %v", r.Instance.Action)
 
 	// Check policy
-	actions := s.manager.Evaluate(r.Instance.Action)
+	actions := s.engine.Evaluate(r.Instance.Action)
 
 	switch actions.Type {
 	case policy.JWT:
@@ -105,8 +105,10 @@ func NewAppIDAdapter(addr string) (Server, error) {
 		return nil, fmt.Errorf("unable to listen on socket: %v", err)
 	}
 
+	store := store.New()
+
 	// Initialize Kubernetes
-	p, err := initializer.New()
+	_, err = initializer.New(store)
 	if err != nil {
 		log.Errorf("Unable to initialize adapter: %v", err)
 		return nil, err
@@ -116,7 +118,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 		listener:    listener,
 		apistrategy: apistrategy.New(),
 		server:      grpc.NewServer(),
-		manager:     p.GetManager(),
+		engine:      engine.New(store),
 	}
 
 	log.Infof("Listening on : \"%v\"\n", s.Addr())

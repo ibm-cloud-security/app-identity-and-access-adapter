@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This script builds the docker image and pushes it to the container registry
 # 
 

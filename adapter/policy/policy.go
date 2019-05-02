@@ -11,3 +11,15 @@ const (
 	// NONE policy specifies requests without protection
 	NONE
 )
+
+// Endpoint captures a request endpoint
+type Endpoint struct {
+	Namespace, Service, Path, Method string
+}
+
+// PolicyMapping captures information of created endpoints by policy
+type PolicyMapping struct {
+	Type      Type
+	Endpoints []Endpoint
+	Spec      interface{}
+}

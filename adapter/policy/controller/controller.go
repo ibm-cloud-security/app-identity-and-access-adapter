@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"ibmcloudappid/adapter/policy"
+	"ibmcloudappid/adapter/policy/handler"
 	"time"
 
 	"istio.io/istio/pkg/log"
@@ -10,8 +12,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	handler "ibmcloudappid/adapter/policy/handler"
-
 )
 
 // Controller struct defines how a controller should encapsulate
@@ -21,7 +21,7 @@ type Controller struct {
 	Clientset kubernetes.Interface
 	Queue     workqueue.RateLimitingInterface
 	Informer  cache.SharedIndexInformer
-	Handler   handler.Handler
+	Handler   handler.PolicyHandler
 }
 
 // Run is the main path of execution for the controller loop
@@ -110,11 +110,11 @@ func (c *Controller) processNextItem() bool {
 	// a code path of successful queue key processing
 	if !exists {
 		log.Debugf("Controller.processNextItem: object deleted detected: %s", keyRaw)
-		c.Handler.ObjectDeleted(item)
+		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw})
 		c.Queue.Forget(key)
 	} else {
 		log.Debugf("Controller.processNextItem: object created detected: %s", keyRaw)
-		c.Handler.ObjectCreated(item)
+		c.Handler.HandleAddUpdateEvent(item)
 		c.Queue.Forget(key)
 	}
 
