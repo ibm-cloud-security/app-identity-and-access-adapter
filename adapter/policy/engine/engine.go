@@ -3,6 +3,7 @@ package engine
 
 import (
 	"errors"
+	"ibmcloudappid/adapter/client"
 
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
@@ -22,6 +23,7 @@ type Action struct {
 // PolicyAction captures data necessary to process a particular policy
 type PolicyAction struct {
 	KeySet keyset.KeySet
+	Client *client.Client
 	// Rule []Rule
 }
 
@@ -51,6 +53,7 @@ func (m *engine) Evaluate(action *authorization.ActionMsg) (*Action, error) {
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)
+	log.Infof("Action:\n\tNamespace: %s\n\tService: %s\n\tPath: %s\n\tMethod: %s\n", action.Namespace, action.Service, action.Path, action.Method)
 	log.Debugf("JWT policies: %v | OIDC policies: %v", len(jwtPolicies), len(oidcPolicies))
 	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
 		return &Action{
@@ -139,6 +142,7 @@ func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error)
 		if client := m.store.GetClient(policies[i].ClientName); client != nil {
 			actions = append(actions, PolicyAction{
 				KeySet: client.AuthServer.KeySet(),
+				Client: client,
 			})
 		} else {
 			log.Errorf("Missing OIDC client : cannot authenticate user")

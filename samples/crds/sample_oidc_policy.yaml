@@ -2,12 +2,10 @@ apiVersion: "appid.cloud.ibm.com/v1"
 kind: OidcPolicy
 metadata:
   name: samploidcpolicy
+  namespace: multi-cloud-tech-preview
 spec:
-  oidcClientName: oidcClientName
+  oidcClientName: appid-london-stage1
   target:
-    - serviceName: serviceA
+    - serviceName: svc-hello-world-backend
       paths:
-        - /path1
-        - /path2
-    - serviceName: serviceB
-      paths: []
+        - /api/user/data

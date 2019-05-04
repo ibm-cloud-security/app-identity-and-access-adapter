@@ -22,10 +22,13 @@ spec:
       properties:
         authorization_header: request.headers["authorization"]
     action:
-      path: request.path | "/"
+      path: request.url_path | "/"
       method: request.method | "get"
-      service: destination.service.host | ""
-      namespace: destination.namespace | "default"
+      service: destination.service.name | ""
+      namespace: destination.service.namespace | "default"
+      properties:
+        authorization_code: request.query_params["code"] | ""
+        error: request.query_params["error"] | ""
 ---
 # rule to dispatch to ibmcloudappid adapter handler
 apiVersion: "config.istio.io/v1alpha2"

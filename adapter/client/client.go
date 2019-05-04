@@ -4,21 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"ibmcloudappid/adapter/authserver"
-	"istio.io/istio/pkg/log"
 	"net/http"
 	"time"
+
+	"ibmcloudappid/adapter/authserver"
+	"ibmcloudappid/adapter/pkg/apis/policies/v1"
+	"istio.io/istio/pkg/log"
 )
 
-// Config encasulates an authn/z client definition
-type Config struct {
-	Name         string
-	ClientID     string
-	Secret       string
-	DiscoveryURL string
-}
-
-// ProviderConfig encasulates the discovery endpoint configuration
+// ProviderConfig encapsulates the discovery endpoint configuration
 type ProviderConfig struct {
 	Issuer      string `json:"issuer"`
 	AuthURL     string `json:"authorization_endpoint"`
@@ -29,16 +23,16 @@ type ProviderConfig struct {
 
 // Client encapsulates an authn/z client object
 type Client struct {
-	Config
+	v1.OidcClientSpec
 	ProviderConfig
 	AuthServer authserver.AuthorizationServer
 	httpClient *http.Client
 }
 
 // New creates a new policy
-func New(cfg Config) Client {
+func New(cfg v1.OidcClientSpec) Client {
 	client := Client{
-		Config: cfg,
+		OidcClientSpec: cfg,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -55,7 +49,7 @@ func New(cfg Config) Client {
 
 func (c *Client) load() error {
 
-	req, err := http.NewRequest("GET", c.DiscoveryURL, nil)
+	req, err := http.NewRequest("GET", c.DiscoveryUrl, nil)
 	if err != nil {
 		return err
 	}

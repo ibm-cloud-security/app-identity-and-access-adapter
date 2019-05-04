@@ -1,8 +1,9 @@
+// Package validator provides structures responsible for validating tokens according to custom policies
 package validator
 
 import (
 	"fmt"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"ibmcloudappid/adapter/authserver/keyset"
 	"ibmcloudappid/adapter/errors"
 	"ibmcloudappid/adapter/policy/engine"
@@ -11,10 +12,9 @@ import (
 
 const (
 	kid    = "kid"
-	tenant = "tenant"
 )
 
-// TokenValidator parses and validates JWT tokens
+// TokenValidator parses and validates JWT tokens according to policies
 type TokenValidator interface {
 	Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError
 }
@@ -23,6 +23,7 @@ type TokenValidator interface {
 type Validator struct{}
 
 // RawTokens - holds references to raw access and id tokens
+// empty tokens are represented with ""
 type RawTokens struct {
 	Access string
 	ID     string
@@ -37,7 +38,8 @@ func New() TokenValidator {
 
 ////////////////// interface //////////////////////////
 
-// Validate validates tokens according to the specified policies
+// Validate validates tokens according to the specified policies.
+// If any policy fails, the entire request should be rejected
 func (*Validator) Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
 	seenSet := make(map[string]struct{})
 
@@ -130,17 +132,17 @@ func validateClaims(token *jwt.Token) *errors.OAuthError {
 		return &errors.OAuthError{Msg: errors.InternalServerError}
 	}
 
-	// Retreive claims map from token
+	// Retrieve claims map from token
 	_, err := getClaims(token)
 	if err != nil {
 		log.Debug("Token validation error - error obtaining claims from token")
 		return err
 	}
-	// Validate Rules
+	// TODO: Validate Custom Rules
 	return nil
 }
 
-// validateClaim given claim
+// validateClaim is used to validate a specific claim with the claims map
 func validateClaim(name string, expected string, claims jwt.MapClaims) error {
 	if found, ok := claims[name].(string); ok {
 		if found != expected {

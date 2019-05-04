@@ -3,6 +3,7 @@ package handler
 
 import (
 	"ibmcloudappid/adapter/authserver"
+	"ibmcloudappid/adapter/client"
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/store"
@@ -57,9 +58,26 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		log.Debugf("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
 		log.Debugf("OidcPolicy created : ID: %s", crd.ObjectMeta.UID)
+		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
+		for _, ep := range policyEndpoints {
+			c.store.SetWebPolicy(ep, crd.Spec)
+		}
 		log.Infof("OidcPolicy created : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcClient:
 		log.Debugf("Creating OidcClient : ID: %s", crd.ObjectMeta.UID)
+		// If we already are tracking this authentication server, skip
+		oidcClient := client.New(crd.Spec)
+		if oidcClient.JWKSURL != "" {
+			if server := c.store.GetAuthServer(oidcClient.JWKSURL); server != nil {
+				oidcClient.AuthServer = server
+			} else {
+				server := authserver.New(oidcClient.JWKSURL)
+				c.store.AddAuthServer(oidcClient.JWKSURL, server)
+				oidcClient.AuthServer = server
+
+			}
+		}
+		c.store.AddClient(oidcClient.ClientName, &oidcClient)
 		log.Infof("OidcClient created : ID %s", crd.ObjectMeta.UID)
 	default:
 		log.Errorf("Could not create object. Unknown type : %f", crd)

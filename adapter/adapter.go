@@ -8,24 +8,19 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"net"
-
 	"google.golang.org/grpc"
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/engine"
 	"ibmcloudappid/adapter/policy/initializer"
 	"ibmcloudappid/adapter/policy/store"
 	"ibmcloudappid/adapter/strategy"
-	apistrategy "ibmcloudappid/adapter/strategy/api"
+	"ibmcloudappid/adapter/strategy/api"
+	"ibmcloudappid/adapter/strategy/web"
 	"istio.io/api/mixer/adapter/model/v1beta1"
-	//webstrategy "ibmcloudappid/adapter/strategy/web"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
-)
-
-const (
-	authorizationHeader = "authorization_header"
+	"net"
 )
 
 type (
@@ -41,6 +36,7 @@ type (
 		listener    net.Listener
 		server      *grpc.Server
 		apistrategy strategy.Strategy
+		webstrategy strategy.Strategy
 		engine      engine.PolicyEngine
 	}
 )
@@ -49,7 +45,7 @@ var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
 
 ////////////////// adapter.Handler //////////////////////////
 
-// HandleAuthorization evaulates authoroization policy using api/web strategy
+// HandleAuthorization evaluates authn/z policies using api/web strategy
 func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
 
 	// Check policy
@@ -64,8 +60,8 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 		log.Info("Executing JWT policies")
 		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)
 	case policy.OIDC:
-		log.Info("OIDC policies are not supported")
-		return &v1beta1.CheckResult{Status: status.OK}, nil
+		log.Info("Executing OIDC policies")
+		return s.webstrategy.HandleAuthorizationRequest(r, actions.Policies)
 	default:
 		log.Debug("No OIDC/JWT policies configured")
 		return &v1beta1.CheckResult{Status: status.OK}, nil
@@ -109,16 +105,16 @@ func NewAppIDAdapter(addr string) (Server, error) {
 		return nil, fmt.Errorf("unable to listen on socket: %v", err)
 	}
 
-	store := store.New()
+	localStore := store.New()
 
 	// Initialize Kubernetes
-	_, err = initializer.New(store)
+	_, err = initializer.New(localStore)
 	if err != nil {
 		log.Errorf("Unable to initialize adapter: %v", err)
 		return nil, err
 	}
 
-	eng, err := engine.New(store)
+	eng, err := engine.New(localStore)
 	if err != nil {
 		log.Errorf("Unable to initialize policy engine: %v", err)
 		return nil, err
@@ -127,6 +123,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	s := &AppidAdapter{
 		listener:    listener,
 		apistrategy: apistrategy.New(),
+		webstrategy: webstrategy.New(),
 		server:      grpc.NewServer(),
 		engine:      eng,
 	}

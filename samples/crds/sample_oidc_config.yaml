@@ -2,11 +2,9 @@ apiVersion: "appid.cloud.ibm.com/v1"
 kind: OidcClient
 metadata:
   name: sampleconfig
+  namespace: multi-cloud-tech-preview
 spec:
-  oidcClientName: oidcClientName
-  clientId: clientId
-  discoveryUrl: http://discovery.com
-  clientSecret : clientSecret
-  clientSecretRef:
-    name: name
-    key: key
+  oidcClientName: appid-london-stage1
+  clientId: c16920e3-a6eb-4ba5-b21a-e72afc86baf3
+  discoveryUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/.well-known/openid-configuration
+  clientSecret : NWM5ZWRiOWYtN2UxYy00YzY1LTkyYTQtMjc0MDU4YWYyNWE0

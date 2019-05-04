@@ -5,11 +5,10 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"io/ioutil"
-	"istio.io/istio/pkg/log"
 	"net/http"
 
+	"istio.io/istio/pkg/log"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -60,7 +59,6 @@ func (s *RemoteKeySet) PublicKeyURL() string {
 
 // updateKeyGroup issues /publicKeys request using shared request group
 func (s *RemoteKeySet) updateKeysGrouped() error {
-	log.Info("updateKeysGrouped", zap.Int("int", 1), zap.Bool("bool", true))
 	_, err, _ := s.requestGroup.Do(s.publicKeyURL, func() (interface{}, error) {
 		return s.updateKeys()
 	})
