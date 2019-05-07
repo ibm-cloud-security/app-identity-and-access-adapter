@@ -1,6 +1,7 @@
 package apistrategy
 
 import (
+	"ibmcloudappid/config/template"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -9,7 +10,6 @@ import (
 	"ibmcloudappid/adapter/policy/engine"
 	"ibmcloudappid/adapter/validator"
 	"istio.io/api/policy/v1beta1"
-	"istio.io/istio/mixer/template/authorization"
 )
 
 func TestNew(t *testing.T) {
@@ -19,7 +19,7 @@ func TestNew(t *testing.T) {
 
 func TestHandleAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
-		req           *authorization.HandleAuthorizationRequest
+		req           *authnz.HandleAuthnZRequest
 		policies      []engine.PolicyAction
 		message       string
 		code          int32
@@ -68,53 +68,58 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 				err: test.validationErr,
 			},
 		}
-		checkresult, err := api.HandleAuthorizationRequest(test.req, test.policies)
+		checkresult, err := api.HandleAuthnZRequest(test.req, test.policies)
 		assert.Nil(t, err)
-		assert.Equal(t, test.message, checkresult.Status.Message)
-		assert.Equal(t, test.code, checkresult.Status.Code)
+		assert.Equal(t, test.message, checkresult.Result.Status.Message)
+		assert.Equal(t, test.code, checkresult.Result.Status.Code)
 	}
 }
 
 func TestParseRequest(t *testing.T) {
 	var tests = []struct {
-		props       map[string]interface{}
+		r           *authnz.HandleAuthnZRequest
 		expectErr   bool
 		expectedMsg string
 	}{
 		{
-			map[string]interface{}{"dummy": "value"},
+			&authnz.HandleAuthnZRequest{
+				Instance: &authnz.InstanceMsg{
+					Name:    "",
+					Subject: &authnz.SubjectMsg{Credentials: &authnz.CredentialsMsg{}},
+				},
+			},
 			true,
 			"authorization header not provided",
 		},
 		{
-			map[string]interface{}{"authorization_header": ""},
+			generateAuthRequest(""),
 			true,
 			"authorization header not provided",
 		},
 		{
-			map[string]interface{}{"authorization_header": "bearer"},
+			generateAuthRequest("bearer"),
 			true,
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
-			map[string]interface{}{"authorization_header": "b access id"},
+			generateAuthRequest("b access id"),
 			true,
 			"unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
-			map[string]interface{}{"authorization_header": "Bearer access id"},
+			generateAuthRequest("Bearer access id"),
 			false,
 			"",
 		},
 		{
-			map[string]interface{}{"authorization_header": "bearer access id"},
+			generateAuthRequest("bearer access id"),
 			false,
 			"",
 		},
 	}
 
 	for _, e := range tests {
-		tokens, err := getAuthTokensFromRequest(e.props)
+		tokens, err := getAuthTokensFromRequest(e.r)
 		if !e.expectErr && tokens != nil {
 			assert.Equal(t, "access", tokens.Access)
 			assert.Equal(t, "id", tokens.ID)
@@ -147,23 +152,19 @@ func TestErrorResponse(t *testing.T) {
 	}
 	for _, test := range tests {
 		checkresult := buildErrorResponse(test.err)
-		assert.Equal(t, checkresult.Status.Code, int32(rpc.UNAUTHENTICATED))
-		assert.Equal(t, checkresult.Status.Message, test.Message)
-		assert.NotNil(t, checkresult.Status.Details)
+		assert.Equal(t, checkresult.Result.Status.Code, int32(rpc.UNAUTHENTICATED))
+		assert.Equal(t, checkresult.Result.Status.Message, test.Message)
+		assert.NotNil(t, checkresult.Result.Status.Details)
 	}
 }
 
-func generateAuthRequest(header string) *authorization.HandleAuthorizationRequest {
-	return &authorization.HandleAuthorizationRequest{
-		Instance: &authorization.InstanceMsg{
+func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
+	return &authnz.HandleAuthnZRequest{
+		Instance: &authnz.InstanceMsg{
 			Name: "",
-			Subject: &authorization.SubjectMsg{
-				Properties: map[string]*v1beta1.Value{
-					"authorization_header": &v1beta1.Value{
-						Value: &v1beta1.Value_StringValue{
-							StringValue: header,
-						},
-					},
+			Subject: &authnz.SubjectMsg{
+				Credentials: &authnz.CredentialsMsg{
+					AuthorizationHeader: header,
 				},
 			},
 			Action: nil,

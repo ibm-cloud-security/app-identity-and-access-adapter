@@ -3,14 +3,13 @@ package engine
 
 import (
 	"errors"
-	"ibmcloudappid/adapter/client"
-
 	"ibmcloudappid/adapter/authserver/keyset"
+	"ibmcloudappid/adapter/client"
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/store"
+	"ibmcloudappid/config/template"
 
-	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
 
@@ -29,7 +28,7 @@ type PolicyAction struct {
 
 // PolicyEngine is responsible for making policy decisions
 type PolicyEngine interface {
-	Evaluate(*authorization.ActionMsg) (*Action, error)
+	Evaluate(*authnz.ActionMsg) (*Action, error)
 }
 
 type engine struct {
@@ -49,7 +48,7 @@ func New(store store.PolicyStore) (PolicyEngine, error) {
 
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
-func (m *engine) Evaluate(action *authorization.ActionMsg) (*Action, error) {
+func (m *engine) Evaluate(action *authnz.ActionMsg) (*Action, error) {
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)

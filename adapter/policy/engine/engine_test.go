@@ -3,15 +3,15 @@ package engine
 import (
 	"errors"
 	"fmt"
-	"ibmcloudappid/adapter/client"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"ibmcloudappid/adapter/authserver/keyset"
+	"ibmcloudappid/adapter/client"
 	"ibmcloudappid/adapter/pkg/apis/policies/v1"
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/store"
-	"istio.io/istio/mixer/template/authorization"
+	"ibmcloudappid/config/template"
 )
 
 func TestNew(t *testing.T) {
@@ -41,7 +41,7 @@ func TestNew(t *testing.T) {
 
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authorization.ActionMsg
+		input               *authnz.ActionMsg
 		jwtpolicies         []v1.JwtPolicySpec
 		endpoints           []policy.Endpoint
 		expectedAction      policy.Type
@@ -146,7 +146,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authorization.ActionMsg
+		input               *authnz.ActionMsg
 		oidcpolicies        []v1.OidcPolicySpec
 		endpoints           []policy.Endpoint
 		expectedAction      policy.Type
@@ -173,7 +173,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			},
 			expectedAction:      policy.OIDC,
 			expectedPolicyCount: 0,
-			err:                 errors.New("missing OIDC client : cannot authenticate user") ,
+			err:                 errors.New("missing OIDC client : cannot authenticate user"),
 		},
 		{
 			// 1 - 1 policy
@@ -186,14 +186,14 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			},
 			expectedAction:      policy.OIDC,
 			expectedPolicyCount: 1,
-			err:                nil,
+			err:                 nil,
 		},
 	}
 
 	for i, test := range tests {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
-		store.AddClient("client", &client.Client{ AuthServer: &mockAuthServer{} })
+		store.AddClient("client", &client.Client{AuthServer: &mockAuthServer{}})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			store.SetWebPolicies(ep, test.oidcpolicies)
@@ -212,7 +212,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 // FUTURE no rules in place for collision
 func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authorization.ActionMsg
+		input               *authnz.ActionMsg
 		jwtpolicies         []v1.JwtPolicySpec
 		oidcpolicies        []v1.OidcPolicySpec
 		endpoints           []policy.Endpoint
@@ -241,7 +241,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
 		store.AddAuthServer("serverurl", &mockAuthServer{})
-		store.AddClient("client", &client.Client{ AuthServer: store.GetAuthServer("serverurl") })
+		store.AddClient("client", &client.Client{AuthServer: store.GetAuthServer("serverurl")})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			store.SetApiPolicies(ep, test.jwtpolicies)
@@ -267,8 +267,8 @@ func genEndpoint(ns string, svc string, path string, method string) policy.Endpo
 	}
 }
 
-func generateActionMessage(ns string, svc string, path string, method string) *authorization.ActionMsg {
-	return &authorization.ActionMsg{
+func generateActionMessage(ns string, svc string, path string, method string) *authnz.ActionMsg {
+	return &authnz.ActionMsg{
 		Namespace: ns,
 		Service:   svc,
 		Path:      path,

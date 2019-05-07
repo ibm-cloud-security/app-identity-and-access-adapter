@@ -16,7 +16,7 @@ metadata:
   name: instance-ibmcloudappid
   namespace: istio-system
 spec:
-  template: authorization
+  template: authnz
   params:
     subject:
       properties:
@@ -41,5 +41,10 @@ spec:
     - handler: handler-ibmcloudappid.istio-system
       instances:
         - instance-ibmcloudappid
+      name: a1
+  responseHeaderOperations:
+    - name: Set-Cookie
+      values: [ a1.output.id_token_cookie, a1.output.refresh_token_cookie, a1.output.access_token_cookie ]
+      operation: APPEND
 ---
 

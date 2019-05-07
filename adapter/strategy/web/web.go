@@ -18,10 +18,10 @@ import (
 	"ibmcloudappid/adapter/policy/engine"
 	"ibmcloudappid/adapter/strategy"
 	"ibmcloudappid/adapter/validator"
+	"ibmcloudappid/config/template"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 )
 
@@ -65,7 +65,7 @@ func New() strategy.Strategy {
 	}
 }
 
-func (w *WebStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthorizationRequest, actions []engine.PolicyAction) (*v1beta1.CheckResult, error) {
+func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
 	props := strategy.DecodeValueMap(r.Instance.Action.Properties)
 	isAuthorized, err := w.checkAuthorized(props)
 	if err != nil {
@@ -73,7 +73,9 @@ func (w *WebStrategy) HandleAuthorizationRequest(r *authorization.HandleAuthoriz
 	}
 	if isAuthorized {
 		log.Debug("User already authenticated")
-		return &v1beta1.CheckResult{Status: status.OK}, nil
+		return &authnz.HandleAuthnZResponse{
+			Result: &v1beta1.CheckResult{Status: status.OK},
+		}, nil
 	}
 	if err, found := props[oauthQueryError]; found && err != "" {
 		log.Debugf("An error occurred during authentication : %s", err)
@@ -92,14 +94,16 @@ func (w *WebStrategy) checkAuthorized(props map[string]interface{}) (bool, error
 	return false, nil
 }
 
-func (w *WebStrategy) handleErrorCallback(err error) (*v1beta1.CheckResult, error) {
-	return &v1beta1.CheckResult{Status: rpc.Status{
-		Code:    int32(rpc.UNAUTHENTICATED),
-		Message: err.Error(),
-	}}, nil
+func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZResponse, error) {
+	return &authnz.HandleAuthnZResponse{
+		Result: &v1beta1.CheckResult{Status: rpc.Status{
+			Code:    int32(rpc.UNAUTHENTICATED),
+			Message: err.Error(),
+		}},
+	}, nil
 }
 
-func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions []engine.PolicyAction) (*v1beta1.CheckResult, error) {
+func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
 	if len(actions) < 1 {
 		return nil, nil
 	}
@@ -144,31 +148,39 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions 
 
 	log.Debug("Authenticated. Returning cookies.")
 
-	return &v1beta1.CheckResult{
-		Status: rpc.Status{
-			Code:    int32(rpc.OK), // Response tells Mixer to accept request
-			Message: "Successfully authenticated",
-			Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
-				Headers: map[string]string{setCookie: accessTokenCookie.String(), setCookie + ": identity": idTokenCookie.String()},
-			})},
+	return &authnz.HandleAuthnZResponse{
+		Result: &v1beta1.CheckResult{
+			Status: rpc.Status{
+				Code:    int32(rpc.OK), // Response tells Mixer to accept request
+				Message: "Successfully authenticated",
+				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
+					Headers: map[string]string{setCookie: accessTokenCookie.String(), setCookie + ": identity": idTokenCookie.String()},
+				})},
+			},
+		},
+		Output: &authnz.OutputMsg{
+			AccessTokenCookie: accessTokenCookie.String(),
+			IdTokenCookie:     idTokenCookie.String(),
 		},
 	}, nil
 }
 
-func (w *WebStrategy) handleAuthorizationCodeFlow(actions []engine.PolicyAction) (*v1beta1.CheckResult, error) {
+func (w *WebStrategy) handleAuthorizationCodeFlow(actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
 	if len(actions) < 1 {
 		return nil, nil
 	}
 	p := actions[0] // Redirect to this identity provider
 
-	return &v1beta1.CheckResult{
-		Status: rpc.Status{
-			Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
-			Message: "Redirecting to identity provider",
-			Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
-				Code:    policy.Found, // Response Mixer remaps on request
-				Headers: map[string]string{location: generateAuthorizationUrl(p.Client)},
-			})},
+	return &authnz.HandleAuthnZResponse{
+		Result: &v1beta1.CheckResult{
+			Status: rpc.Status{
+				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
+				Message: "Redirecting to identity provider",
+				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
+					Code:    policy.Found, // Response Mixer remaps on request
+					Headers: map[string]string{location: generateAuthorizationUrl(p.Client)},
+				})},
+			},
 		},
 	}, nil
 }
@@ -243,7 +255,7 @@ func generateCookie(cookieData *OauthCookie) (*http.Cookie, error) {
 func generateAuthorizationUrl(c *client.Client) string {
 	baseUrl, err := url.Parse(c.AuthURL)
 	if err != nil {
-		log.Errorf("Malformed Auth URL: ", err.Error())
+		log.Errorf("Malformed Auth URL: %s", err.Error())
 		return ""
 	}
 

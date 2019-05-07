@@ -16,9 +16,9 @@ import (
 	"ibmcloudappid/adapter/strategy"
 	"ibmcloudappid/adapter/strategy/api"
 	"ibmcloudappid/adapter/strategy/web"
+	"ibmcloudappid/config/template"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/istio/mixer/template/authorization"
 	"istio.io/istio/pkg/log"
 	"net"
 )
@@ -41,13 +41,10 @@ type (
 	}
 )
 
-var _ authorization.HandleAuthorizationServiceServer = &AppidAdapter{}
-
 ////////////////// adapter.Handler //////////////////////////
 
-// HandleAuthorization evaluates authn/z policies using api/web strategy
-func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization.HandleAuthorizationRequest) (*v1beta1.CheckResult, error) {
-
+// HandleAuthnZ evaluates authn/z policies using api/web strategy
+func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZRequest) (*authnz.HandleAuthnZResponse, error) {
 	// Check policy
 	actions, err := s.engine.Evaluate(r.Instance.Action)
 	if err != nil {
@@ -58,13 +55,15 @@ func (s *AppidAdapter) HandleAuthorization(ctx context.Context, r *authorization
 	switch actions.Type {
 	case policy.JWT:
 		log.Info("Executing JWT policies")
-		return s.apistrategy.HandleAuthorizationRequest(r, actions.Policies)
+		return s.apistrategy.HandleAuthnZRequest(r, actions.Policies)
 	case policy.OIDC:
 		log.Info("Executing OIDC policies")
-		return s.webstrategy.HandleAuthorizationRequest(r, actions.Policies)
+		return s.webstrategy.HandleAuthnZRequest(r, actions.Policies)
 	default:
 		log.Debug("No OIDC/JWT policies configured")
-		return &v1beta1.CheckResult{Status: status.OK}, nil
+		return &authnz.HandleAuthnZResponse{
+			Result: &v1beta1.CheckResult{Status: status.OK},
+		}, nil
 	}
 }
 
@@ -130,7 +129,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 
 	log.Infof("Listening on : \"%v\"\n", s.Addr())
 
-	authorization.RegisterHandleAuthorizationServiceServer(s.server, s)
+	authnz.RegisterHandleAuthnZServiceServer(s.server, s)
 
 	return s, nil
 }

@@ -5,16 +5,18 @@ metadata:
   name: instance-{{ .Values.appName }}
   namespace: istio-system
 spec:
-  template: authorization
+  template: authnz
   params:
     subject:
-      properties:
-        authorization_header: request.headers["authorization"]
+      credentials:
+        access_cookie: request.headers["Cookie"] | ""
+        id_cookie: request.headers["Cookie"] | ""
+        refresh_cookie: request.headers["Cookie"] | ""
+        authorization_header: request.headers["authorization"] | ""
     action:
       path: request.url_path | "/"
       method: request.method | "get"
       service: destination.service.name | ""
       namespace: destination.service.namespace | "default"
       properties:
-        authorization_code: request.query_params["code"] | ""
         error: request.query_params["error"] | ""
