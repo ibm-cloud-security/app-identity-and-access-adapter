@@ -29,8 +29,8 @@ const (
 	oauthQueryError   = "error"
 	authorizationCode = "authorization_code"
 	location          = "location"
-	setCookie         = "Set-Cookie"
-	adapterCookie     = "ISTIO-ADAPTER"
+	accessTokenCookie = "ibmcloudappid-access-cookie"
+	idTokenCookie     = "ibmcloudappid-identity-cookie"
 )
 
 var hashKey = securecookie.GenerateRandomKey(32)
@@ -66,8 +66,7 @@ func New() strategy.Strategy {
 }
 
 func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	props := strategy.DecodeValueMap(r.Instance.Action.Properties)
-	isAuthorized, err := w.checkAuthorized(props)
+	isAuthorized, err := w.checkAuthorized(r.Instance.Subject.Credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +76,35 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions
 			Result: &v1beta1.CheckResult{Status: status.OK},
 		}, nil
 	}
+	props := strategy.DecodeValueMap(r.Instance.Action.Properties)
 	if err, found := props[oauthQueryError]; found && err != "" {
 		log.Debugf("An error occurred during authentication : %s", err)
 		return w.handleErrorCallback(errors.New(err.(string)))
 	}
 	if code, found := props[authorizationCode]; found && code != "" {
 		log.Debugf("Received authorization code : %s", code)
-		return w.handleAuthorizationCodeCallback(code, actions)
+		return w.handleAuthorizationCodeCallback(code, r.Instance.Action, actions)
 	}
 	log.Debug("Handling new user authentication")
-	return w.handleAuthorizationCodeFlow(actions)
+	return w.handleAuthorizationCodeFlow(r.Instance.Action, actions)
 }
 
-func (w *WebStrategy) checkAuthorized(props map[string]interface{}) (bool, error) {
-	// Convert tokens
+func (w *WebStrategy) checkAuthorized(credentials *authnz.CredentialsMsg) (bool, error) {
+	// Parse cookies
+	header := http.Header{}
+	header.Add("Cookie", credentials.Cookies)
+	request := http.Request{Header: header}
+
+	cookies := request.Cookies()
+	accessCookie := getCookieByName(cookies, accessTokenCookie)
+	idCookie := getCookieByName(cookies, idTokenCookie)
+
+	if accessCookie != "" {
+		if idCookie != "" {
+
+		}
+		return true, nil
+	}
 	return false, nil
 }
 
@@ -103,14 +117,16 @@ func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZRespon
 	}, nil
 }
 
-func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, action *authnz.ActionMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
 	if len(actions) < 1 {
 		return nil, nil
 	}
 	p := actions[0]
 
+	redirectURI, _ := buildRedirectURI(action)
+
 	// Get Tokens
-	response, err := w.getTokens(code.(string), "http://localhost:3000/api/user/data", p.Client)
+	response, err := w.getTokens(code.(string), redirectURI, p.Client)
 	if err != nil {
 		log.Errorf("Could not retrieve tokens : %s", err.Error())
 		return w.handleErrorCallback(err)
@@ -129,7 +145,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions 
 	}
 
 	// Create access_token cookie
-	accessTokenCookie, err := generateCookie(&OauthCookie{
+	accessTokenCookie, err := generateCookie(accessTokenCookie, &OauthCookie{
 		Token: *response.AccessToken,
 	})
 	if err != nil {
@@ -138,7 +154,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions 
 	}
 
 	// Create id_token cookie
-	idTokenCookie, err := generateCookie(&OauthCookie{
+	idTokenCookie, err := generateCookie(idTokenCookie, &OauthCookie{
 		Token: *response.IdentityToken,
 	})
 	if err != nil {
@@ -153,9 +169,6 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions 
 			Status: rpc.Status{
 				Code:    int32(rpc.OK), // Response tells Mixer to accept request
 				Message: "Successfully authenticated",
-				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
-					Headers: map[string]string{setCookie: accessTokenCookie.String(), setCookie + ": identity": idTokenCookie.String()},
-				})},
 			},
 		},
 		Output: &authnz.OutputMsg{
@@ -165,12 +178,13 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, actions 
 	}, nil
 }
 
-func (w *WebStrategy) handleAuthorizationCodeFlow(actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeFlow(action *authnz.ActionMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
 	if len(actions) < 1 {
 		return nil, nil
 	}
 	p := actions[0] // Redirect to this identity provider
-
+	redirectURI, _ := buildRedirectURI(action)
+	log.Infof("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{
 			Status: rpc.Status{
@@ -178,7 +192,7 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(actions []engine.PolicyAction)
 				Message: "Redirecting to identity provider",
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code:    policy.Found, // Response Mixer remaps on request
-					Headers: map[string]string{location: generateAuthorizationUrl(p.Client)},
+					Headers: map[string]string{location: generateAuthorizationUrl(p.Client, redirectURI)},
 				})},
 			},
 		},
@@ -229,7 +243,7 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client *client.
 	return &tokenResponse, nil
 }
 
-func generateCookie(cookieData *OauthCookie) (*http.Cookie, error) {
+func generateCookie(cookieName string, cookieData *OauthCookie) (*http.Cookie, error) {
 	// encode the struct
 	data, err := bson.Marshal(&cookieData)
 	if err != nil {
@@ -237,13 +251,13 @@ func generateCookie(cookieData *OauthCookie) (*http.Cookie, error) {
 	}
 
 	// create the cookie
-	if encoded, err := secretCookie.Encode(adapterCookie, data); err == nil {
+	if encoded, err := secretCookie.Encode(cookieName, data); err == nil {
 		return &http.Cookie{
-			Name:     adapterCookie,
+			Name:     cookieName,
 			Value:    encoded,
 			Path:     "/",
-			Secure:   true,
-			HttpOnly: true,
+			Secure:   false, // TODO: DO NOT RELEASE WITHOUT THIS FLAG SET TO TRUE
+			HttpOnly: false,
 			Expires:  time.Now().Add(time.Hour * time.Duration(4)),
 		}, nil
 	} else {
@@ -252,7 +266,7 @@ func generateCookie(cookieData *OauthCookie) (*http.Cookie, error) {
 	}
 }
 
-func generateAuthorizationUrl(c *client.Client) string {
+func generateAuthorizationUrl(c *client.Client, redirectURI string) string {
 	baseUrl, err := url.Parse(c.AuthURL)
 	if err != nil {
 		log.Errorf("Malformed Auth URL: %s", err.Error())
@@ -263,11 +277,30 @@ func generateAuthorizationUrl(c *client.Client) string {
 	params := url.Values{}
 	params.Add("client_id", c.ClientId)
 	params.Add("response_type", "code")
-	params.Add("redirect_uri", "http://localhost:3000/api/user/data")
+	params.Add("redirect_uri", redirectURI)
 	params.Add("scope", "oidc")
 
 	// Add Query Parameters to the URL
 	baseUrl.RawQuery = params.Encode() // Escape Query Parameters
 
 	return baseUrl.String()
+}
+
+// getCookieByName finds the given cookie in an array
+func getCookieByName(cookies []*http.Cookie, name string) string {
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			return cookie.Value
+		}
+	}
+	return ""
+}
+
+func buildRedirectURI(action *authnz.ActionMsg) (string, error) {
+	props := strategy.DecodeValueMap(action.Properties)
+	// Generate Redirect URI - TODO: error checking
+	reqScheme := props["request_scheme"].(string)
+	reqHost := props["request_host"].(string)
+	reqUrl := props["request_url_path"].(string)
+	return reqScheme + "://" + reqHost + reqUrl, nil
 }

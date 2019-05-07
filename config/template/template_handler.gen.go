@@ -93,16 +93,10 @@ func (o *Output) WasSet(field string) bool {
 // The optional credentials passed in the request
 type Credentials struct {
 
-	// The encrypted access token cookie
-	AccessCookie string
+	// Optionally contains the authn/z session cookies
+	Cookies string
 
-	// The encrypted id token cookie
-	IdCookie string
-
-	// The encrypted refresh token cookie
-	RefreshCookie string
-
-	// The authorization header passed on the request
+	// Optionally contains the authorization header
 	AuthorizationHeader string
 }
 

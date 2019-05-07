@@ -10,14 +10,15 @@ option (istio.mixer.adapter.model.v1beta1.template_variety) = TEMPLATE_VARIETY_C
 
 // The optional credentials passed in the request
 message Credentials {
-    // The encrypted access token cookie
-    string access_cookie = 1;
-    // The encrypted id token cookie
-    string id_cookie = 2;
-    // The encrypted refresh token cookie
-    string refresh_cookie = 3;
-    // The authorization header passed on the request
-    string authorization_header = 4;
+    // Optionally contains the authn/z session cookies
+    string cookies = 1;
+    // Optionally contains the authorization header
+    string authorization_header = 2;
+}
+
+// The optional params returned during the OAuth 2.0 callback
+message OAuthCallbackParams {
+
 }
 
 // A subject contains a list of attributes that identify

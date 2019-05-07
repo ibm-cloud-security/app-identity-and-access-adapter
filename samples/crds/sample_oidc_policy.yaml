@@ -1,0 +1,11 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: OidcPolicy
+metadata:
+  name: samploidcpolicy
+  namespace: demo-backend-namespace
+spec:
+  oidcClientName: AppID1
+  target:
+    - serviceName: svc-demo-backend
+      paths:
+        - /api/user/data
