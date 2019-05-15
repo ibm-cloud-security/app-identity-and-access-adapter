@@ -84,8 +84,9 @@ func TestParseRequest(t *testing.T) {
 		{
 			&authnz.HandleAuthnZRequest{
 				Instance: &authnz.InstanceMsg{
-					Name:    "",
-					Subject: &authnz.SubjectMsg{Credentials: &authnz.CredentialsMsg{}},
+					Request: &authnz.RequestMsg{
+						Headers: &authnz.HeadersMsg{},
+					},
 				},
 			},
 			true,
@@ -161,13 +162,11 @@ func TestErrorResponse(t *testing.T) {
 func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
-			Name: "",
-			Subject: &authnz.SubjectMsg{
-				Credentials: &authnz.CredentialsMsg{
-					AuthorizationHeader: header,
+			Request: &authnz.RequestMsg{
+				Headers: &authnz.HeadersMsg{
+					Authorization: header,
 				},
 			},
-			Action: nil,
 		},
 	}
 }

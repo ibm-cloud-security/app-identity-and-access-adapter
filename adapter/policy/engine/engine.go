@@ -65,10 +65,8 @@ func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
 	}
 
 	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
-		// Make decision
-		return &Action{
-			Type: policy.NONE,
-		}, nil
+		log.Fatal("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
+		return nil, errors.New("conflicting OIDC and JWT policies")
 	}
 
 	if oidcPolicies != nil && len(oidcPolicies) > 0 {

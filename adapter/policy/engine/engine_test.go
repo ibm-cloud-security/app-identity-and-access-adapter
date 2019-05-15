@@ -41,7 +41,7 @@ func TestNew(t *testing.T) {
 
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.ActionMsg
+		input               *authnz.TargetMsg
 		jwtpolicies         []v1.JwtPolicySpec
 		endpoints           []policy.Endpoint
 		expectedAction      policy.Type
@@ -146,7 +146,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.ActionMsg
+		input               *authnz.TargetMsg
 		oidcpolicies        []v1.OidcPolicySpec
 		endpoints           []policy.Endpoint
 		expectedAction      policy.Type
@@ -212,7 +212,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 // FUTURE no rules in place for collision
 func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.ActionMsg
+		input               *authnz.TargetMsg
 		jwtpolicies         []v1.JwtPolicySpec
 		oidcpolicies        []v1.OidcPolicySpec
 		endpoints           []policy.Endpoint
@@ -267,8 +267,8 @@ func genEndpoint(ns string, svc string, path string, method string) policy.Endpo
 	}
 }
 
-func generateActionMessage(ns string, svc string, path string, method string) *authnz.ActionMsg {
-	return &authnz.ActionMsg{
+func generateActionMessage(ns string, svc string, path string, method string) *authnz.TargetMsg {
+	return &authnz.TargetMsg{
 		Namespace: ns,
 		Service:   svc,
 		Path:      path,

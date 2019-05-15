@@ -17,6 +17,11 @@ type Endpoint struct {
 	Namespace, Service, Path, Method string
 }
 
+// CrdKey represents a CustomResourceDefinition ID
+type CrdKey struct {
+	Id string
+}
+
 // PolicyMapping captures information of created endpoints by policy
 type PolicyMapping struct {
 	Type      Type

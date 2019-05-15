@@ -83,20 +83,19 @@ type mockEngine struct {
 	err    error
 }
 
-func (m *mockEngine) Evaluate(*authnz.ActionMsg) (*engine.Action, error) {
+func (m *mockEngine) Evaluate(msg *authnz.TargetMsg) (*engine.Action, error) {
 	return m.action, m.err
 }
 
 func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
-			Name: "",
-			Subject: &authnz.SubjectMsg{
-				Credentials: &authnz.CredentialsMsg{
-					AuthorizationHeader: header,
+			Request: &authnz.RequestMsg{
+				Headers: &authnz.HeadersMsg{
+					Authorization: header,
 				},
 			},
-			Action: nil,
+			Target: nil,
 		},
 	}
 }

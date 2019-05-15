@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"istio.io/istio/pkg/log"
 	"golang.org/x/sync/singleflight"
+	"istio.io/istio/pkg/log"
 )
 
 // KeySet retrieves public keys from OAuth server
@@ -122,6 +122,8 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 		}
 		keymap[k.Kid] = pubkey
 	}
+
+	log.Infof("KeySet - updated public keys for %s", s.publicKeyURL)
 
 	s.publicKeys = keymap
 
