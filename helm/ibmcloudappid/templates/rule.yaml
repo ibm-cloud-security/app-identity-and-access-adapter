@@ -10,7 +10,7 @@ spec:
       instances:
         - instance-{{ .Values.appName }}
       name: a1
-  responseHeaderOperations:
-    - name: Set-Cookie
-      values: [ a1.output.id_token_cookie, a1.output.refresh_token_cookie, a1.output.access_token_cookie ]
-      operation: APPEND
+  requestHeaderOperations:
+    - name: Authorization
+      values: [ a1.output.authorization ]
+      operation: REPLACE

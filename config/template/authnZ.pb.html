@@ -2,13 +2,13 @@
 title: authnZ
 layout: protoc-gen-docs
 generator: protoc-gen-docs
-number_of_entries: 5
+number_of_entries: 6
 ---
 <p>Template authnZ defines an authorization and authentication adapter template</p>
 
-<h2 id="Action">Action</h2>
+<h2 id="Headers">Headers</h2>
 <section>
-<p>An action defines &ldquo;how a resource is accessed&rdquo;.</p>
+<p>The Headers models the core HTTP headers needed for the JWT/OIDC flows</p>
 
 <table class="message-fields">
 <thead>
@@ -19,75 +19,29 @@ number_of_entries: 5
 </tr>
 </thead>
 <tbody>
-<tr id="Action-namespace">
-<td><code>namespace</code></td>
-<td><code>string</code></td>
-<td>
-<p>Namespace the target action is taking place in.</p>
-
-</td>
-</tr>
-<tr id="Action-service">
-<td><code>service</code></td>
-<td><code>string</code></td>
-<td>
-<p>The Service the action is being taken on.</p>
-
-</td>
-</tr>
-<tr id="Action-method">
-<td><code>method</code></td>
-<td><code>string</code></td>
-<td>
-<p>What action is being taken.</p>
-
-</td>
-</tr>
-<tr id="Action-path">
-<td><code>path</code></td>
-<td><code>string</code></td>
-<td>
-<p>HTTP REST path within the service</p>
-
-</td>
-</tr>
-<tr id="Action-properties">
-<td><code>properties</code></td>
-<td><code>map&lt;string,&nbsp;<a href="https://istio.io/docs/reference/config/policy-and-telemetry/istio.policy.v1beta1.html#Value">istio.policy.v1beta1.Value</a>&gt;</code></td>
-<td>
-<p>Additional data about the action for use in policy.</p>
-
-</td>
-</tr>
-</tbody>
-</table>
-</section>
-<h2 id="Credentials">Credentials</h2>
-<section>
-<p>The optional credentials passed in the request</p>
-
-<table class="message-fields">
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr id="Credentials-cookies">
+<tr id="Headers-cookies">
 <td><code>cookies</code></td>
 <td><code>string</code></td>
 <td>
-<p>Optionally contains the authn/z session cookies</p>
+<p>The optional cookies are the HTTP request cookies sent by the browser. These
+contain the encrypted session toke</p>
 
 </td>
 </tr>
-<tr id="Credentials-authorization_header">
-<td><code>authorizationHeader</code></td>
+<tr id="Headers-authorization">
+<td><code>authorization</code></td>
 <td><code>string</code></td>
 <td>
-<p>Optionally contains the authorization header</p>
+<p>The optional authorization header contains credentials needed to verify
+access / authorization privileges.</p>
+
+</td>
+</tr>
+<tr id="Headers-properties">
+<td><code>properties</code></td>
+<td><code>map&lt;string,&nbsp;<a href="https://istio.io/docs/reference/config/policy-and-telemetry/istio.policy.v1beta1.html#Value">istio.policy.v1beta1.Value</a>&gt;</code></td>
+<td>
+<p>Additional data about the headers for use in policy.</p>
 
 </td>
 </tr>
@@ -96,9 +50,8 @@ number_of_entries: 5
 </section>
 <h2 id="OutputTemplate">OutputTemplate</h2>
 <section>
-<p>OutputTemplate defines OAuth 2.0 cookies to apply to response headers
-These are primarily used in OAuth 2.0 / OIDC web strategy
-flows and will be remain empty during most flows.</p>
+<p>The Authn/Z template produces an authorization header of the format
+<code>Bearer &lt;access&gt; &lt;id&gt;</code> which should be replaced on the ongoing request.</p>
 
 <table class="message-fields">
 <thead>
@@ -109,37 +62,20 @@ flows and will be remain empty during most flows.</p>
 </tr>
 </thead>
 <tbody>
-<tr id="OutputTemplate-access_token_cookie">
-<td><code>accessTokenCookie</code></td>
+<tr id="OutputTemplate-authorization">
+<td><code>authorization</code></td>
 <td><code>string</code></td>
 <td>
-<p>The access token cookie using in OAuth 2.0 flows</p>
-
-</td>
-</tr>
-<tr id="OutputTemplate-id_token_cookie">
-<td><code>idTokenCookie</code></td>
-<td><code>string</code></td>
-<td>
-<p>The ID token cookie using in OAuth 2.0 flows</p>
-
-</td>
-</tr>
-<tr id="OutputTemplate-refresh_token_cookie">
-<td><code>refreshTokenCookie</code></td>
-<td><code>string</code></td>
-<td>
-<p>The refresh token cookie using in OAuth 2.0 flows</p>
+<p>The authorization header</p>
 
 </td>
 </tr>
 </tbody>
 </table>
 </section>
-<h2 id="Subject">Subject</h2>
+<h2 id="QueryParams">QueryParams</h2>
 <section>
-<p>A subject contains a list of attributes that identify
-the caller identity.</p>
+<p>The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow</p>
 
 <table class="message-fields">
 <thead>
@@ -150,38 +86,147 @@ the caller identity.</p>
 </tr>
 </thead>
 <tbody>
-<tr id="Subject-user">
-<td><code>user</code></td>
+<tr id="QueryParams-error">
+<td><code>error</code></td>
 <td><code>string</code></td>
 <td>
-<p>The user name/ID that the subject represents.</p>
+<p>The error matches an OAuth 2.0 callback error response</p>
 
 </td>
 </tr>
-<tr id="Subject-groups">
-<td><code>groups</code></td>
+<tr id="QueryParams-code">
+<td><code>code</code></td>
 <td><code>string</code></td>
 <td>
-<p>Groups the subject belongs to depending on the authentication mechanism,
-&ldquo;groups&rdquo; are normally populated from JWT claim or client certificate.
-The operator can define how it is populated when creating an instance of
-the template.</p>
+<p>The code matches an OAuth 2.0 callback authorization code grant</p>
 
 </td>
 </tr>
-<tr id="Subject-credentials">
-<td><code>credentials</code></td>
-<td><code><a href="#Credentials">Credentials</a></code></td>
-<td>
-<p>The optional credentials passed in the request</p>
-
-</td>
-</tr>
-<tr id="Subject-properties">
+<tr id="QueryParams-properties">
 <td><code>properties</code></td>
 <td><code>map&lt;string,&nbsp;<a href="https://istio.io/docs/reference/config/policy-and-telemetry/istio.policy.v1beta1.html#Value">istio.policy.v1beta1.Value</a>&gt;</code></td>
 <td>
-<p>Additional attributes about the subject.</p>
+<p>Additional data about the query parameters for use in policy.</p>
+
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<h2 id="Request">Request</h2>
+<section>
+<p>The Request captures information about the incoming HTTP request</p>
+
+<table class="message-fields">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr id="Request-scheme">
+<td><code>scheme</code></td>
+<td><code>string</code></td>
+<td>
+<p>The HTTP scheme</p>
+
+</td>
+</tr>
+<tr id="Request-host">
+<td><code>host</code></td>
+<td><code>string</code></td>
+<td>
+<p>The HTTP host</p>
+
+</td>
+</tr>
+<tr id="Request-path">
+<td><code>path</code></td>
+<td><code>string</code></td>
+<td>
+<p>The HTTP path</p>
+
+</td>
+</tr>
+<tr id="Request-headers">
+<td><code>headers</code></td>
+<td><code><a href="#Headers">Headers</a></code></td>
+<td>
+<p>The HTTP headers on the request</p>
+
+</td>
+</tr>
+<tr id="Request-params">
+<td><code>params</code></td>
+<td><code><a href="#QueryParams">QueryParams</a></code></td>
+<td>
+<p>THE HTTP query params</p>
+
+</td>
+</tr>
+<tr id="Request-properties">
+<td><code>properties</code></td>
+<td><code>map&lt;string,&nbsp;<a href="https://istio.io/docs/reference/config/policy-and-telemetry/istio.policy.v1beta1.html#Value">istio.policy.v1beta1.Value</a>&gt;</code></td>
+<td>
+<p>Additional data about the Request for use in policy.</p>
+
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<h2 id="Target">Target</h2>
+<section>
+<p>A Target contains the Action destination.</p>
+
+<table class="message-fields">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr id="Target-namespace">
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>
+<p>The namespace the target service is in</p>
+
+</td>
+</tr>
+<tr id="Target-service">
+<td><code>service</code></td>
+<td><code>string</code></td>
+<td>
+<p>The service the action is being taken on.</p>
+
+</td>
+</tr>
+<tr id="Target-method">
+<td><code>method</code></td>
+<td><code>string</code></td>
+<td>
+<p>The HTTP method of the request</p>
+
+</td>
+</tr>
+<tr id="Target-path">
+<td><code>path</code></td>
+<td><code>string</code></td>
+<td>
+<p>The HTTP REST path within the service</p>
+
+</td>
+</tr>
+<tr id="Target-properties">
+<td><code>properties</code></td>
+<td><code>map&lt;string,&nbsp;<a href="https://istio.io/docs/reference/config/policy-and-telemetry/istio.policy.v1beta1.html#Value">istio.policy.v1beta1.Value</a>&gt;</code></td>
+<td>
+<p>Additional data about the target for use in policy.</p>
 
 </td>
 </tr>
@@ -190,13 +235,10 @@ the template.</p>
 </section>
 <h2 id="Template">Template</h2>
 <section>
-<p>The <code>authorization</code> template defines parameters for performing policy
-enforcement within Istio. It is primarily concerned with enabling Mixer
-adapters to make decisions about who is allowed to do what.
-In this template, the &ldquo;who&rdquo; is defined in a Subject message. The &ldquo;what&rdquo; is
-defined in an Action message. During a Mixer Check call, these values
-will be populated based on configuration from request attributes and
-passed to individual authorization adapters to adjudicate.</p>
+<p>The Authn/Z template contains the information necessary to
+control authorization and authentication using OAuth 2.0 / OIDC
+defined protocols. It captures information about the request source, destination
+and code request telemetry that allows comprehensive JWT policy definitions.</p>
 
 <table class="message-fields">
 <thead>
@@ -207,20 +249,19 @@ passed to individual authorization adapters to adjudicate.</p>
 </tr>
 </thead>
 <tbody>
-<tr id="Template-subject">
-<td><code>subject</code></td>
-<td><code><a href="#Subject">Subject</a></code></td>
+<tr id="Template-request">
+<td><code>request</code></td>
+<td><code><a href="#Request">Request</a></code></td>
 <td>
-<p>A subject contains a list of attributes that identify
-the caller identity.</p>
+<p>The request contains the core information about the request being made</p>
 
 </td>
 </tr>
-<tr id="Template-action">
-<td><code>action</code></td>
-<td><code><a href="#Action">Action</a></code></td>
+<tr id="Template-target">
+<td><code>target</code></td>
+<td><code><a href="#Target">Target</a></code></td>
 <td>
-<p>An action defines &ldquo;how a resource is accessed&rdquo;.</p>
+<p>The target contains aggregated Kube information about the destination</p>
 
 </td>
 </tr>

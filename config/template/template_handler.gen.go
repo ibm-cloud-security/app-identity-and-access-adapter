@@ -29,60 +29,39 @@ const TemplateName = "authnz"
 
 // Instance is constructed by Mixer for the 'authnz' template.
 //
-// The `authorization` template defines parameters for performing policy
-// enforcement within Istio. It is primarily concerned with enabling Mixer
-// adapters to make decisions about who is allowed to do what.
-// In this template, the "who" is defined in a Subject message. The "what" is
-// defined in an Action message. During a Mixer Check call, these values
-// will be populated based on configuration from request attributes and
-// passed to individual authorization adapters to adjudicate.
+// The Authn/Z template contains the information necessary to
+// control authorization and authentication using OAuth 2.0 / OIDC
+// defined protocols. It captures information about the request source, destination
+// and code request telemetry that allows comprehensive JWT policy definitions.
 type Instance struct {
 	// Name of the instance as specified in configuration.
 	Name string
 
-	// A subject contains a list of attributes that identify
-	// the caller identity.
-	Subject *Subject
+	// The request contains the core information about the request being made
+	Request *Request
 
-	// An action defines "how a resource is accessed".
-	Action *Action
+	// The target contains aggregated Kube information about the destination
+	Target *Target
 }
 
 // Output struct is returned by the attribute producing adapters that handle this template.
 //
-// OutputTemplate defines OAuth 2.0 cookies to apply to response headers
-// These are primarily used in OAuth 2.0 / OIDC web strategy
-// flows and will be remain empty during most flows.
+// The Authn/Z template produces an authorization header of the format
+// `Bearer <access> <id>` which should be replaced on the ongoing request.
 type Output struct {
 	fieldsSet map[string]bool
 
-	// The access token cookie using in OAuth 2.0 flows
-	AccessTokenCookie string
-
-	// The ID token cookie using in OAuth 2.0 flows
-	IdTokenCookie string
-
-	// The refresh token cookie using in OAuth 2.0 flows
-	RefreshTokenCookie string
+	// The authorization header
+	Authorization string
 }
 
 func NewOutput() *Output {
 	return &Output{fieldsSet: make(map[string]bool)}
 }
 
-func (o *Output) SetAccessTokenCookie(val string) {
-	o.fieldsSet["access_token_cookie"] = true
-	o.AccessTokenCookie = val
-}
-
-func (o *Output) SetIdTokenCookie(val string) {
-	o.fieldsSet["id_token_cookie"] = true
-	o.IdTokenCookie = val
-}
-
-func (o *Output) SetRefreshTokenCookie(val string) {
-	o.fieldsSet["refresh_token_cookie"] = true
-	o.RefreshTokenCookie = val
+func (o *Output) SetAuthorization(val string) {
+	o.fieldsSet["authorization"] = true
+	o.Authorization = val
 }
 
 func (o *Output) WasSet(field string) bool {
@@ -90,52 +69,72 @@ func (o *Output) WasSet(field string) bool {
 	return found
 }
 
-// The optional credentials passed in the request
-type Credentials struct {
+// A Target contains the Action destination.
+type Target struct {
 
-	// Optionally contains the authn/z session cookies
-	Cookies string
+	// The namespace the target service is in
+	Namespace string
 
-	// Optionally contains the authorization header
-	AuthorizationHeader string
-}
+	// The service the action is being taken on.
+	Service string
 
-// A subject contains a list of attributes that identify
-// the caller identity.
-type Subject struct {
+	// The HTTP method of the request
+	Method string
 
-	// The user name/ID that the subject represents.
-	User string
+	// The HTTP REST path within the service
+	Path string
 
-	// Groups the subject belongs to depending on the authentication mechanism,
-	// "groups" are normally populated from JWT claim or client certificate.
-	// The operator can define how it is populated when creating an instance of
-	// the template.
-	Groups string
-
-	// The optional credentials passed in the request
-	Credentials *Credentials
-
-	// Additional attributes about the subject.
+	// Additional data about the target for use in policy.
 	Properties map[string]interface{}
 }
 
-// An action defines "how a resource is accessed".
-type Action struct {
+// The Headers models the core HTTP headers needed for the JWT/OIDC flows
+type Headers struct {
 
-	// Namespace the target action is taking place in.
-	Namespace string
+	// The optional cookies are the HTTP request cookies sent by the browser. These
+	// contain the encrypted session toke
+	Cookies string
 
-	// The Service the action is being taken on.
-	Service string
+	// The optional authorization header contains credentials needed to verify
+	// access / authorization privileges.
+	Authorization string
 
-	// What action is being taken.
-	Method string
+	// Additional data about the headers for use in policy.
+	Properties map[string]interface{}
+}
 
-	// HTTP REST path within the service
+// The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow
+type QueryParams struct {
+
+	// The error matches an OAuth 2.0 callback error response
+	Error string
+
+	// The code matches an OAuth 2.0 callback authorization code grant
+	Code string
+
+	// Additional data about the query parameters for use in policy.
+	Properties map[string]interface{}
+}
+
+// The Request captures information about the incoming HTTP request
+type Request struct {
+
+	// The HTTP scheme
+	Scheme string
+
+	// The HTTP host
+	Host string
+
+	// The HTTP path
 	Path string
 
-	// Additional data about the action for use in policy.
+	// The HTTP headers on the request
+	Headers *Headers
+
+	// THE HTTP query params
+	Params *QueryParams
+
+	// Additional data about the Request for use in policy.
 	Properties map[string]interface{}
 }
 

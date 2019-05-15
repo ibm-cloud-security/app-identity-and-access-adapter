@@ -19,13 +19,10 @@ syntax = "proto3";
 
 // Template authnZ defines an authorization and authentication adapter template
 //
-// The `authorization` template defines parameters for performing policy
-// enforcement within Istio. It is primarily concerned with enabling Mixer
-// adapters to make decisions about who is allowed to do what.
-// In this template, the "who" is defined in a Subject message. The "what" is
-// defined in an Action message. During a Mixer Check call, these values
-// will be populated based on configuration from request attributes and
-// passed to individual authorization adapters to adjudicate.
+// The Authn/Z template contains the information necessary to
+// control authorization and authentication using OAuth 2.0 / OIDC
+// defined protocols. It captures information about the request source, destination
+// and code request telemetry that allows comprehensive JWT policy definitions.
 package authnz;
 
 
@@ -76,14 +73,8 @@ message HandleAuthnZResponse {
 // Contains output payload for 'authnz' template.
 message OutputMsg {
     
-    // The access token cookie using in OAuth 2.0 flows
-    string access_token_cookie = 1;
-    
-    // The ID token cookie using in OAuth 2.0 flows
-    string id_token_cookie = 2;
-    
-    // The refresh token cookie using in OAuth 2.0 flows
-    string refresh_token_cookie = 3;
+    // The authorization header
+    string authorization = 1;
     
 }
 
@@ -94,64 +85,84 @@ message InstanceMsg {
     // Name of the instance as specified in configuration.
     string name = 72295727;
     
-    // A subject contains a list of attributes that identify
-// the caller identity.
-    SubjectMsg subject = 1;
+    // The request contains the core information about the request being made
+    RequestMsg request = 1;
     
-    // An action defines "how a resource is accessed".
-    ActionMsg action = 2;
-    
-}
-
-// The optional credentials passed in the request
-message CredentialsMsg {
-    
-    // Optionally contains the authn/z session cookies
-    string cookies = 1;
-    
-    // Optionally contains the authorization header
-    string authorization_header = 2;
+    // The target contains aggregated Kube information about the destination
+    TargetMsg target = 2;
     
 }
 
-// A subject contains a list of attributes that identify
-// the caller identity.
-message SubjectMsg {
+// A Target contains the Action destination.
+message TargetMsg {
     
-    // The user name/ID that the subject represents.
-    string user = 1;
-    
-    // Groups the subject belongs to depending on the authentication mechanism,
-// "groups" are normally populated from JWT claim or client certificate.
-// The operator can define how it is populated when creating an instance of
-// the template.
-    string groups = 2;
-    
-    // The optional credentials passed in the request
-    CredentialsMsg credentials = 3;
-    
-    // Additional attributes about the subject.
-    map<string, istio.policy.v1beta1.Value> properties = 4;
-    
-}
-
-// An action defines "how a resource is accessed".
-message ActionMsg {
-    
-    // Namespace the target action is taking place in.
+    // The namespace the target service is in
     string namespace = 1;
     
-    // The Service the action is being taken on.
+    // The service the action is being taken on.
     string service = 2;
     
-    // What action is being taken.
+    // The HTTP method of the request
     string method = 3;
     
-    // HTTP REST path within the service
+    // The HTTP REST path within the service
     string path = 4;
     
-    // Additional data about the action for use in policy.
+    // Additional data about the target for use in policy.
     map<string, istio.policy.v1beta1.Value> properties = 5;
+    
+}
+
+// The Headers models the core HTTP headers needed for the JWT/OIDC flows
+message HeadersMsg {
+    
+    // The optional cookies are the HTTP request cookies sent by the browser. These
+// contain the encrypted session toke
+    string cookies = 1;
+    
+    // The optional authorization header contains credentials needed to verify
+// access / authorization privileges.
+    string authorization = 2;
+    
+    // Additional data about the headers for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 3;
+    
+}
+
+// The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow
+message QueryParamsMsg {
+    
+    // The error matches an OAuth 2.0 callback error response
+    string error = 1;
+    
+    // The code matches an OAuth 2.0 callback authorization code grant
+    string code = 2;
+    
+    // Additional data about the query parameters for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 3;
+    
+}
+
+// The Request captures information about the incoming HTTP request
+message RequestMsg {
+    
+    // The HTTP scheme
+    string scheme = 1;
+    
+    // The HTTP host
+    string host = 2;
+    
+    // The HTTP path
+    string path = 3;
+    
+    // The HTTP headers on the request
+    HeadersMsg headers = 4;
+    
+    // THE HTTP query params
+    QueryParamsMsg params = 5;
+    
+    // Additional data about the Request for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 6;
     
 }
 
@@ -159,37 +170,49 @@ message ActionMsg {
 // infrastructure backends during configuration-time through [InfrastructureBackend.CreateSession][TODO: Link to this fragment].
 message Type {
     
-    // A subject contains a list of attributes that identify
-// the caller identity.
-    SubjectType subject = 1;
+    // The request contains the core information about the request being made
+    RequestType request = 1;
     
-    // An action defines "how a resource is accessed".
-    ActionType action = 2;
-    
-}
-
-// The optional credentials passed in the request
-message CredentialsType {
+    // The target contains aggregated Kube information about the destination
+    TargetType target = 2;
     
 }
 
-// A subject contains a list of attributes that identify
-// the caller identity.
-message SubjectType {
+// A Target contains the Action destination.
+message TargetType {
     
-    // The optional credentials passed in the request
-    CredentialsType credentials = 3;
-    
-    // Additional attributes about the subject.
-    map<string, istio.policy.v1beta1.ValueType> properties = 4;
-    
-}
-
-// An action defines "how a resource is accessed".
-message ActionType {
-    
-    // Additional data about the action for use in policy.
+    // Additional data about the target for use in policy.
     map<string, istio.policy.v1beta1.ValueType> properties = 5;
+    
+}
+
+// The Headers models the core HTTP headers needed for the JWT/OIDC flows
+message HeadersType {
+    
+    // Additional data about the headers for use in policy.
+    map<string, istio.policy.v1beta1.ValueType> properties = 3;
+    
+}
+
+// The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow
+message QueryParamsType {
+    
+    // Additional data about the query parameters for use in policy.
+    map<string, istio.policy.v1beta1.ValueType> properties = 3;
+    
+}
+
+// The Request captures information about the incoming HTTP request
+message RequestType {
+    
+    // The HTTP headers on the request
+    HeadersType headers = 4;
+    
+    // THE HTTP query params
+    QueryParamsType params = 5;
+    
+    // Additional data about the Request for use in policy.
+    map<string, istio.policy.v1beta1.ValueType> properties = 6;
     
 }
 
@@ -197,64 +220,84 @@ message ActionType {
 // Represents instance configuration schema for 'authnz' template.
 message InstanceParam {
     
-    // A subject contains a list of attributes that identify
-// the caller identity.
-    SubjectInstanceParam subject = 1;
+    // The request contains the core information about the request being made
+    RequestInstanceParam request = 1;
     
-    // An action defines "how a resource is accessed".
-    ActionInstanceParam action = 2;
-    
-}
-
-// The optional credentials passed in the request
-message CredentialsInstanceParam {
-    
-    // Optionally contains the authn/z session cookies
-    string cookies = 1;
-    
-    // Optionally contains the authorization header
-    string authorization_header = 2;
+    // The target contains aggregated Kube information about the destination
+    TargetInstanceParam target = 2;
     
 }
 
-// A subject contains a list of attributes that identify
-// the caller identity.
-message SubjectInstanceParam {
+// A Target contains the Action destination.
+message TargetInstanceParam {
     
-    // The user name/ID that the subject represents.
-    string user = 1;
-    
-    // Groups the subject belongs to depending on the authentication mechanism,
-// "groups" are normally populated from JWT claim or client certificate.
-// The operator can define how it is populated when creating an instance of
-// the template.
-    string groups = 2;
-    
-    // The optional credentials passed in the request
-    CredentialsInstanceParam credentials = 3;
-    
-    // Additional attributes about the subject.
-    map<string, string> properties = 4;
-    
-}
-
-// An action defines "how a resource is accessed".
-message ActionInstanceParam {
-    
-    // Namespace the target action is taking place in.
+    // The namespace the target service is in
     string namespace = 1;
     
-    // The Service the action is being taken on.
+    // The service the action is being taken on.
     string service = 2;
     
-    // What action is being taken.
+    // The HTTP method of the request
     string method = 3;
     
-    // HTTP REST path within the service
+    // The HTTP REST path within the service
     string path = 4;
     
-    // Additional data about the action for use in policy.
+    // Additional data about the target for use in policy.
     map<string, string> properties = 5;
+    
+}
+
+// The Headers models the core HTTP headers needed for the JWT/OIDC flows
+message HeadersInstanceParam {
+    
+    // The optional cookies are the HTTP request cookies sent by the browser. These
+// contain the encrypted session toke
+    string cookies = 1;
+    
+    // The optional authorization header contains credentials needed to verify
+// access / authorization privileges.
+    string authorization = 2;
+    
+    // Additional data about the headers for use in policy.
+    map<string, string> properties = 3;
+    
+}
+
+// The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow
+message QueryParamsInstanceParam {
+    
+    // The error matches an OAuth 2.0 callback error response
+    string error = 1;
+    
+    // The code matches an OAuth 2.0 callback authorization code grant
+    string code = 2;
+    
+    // Additional data about the query parameters for use in policy.
+    map<string, string> properties = 3;
+    
+}
+
+// The Request captures information about the incoming HTTP request
+message RequestInstanceParam {
+    
+    // The HTTP scheme
+    string scheme = 1;
+    
+    // The HTTP host
+    string host = 2;
+    
+    // The HTTP path
+    string path = 3;
+    
+    // The HTTP headers on the request
+    HeadersInstanceParam headers = 4;
+    
+    // THE HTTP query params
+    QueryParamsInstanceParam params = 5;
+    
+    // Additional data about the Request for use in policy.
+    map<string, string> properties = 6;
     
 }
 

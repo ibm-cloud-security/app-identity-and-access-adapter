@@ -9,6 +9,7 @@ import (
 	"ibmcloudappid/adapter/policy"
 	"ibmcloudappid/adapter/policy/store"
 	"ibmcloudappid/config/template"
+	"strings"
 
 	"istio.io/istio/pkg/log"
 )
@@ -28,7 +29,7 @@ type PolicyAction struct {
 
 // PolicyEngine is responsible for making policy decisions
 type PolicyEngine interface {
-	Evaluate(*authnz.ActionMsg) (*Action, error)
+	Evaluate(msg *authnz.TargetMsg) (*Action, error)
 }
 
 type engine struct {
@@ -48,11 +49,14 @@ func New(store store.PolicyStore) (PolicyEngine, error) {
 
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
-func (m *engine) Evaluate(action *authnz.ActionMsg) (*Action, error) {
+func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
+	log.Infof("Action:\n\tNamespace: %s\n\tService: %s\n\tPath: %s\n\tMethod: %s\n", action.Namespace, action.Service, action.Path, action.Method)
+	if strings.HasSuffix(action.Path, "/oidc/callback") {
+		action.Path = strings.Split(action.Path, "/oidc/callback")[0]
+	}
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)
-	log.Infof("Action:\n\tNamespace: %s\n\tService: %s\n\tPath: %s\n\tMethod: %s\n", action.Namespace, action.Service, action.Path, action.Method)
 	log.Debugf("JWT policies: %v | OIDC policies: %v", len(jwtPolicies), len(oidcPolicies))
 	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
 		return &Action{

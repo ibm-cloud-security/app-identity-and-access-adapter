@@ -8,72 +8,72 @@ import "mixer/adapter/model/v1beta1/extensions.proto";
 
 option (istio.mixer.adapter.model.v1beta1.template_variety) = TEMPLATE_VARIETY_CHECK_WITH_OUTPUT;
 
-// The optional credentials passed in the request
-message Credentials {
-    // Optionally contains the authn/z session cookies
+// A Target contains the Action destination.
+message Target {
+    // The namespace the target service is in
+    string namespace = 1;
+    // The service the action is being taken on.
+    string service = 2;
+    // The HTTP method of the request
+    string method = 3;
+    // The HTTP REST path within the service
+    string path = 4;
+    // Additional data about the target for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 5;
+}
+
+// The Headers models the core HTTP headers needed for the JWT/OIDC flows
+message Headers {
+    // The optional cookies are the HTTP request cookies sent by the browser. These
+    // contain the encrypted session toke
     string cookies = 1;
-    // Optionally contains the authorization header
-    string authorization_header = 2;
+    // The optional authorization header contains credentials needed to verify
+    // access / authorization privileges.
+    string authorization = 2;
+    // Additional data about the headers for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 3;
 }
 
-// The optional params returned during the OAuth 2.0 callback
-message OAuthCallbackParams {
-
+// The QueryParams are the code HTTP request query parameters used in an OAuth 2.0 / OIDC flow
+message QueryParams {
+    // The error matches an OAuth 2.0 callback error response
+    string error = 1;
+    // The code matches an OAuth 2.0 callback authorization code grant
+    string code = 2;
+    // Additional data about the query parameters for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 3;
 }
 
-// A subject contains a list of attributes that identify
-// the caller identity.
-message Subject {
-  // The user name/ID that the subject represents.
-  string user = 1;
-  // Groups the subject belongs to depending on the authentication mechanism,
-  // "groups" are normally populated from JWT claim or client certificate.
-  // The operator can define how it is populated when creating an instance of
-  // the template.
-  string groups = 2;
-  // The optional credentials passed in the request
-  Credentials credentials = 3;
-  // Additional attributes about the subject.
-  map<string, istio.policy.v1beta1.Value> properties = 4;
+// The Request captures information about the incoming HTTP request
+message Request {
+    // The HTTP scheme
+    string scheme = 1;
+    // The HTTP host
+    string host = 2;
+    // The HTTP path
+    string path = 3;
+    // The HTTP headers on the request
+    Headers headers = 4;
+    // THE HTTP query params
+    QueryParams params = 5;
+    // Additional data about the Request for use in policy.
+    map<string, istio.policy.v1beta1.Value> properties = 6;
 }
 
-// An action defines "how a resource is accessed".
-message Action {
-  // Namespace the target action is taking place in.
-  string namespace = 1;
-  // The Service the action is being taken on.
-  string service = 2;
-  // What action is being taken.
-  string method = 3;
-  // HTTP REST path within the service
-  string path = 4;
-  // Additional data about the action for use in policy.
-  map<string, istio.policy.v1beta1.Value> properties = 5;
-}
-
-// The `authorization` template defines parameters for performing policy
-// enforcement within Istio. It is primarily concerned with enabling Mixer
-// adapters to make decisions about who is allowed to do what.
-// In this template, the "who" is defined in a Subject message. The "what" is
-// defined in an Action message. During a Mixer Check call, these values
-// will be populated based on configuration from request attributes and
-// passed to individual authorization adapters to adjudicate.
+// The Authn/Z template contains the information necessary to
+// control authorization and authentication using OAuth 2.0 / OIDC
+// defined protocols. It captures information about the request source, destination
+// and code request telemetry that allows comprehensive JWT policy definitions.
 message Template {
-  // A subject contains a list of attributes that identify
-  // the caller identity.
-  Subject subject = 1;
-  // An action defines "how a resource is accessed".
-  Action action = 2;
+    // The request contains the core information about the request being made
+    Request request = 1;
+    // The target contains aggregated Kube information about the destination
+    Target target = 2;
 }
 
-// OutputTemplate defines OAuth 2.0 cookies to apply to response headers
-// These are primarily used in OAuth 2.0 / OIDC web strategy
-// flows and will be remain empty during most flows.
+// The Authn/Z template produces an authorization header of the format
+// `Bearer <access> <id>` which should be replaced on the ongoing request.
 message OutputTemplate {
-  // The access token cookie using in OAuth 2.0 flows
-  string access_token_cookie = 1;
-  // The ID token cookie using in OAuth 2.0 flows
-  string id_token_cookie = 2;
-  // The refresh token cookie using in OAuth 2.0 flows
-  string refresh_token_cookie = 3;
+    // The authorization header
+    string authorization = 1;
 }

@@ -7,18 +7,19 @@ metadata:
 spec:
   template: authnz
   params:
-    subject:
-      credentials:
-        cookies: request.headers["cookie"] | ""
-        authorization_header: request.headers["authorization"] | ""
-    action:
+    target:
       path: request.url_path | "/"
       method: request.method | "get"
       service: destination.service.name | ""
       namespace: destination.service.namespace | "default"
-      properties:
-        authorization_code: request.query_params["code"] | ""
+    request:
+      scheme: request.scheme | ""
+      host: request.host | ""
+      path: request.url_path | ""
+      headers:
+        cookies: request.headers["cookie"] | ""
+        authorization: request.headers["authorization"] | ""
+      params:
+        code: request.query_params["code"] | ""
         error: request.query_params["error"] | ""
-        request_scheme: request.scheme | ""
-        request_host: request.host | ""
-        request_url_path: request.url_path | ""
+

@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	authorizationHeader = "authorization_header"
-	bearer              = "Bearer"
-	wwwAuthenticate     = "WWW-Authenticate"
+	bearer          = "Bearer"
+	wwwAuthenticate = "WWW-Authenticate"
 )
 
 // APIStrategy handles authorization requests
@@ -66,7 +65,7 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, policie
 
 // Parse authorization header from gRPC props
 func getAuthTokensFromRequest(r *authnz.HandleAuthnZRequest) (*validator.RawTokens, *errors.OAuthError) {
-	authHeader := r.Instance.Subject.Credentials.AuthorizationHeader
+	authHeader := r.Instance.Request.Headers.Authorization
 
 	// Authorization header should exist
 	if authHeader == "" {

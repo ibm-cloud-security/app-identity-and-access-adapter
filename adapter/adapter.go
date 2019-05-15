@@ -46,7 +46,7 @@ type (
 // HandleAuthnZ evaluates authn/z policies using api/web strategy
 func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZRequest) (*authnz.HandleAuthnZResponse, error) {
 	// Check policy
-	actions, err := s.engine.Evaluate(r.Instance.Action)
+	actions, err := s.engine.Evaluate(r.Instance.Target)
 	if err != nil {
 		log.Errorf("Could not check policies")
 		return nil, err

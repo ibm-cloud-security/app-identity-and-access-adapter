@@ -9,42 +9,46 @@ spec:
   connection:
     address: "[::]:47304"
 ---
-# instance for App ID authorization template
+# instance for authorization template
 apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
-  name: instance-ibmcloudappid
+  name: instance-{{ .Values.appName }}
   namespace: istio-system
 spec:
   template: authnz
   params:
-    subject:
-      properties:
-        authorization_header: request.headers["authorization"]
-    action:
+    target:
       path: request.url_path | "/"
       method: request.method | "get"
       service: destination.service.name | ""
       namespace: destination.service.namespace | "default"
-      properties:
-        authorization_code: request.query_params["code"] | ""
+    request:
+      scheme: request.scheme | ""
+      host: request.host | ""
+      path: request.url_path | ""
+      headers:
+        cookies: request.headers["cookie"] | ""
+        authorization: request.headers["authorization"] | ""
+      params:
+        code: request.query_params["code"] | ""
         error: request.query_params["error"] | ""
 ---
-# rule to dispatch to ibmcloudappid adapter handler
+# rule to dispatch the app ID adapter handler
 apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
-  name: rule-ibmcloudappid
+  name: rule-{{ .Values.appName }}
   namespace: istio-system
 spec:
   actions:
-    - handler: handler-ibmcloudappid.istio-system
+    - handler: handler-{{ .Values.appName }}.istio-system
       instances:
-        - instance-ibmcloudappid
+        - instance-{{ .Values.appName }}
       name: a1
-  responseHeaderOperations:
-    - name: Set-Cookie
-      values: [ a1.output.id_token_cookie, a1.output.refresh_token_cookie, a1.output.access_token_cookie ]
-      operation: APPEND
+  requestHeaderOperations:
+    - name: Authorization
+      values: [ a1.output.authorization ]
+      operation: REPLACE
 ---
 
