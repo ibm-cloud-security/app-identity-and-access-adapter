@@ -2,14 +2,14 @@ package adapter
 
 import (
 	"context"
-	"errors"
+	"crypto"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
-	"github.com/stretchr/testify/assert"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/stretchr/testify/assert"
 	"istio.io/istio/mixer/pkg/status"
 )
 
@@ -18,6 +18,7 @@ func TestNew(t *testing.T) {
 	defer server.Close()
 	assert.Nil(t, err)
 	s := server.(*AppidAdapter)
+	assert.NotNil(t, s.webstrategy)
 	assert.NotNil(t, s.apistrategy)
 	assert.NotNil(t, s.listener)
 	assert.NotNil(t, s.engine)
@@ -45,24 +46,24 @@ func TestHandleAuthorization(t *testing.T) {
 			action: &engine.Action{Type: policy.NONE},
 			err:    nil,
 		},
-		{
+		/*{
 			req:    generateAuthRequest("bearer token1 token2"),
 			status: status.OK,
 			action: &engine.Action{Type: policy.JWT},
 			err:    nil,
 		},
-		/*{
+		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
-			action: &engine.Action{Type: policy.OIDC}, // Not yet supported
+			action: &engine.Action{Type: policy.OIDC},
 			err:    nil,
-		},*/
+		},
 		{
 			req:    generateAuthRequest(""),
 			status: status.OK,
 			action: nil,
 			err:    errors.New(""),
-		},
+		},*/
 	}
 
 	for _, test := range tests {
@@ -85,6 +86,13 @@ type mockEngine struct {
 
 func (m *mockEngine) Evaluate(msg *authnz.TargetMsg) (*engine.Action, error) {
 	return m.action, m.err
+}
+
+type localKeySet struct{ url string }
+
+func (k *localKeySet) PublicKeyURL() string { return k.url }
+func (k *localKeySet) PublicKey(kid string) crypto.PublicKey {
+	return nil
 }
 
 func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {

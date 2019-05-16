@@ -22,6 +22,12 @@ type CrdKey struct {
 	Id string
 }
 
+// Rule represents a policy validation rule
+type Rule struct {
+	Key   string
+	Value string
+}
+
 // PolicyMapping captures information of created endpoints by policy
 type PolicyMapping struct {
 	Type      Type

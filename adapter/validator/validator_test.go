@@ -2,13 +2,13 @@ package validator
 
 import (
 	"crypto"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"testing"
 
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,11 +25,6 @@ const (
 )
 
 ////// Mocks /////
-type localServer struct {
-	ks keyset.KeySet
-}
-
-func (s *localServer) KeySet() keyset.KeySet { return s.ks }
 
 type localKeySet struct{ url string }
 
@@ -44,80 +39,36 @@ func (k *localKeySet) PublicKey(kid string) crypto.PublicKey {
 }
 
 var testKeySet = &localKeySet{url: "https://keys.com/publickeys"}
-var testKeySet2 = &localKeySet{url: "ignore"}
-var testLocalServer = localServer{ks: testKeySet}
 
-// Policy arrays
-var emptyPolicy = []engine.PolicyAction{}
-var singlePolicy = []engine.PolicyAction{engine.PolicyAction{KeySet: testKeySet}}
-var missingKeySet = []engine.PolicyAction{engine.PolicyAction{KeySet: nil}}
-var conflictingPolicies = []engine.PolicyAction{engine.PolicyAction{KeySet: testKeySet}, engine.PolicyAction{KeySet: testKeySet2}}
+var emptyRule = []policy.Rule{}
 
 /////// Token Validation ///////
 
-func TestAccessTokenValidation(t *testing.T) {
+func TestTokenValidation(t *testing.T) {
 	var tests = []struct {
-		accessToken string
-		idToken     string
-		expectErr   bool
-		expectedMsg string
-		policies    []engine.PolicyAction
+		token string
+		err   error
+		jwks  keyset.KeySet
+		rules []policy.Rule
 	}{
-		/*{validAudStrToken, "", false, "", nil},
-		{validAudArrToken, "", false, "", emptyPolicy},
-		{validAudArrToken, "", true, "Internal Server Error", missingKeySet},
-		*/
-		// Access token
-		{validAudStrToken, "", false, "", singlePolicy},
-		{validAudArrToken, "", false, "", singlePolicy},
-		{expiredToken, "", true, "Token is expired", singlePolicy},
-		{validAudArrToken + "other", "", true, "crypto/rsa: verification error", singlePolicy},
-		{noKidToken, "", true, "token validation error - kid is missing", singlePolicy},
-		{diffKidToken, "", true, "token validation error - key not found for kid: other", singlePolicy},
-		{"p1.p2", "", true, "token contains an invalid number of segments", singlePolicy},
-		{validAudArrToken, "", true, "token validation error - key not found for kid: appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497", conflictingPolicies},
+		{validAudArrToken, errors.New("Internal Server Error"), nil, emptyRule},
+
+		{validAudStrToken, nil, testKeySet, emptyRule},
+		{validAudArrToken, nil, testKeySet, emptyRule},
+		{expiredToken, errors.New("Token is expired"), testKeySet, emptyRule},
+		{validAudArrToken + "other", errors.New("crypto/rsa: verification error"), testKeySet, emptyRule},
+		{noKidToken, errors.New("token validation error - kid is missing"), testKeySet, emptyRule},
+		{diffKidToken, errors.New("token validation error - key not found for kid: other"), testKeySet, emptyRule},
+		{"p1.p2", errors.New("token contains an invalid number of segments"), testKeySet, emptyRule},
 	}
 	v := New()
 
-	for i, e := range tests {
-		err := v.Validate(RawTokens{Access: e.accessToken, ID: e.idToken}, e.policies)
-		if err != nil && e.expectErr {
-			assert.Equal(t, e.expectedMsg, err.Error())
-		} else if err != nil && !e.expectErr {
-			assert.Fail(t, fmt.Sprintf("Test %v: Unexpected error: "+err.Error(), i))
-		} else if err == nil && e.expectErr {
-			assert.Fail(t, fmt.Sprintf("Test %v: Expected to receive error: "+e.expectedMsg, i))
-		}
-	}
-}
-
-func TestIDTokenValidation(t *testing.T) {
-	var tests = []struct {
-		accessToken string
-		idToken     string
-		expectErr   bool
-		expectedMsg string
-		policies    []engine.PolicyAction
-	}{
-		// ID Token
-		{validAudArrToken, validAudArrToken, false, "", singlePolicy},
-		{validAudArrToken, expiredToken, true, "Token is expired", singlePolicy},
-		{validAudArrToken, validAudArrToken + "other", true, "crypto/rsa: verification error", singlePolicy},
-		{validAudArrToken, noKidToken, true, "token validation error - kid is missing", singlePolicy},
-		{validAudArrToken, diffKidToken, true, "token validation error - key not found for kid: other", singlePolicy},
-		{validAudArrToken, "p1.p2", true, "token contains an invalid number of segments", singlePolicy},
-		{validAudArrToken, validAudArrToken, true, "token validation error - key not found for kid: appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497", conflictingPolicies},
-	}
-	v := New()
-
-	for i, e := range tests {
-		err := v.Validate(RawTokens{Access: e.accessToken, ID: e.idToken}, e.policies)
-		if err != nil && e.expectErr {
-			assert.Equal(t, e.expectedMsg, err.Error())
-		} else if err != nil && !e.expectErr {
-			assert.Fail(t, fmt.Sprintf("Test %v: Unexpected error: "+err.Error(), i))
-		} else if err == nil && e.expectErr {
-			assert.Fail(t, fmt.Sprintf("Test %v: Expected to receive error: "+e.expectedMsg, i))
+	for _, e := range tests {
+		err := v.Validate(e.token, e.jwks, e.rules)
+		if e.err != nil {
+			assert.EqualError(t, err, e.err.Error())
+		} else {
+			assert.Nil(t, err)
 		}
 	}
 }
@@ -150,7 +101,7 @@ func TestClaimValidation(t *testing.T) {
 }
 
 func TestValidateClaims(t *testing.T) {
-	err := validateClaims(nil)
+	err := validateClaims(nil, nil)
 	assert.Equal(t, err.Error(), "Internal Server Error")
 }
 

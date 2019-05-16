@@ -6,17 +6,18 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"istio.io/pkg/log"
 )
 
 const (
 	kid = "kid"
+	aud = "aud"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies
 type TokenValidator interface {
-	Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError
+	Validate(token string, jwks keyset.KeySet, rules []policy.Rule) *errors.OAuthError
 }
 
 // Validator implements the TokenValidator
@@ -40,59 +41,27 @@ func New() TokenValidator {
 
 // Validate validates tokens according to the specified policies.
 // If any policy fails, the entire request should be rejected
-func (*Validator) Validate(tokens RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
-	seenSet := make(map[string]struct{})
+func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
 
-	var accessToken *jwt.Token
-	var idToken *jwt.Token
-	var err error
-
-	for _, p := range policies {
-		if p.KeySet == nil {
-			log.Error("Internal Server Error: Missing policy keyset")
-			return &errors.OAuthError{Msg: errors.InternalServerError}
-		}
-
-		// only validate signature for new endpoints
-		if _, ok := seenSet[p.KeySet.PublicKeyURL()]; !ok {
-			if len(seenSet) == 1 {
-				log.Warn("Conflicting policies: requesting signature validation against multiple authorization servers.")
-			}
-			// Parse the access token - validate expiration and signature
-			accessToken, err = validateSignature(tokens.Access, p.KeySet)
-			if err != nil {
-				return errors.UnauthorizedHTTPException(err.Error(), nil)
-			}
-
-			// Parse the id token - validate expiration and signature
-			if tokens.ID != "" {
-				idToken, err = validateSignature(tokens.ID, p.KeySet)
-				if err != nil {
-					return errors.UnauthorizedHTTPException(err.Error(), nil)
-				}
-			}
-
-			seenSet[p.KeySet.PublicKeyURL()] = struct{}{}
-		}
-
-		// Validate access token
-		err := validateClaims(accessToken)
-		if err != nil {
-			log.Debugf("Unauthorized - invalid access token - %s", err)
-			return err
-		}
-
-		// If necessary, validate ID token
-		if tokens.ID != "" {
-			err = validateClaims(idToken)
-			if err != nil {
-				log.Debugf("Unauthorized - invalid ID token : %s", err)
-				return err
-			}
+	if jwks == nil {
+		return &errors.OAuthError{
+			Msg: errors.InternalServerError,
 		}
 	}
+	// Parse the access token - validate expiration and signature
+	token, err := validateSignature(tokenStr, jwks)
+	if err != nil {
+		return errors.UnauthorizedHTTPException(err.Error(), nil)
+	}
 
-	log.Debug("Authorized")
+	// Validate access token
+	claimErr := validateClaims(token, rules)
+	if claimErr != nil {
+		log.Debugf("Unauthorized - invalid token - %s", claimErr)
+		return claimErr
+	}
+
+	log.Debug("Token has been validated")
 
 	return nil
 }
@@ -126,34 +95,50 @@ func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 }
 
 // validateClaims validates claims based on policies
-func validateClaims(token *jwt.Token) *errors.OAuthError {
+func validateClaims(token *jwt.Token, rules []policy.Rule) *errors.OAuthError {
 	if token == nil {
-		log.Error("Unexpectantly received nil token during validation")
+		log.Error("Unexpectedly received nil token during validation")
 		return &errors.OAuthError{Msg: errors.InternalServerError}
 	}
 
 	// Retrieve claims map from token
-	_, err := getClaims(token)
+	claims, err := getClaims(token)
 	if err != nil {
 		log.Debug("Token validation error - error obtaining claims from token")
 		return err
 	}
-	// TODO: Validate Custom Rules
+
+	for _, rule := range rules {
+		if err := validateClaim(rule.Key, rule.Value, claims); err != nil {
+			return &errors.OAuthError{
+				Msg: err.Error(),
+			}
+		}
+	}
+
 	return nil
 }
 
 // validateClaim is used to validate a specific claim with the claims map
 func validateClaim(name string, expected string, claims jwt.MapClaims) error {
-	if found, ok := claims[name].(string); ok {
-		if found != expected {
-			log.Debugf("Token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
-			return fmt.Errorf("token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
+	switch name {
+	case aud:
+		if !claims.VerifyAudience(expected, true) {
+			return fmt.Errorf("token validation error - expected claim `%s` to exist", name)
 		}
-		log.Debugf("Validated token claim: `%s`", name)
-		return nil
+	default:
+		if found, ok := claims[name].(string); ok {
+			if found != expected {
+				log.Debugf("Token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
+				return fmt.Errorf("token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
+			}
+			log.Debugf("Validated token claim: `%s`", name)
+			return nil
+		}
+		log.Debugf("Token validation error - expected claim `%s` to exist", name)
+		return fmt.Errorf("token validation error - expected claim `%s` to exist", name)
 	}
-	log.Debugf("Token validation error - expected claim `%s` to exist", name)
-	return fmt.Errorf("token validation error - expected claim `%s` to exist", name)
+	return nil
 }
 
 // getClaims retrieves claims map from JWT

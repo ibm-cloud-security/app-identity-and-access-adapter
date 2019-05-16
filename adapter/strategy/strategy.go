@@ -9,7 +9,7 @@ import (
 
 // Strategy defines the entry point to an authentication handler
 type Strategy interface {
-	HandleAuthnZRequest(*authnz.HandleAuthnZRequest, []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error)
+	HandleAuthnZRequest(*authnz.HandleAuthnZRequest, *engine.Action) (*authnz.HandleAuthnZResponse, error)
 }
 
 // DecodeValueMap decodes gRPC values into string interface

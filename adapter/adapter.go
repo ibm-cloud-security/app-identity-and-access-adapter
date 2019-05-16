@@ -46,19 +46,19 @@ type (
 // HandleAuthnZ evaluates authn/z policies using api/web strategy
 func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZRequest) (*authnz.HandleAuthnZResponse, error) {
 	// Check policy
-	actions, err := s.engine.Evaluate(r.Instance.Target)
+	action, err := s.engine.Evaluate(r.Instance.Target)
 	if err != nil {
 		log.Errorf("Could not check policies")
 		return nil, err
 	}
 
-	switch actions.Type {
+	switch action.Type {
 	case policy.JWT:
 		log.Info("Executing JWT policies")
-		return s.apistrategy.HandleAuthnZRequest(r, actions.Policies)
+		return s.apistrategy.HandleAuthnZRequest(r, action)
 	case policy.OIDC:
 		log.Info("Executing OIDC policies")
-		return s.webstrategy.HandleAuthnZRequest(r, actions.Policies)
+		return s.webstrategy.HandleAuthnZRequest(r, action)
 	default:
 		log.Debug("No OIDC/JWT policies configured")
 		return &authnz.HandleAuthnZResponse{

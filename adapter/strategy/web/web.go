@@ -13,12 +13,12 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
-	"gopkg.in/mgo.v2/bson"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"gopkg.in/mgo.v2/bson"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
@@ -72,8 +72,8 @@ func New() strategy.Strategy {
 }
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
-func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	tokens, err := w.isAuthorized(r.Instance.Request.Headers.Cookies, actions)
+func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
+	tokens, err := w.isAuthorized(r.Instance.Request.Headers.Cookies, action)
 	if err != nil {
 		return nil, err
 	}
@@ -98,85 +98,98 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions
 			return w.handleErrorCallback(errors.New(r.Instance.Request.Params.Error))
 		} else if r.Instance.Request.Params.Code != "" {
 			log.Debugf("Received authorization code : %s", r.Instance.Request.Params.Code)
-			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, r.Instance.Request, actions)
+			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, r.Instance.Request, action)
 		} else {
 			log.Infof("Unexpected response on callback endpoint /oidc/callback. Triggering re-authentication.")
 		}
 	}
 	log.Debug("Handling new user authentication")
-	return w.handleAuthorizationCodeFlow(r.Instance.Request, actions)
+	return w.handleAuthorizationCodeFlow(r.Instance.Request, action)
 }
 
 // isAuthorized checks for the existence of valid cookies
 // returns an error in the event of an Internal Server Error
-func (w *WebStrategy) isAuthorized(cookies string, actions []engine.PolicyAction) (*validator.RawTokens, error) {
-	c, err := getOidcClient(actions)
-	if err != nil {
-		log.Debugf("An error occurred retrieving the OIDC client: %v", err)
-		return nil, err
+func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*validator.RawTokens, error) {
+	if action.Client == nil {
+		log.Errorf("Internal server error: OIDC client not provided")
+		return nil, errors.New("invalid OIDC configuration")
 	}
 
 	header := http.Header{}
 	header.Add("Cookie", cookies)
 	request := http.Request{Header: header}
 
-	accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, c))
+	accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, action.Client))
 	accessTokenCookie := parseAndValidateCookie(accessCookie)
 	if accessTokenCookie == nil {
 		log.Debugf("Valid access token cookie not found: %v", err)
 		return nil, nil
 	}
 
-	tokens := validator.RawTokens{Access: accessTokenCookie.Token}
-	validationErr := w.tokenUtil.Validate(tokens, actions)
+	validationErr := w.tokenUtil.Validate(accessTokenCookie.Token, action.Client.AuthServer.KeySet(), action.Rules)
 	if validationErr != nil {
 		log.Debugf("Cookies failed token validation: %v", validationErr)
 		return nil, nil
 	}
 
-	return &tokens, nil
+	/*
+		accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, action.Client))
+		accessTokenCookie := parseAndValidateCookie(accessCookie)
+		if accessTokenCookie == nil {
+			log.Debugf("Valid access token cookie not found: %v", err)
+			return nil, nil
+		}
+
+		validationErr = w.tokenUtil.Validate(idTokenCookie.Token, action.Client.AuthServer.KeySet(), action.Rules)
+		if validationErr != nil {
+			log.Debugf("Cookies failed token validation: %v", validationErr)
+			return nil, nil
+		}
+	*/
+	return &validator.RawTokens{Access: accessTokenCookie.Token}, nil
 }
 
 // handleErrorCallback returns an Unauthenticated CheckResult
 func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZResponse, error) {
+	message := "internal server error"
+	if err != nil {
+		message = err.Error()
+	}
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{Status: rpc.Status{
 			Code:    int32(rpc.UNAUTHENTICATED),
-			Message: err.Error(),
+			Message: message,
 		}},
 	}, nil
 }
 
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
-func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	c, err := getOidcClient(actions)
-	if err != nil {
-		return nil, err
-	}
+func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := w.getTokens(code.(string), redirectURI, c)
+	response, err := w.getTokens(code.(string), redirectURI, action.Client)
 	if err != nil {
 		log.Errorf("Could not retrieve tokens : %s", err.Error())
 		return w.handleErrorCallback(err)
 	}
 
-	tokens := validator.RawTokens{
-		Access: *response.AccessToken,
-		ID:     *response.IdentityToken,
+	// Validate Tokens
+	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthServer.KeySet(), action.Rules)
+	if validationErr != nil {
+		log.Debugf("Cookies failed token validation: %v", validationErr)
+		return w.handleErrorCallback(err)
 	}
 
-	// Validate Tokens
-	oauthErr := w.tokenUtil.Validate(tokens, actions)
-	if oauthErr != nil {
-		log.Debugf("Failed token validation: %v", oauthErr)
+	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthServer.KeySet(), action.Rules)
+	if validationErr != nil {
+		log.Debugf("Cookies failed token validation: %v", validationErr)
 		return w.handleErrorCallback(err)
 	}
 
 	// Create access_token cookie
-	accessTokenCookie, err := generateTokenCookie(buildTokenCookieName(accessTokenCookie, c), &OidcCookie{
+	accessTokenCookie, err := generateTokenCookie(buildTokenCookieName(accessTokenCookie, action.Client), &OidcCookie{
 		Token:      *response.AccessToken,
 		Expiration: time.Now().Add(time.Minute * time.Duration(response.ExpiresIn)),
 	})
@@ -202,11 +215,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
-func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	c, err := getOidcClient(actions)
-	if err != nil {
-		return nil, err
-	}
+func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
 	log.Infof("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
 	return &authnz.HandleAuthnZResponse{
@@ -216,7 +225,7 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 				Message: "Redirecting to identity provider",
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code:    policy.Found, // Response Mixer remaps on request
-					Headers: map[string]string{location: generateAuthorizationUrl(c, redirectURI)},
+					Headers: map[string]string{location: generateAuthorizationUrl(action.Client, redirectURI)},
 				})},
 			},
 		},
@@ -370,15 +379,4 @@ func buildRequestURL(action *authnz.RequestMsg) string {
 // buildTokenCookieName constructs the cookie name
 func buildTokenCookieName(base string, c *client.Client) string {
 	return base + "-" + c.ClientId
-}
-
-// getOidcClient retrieves the OIDC client for an operation
-func getOidcClient(actions []engine.PolicyAction) (*client.Client, error) {
-	if len(actions) < 1 {
-		return nil, errors.New("invalid OIDC strategy configuration")
-	}
-	if actions[0].Client == nil {
-		return nil, errors.New("action missing OIDC client")
-	}
-	return actions[0].Client, nil
 }

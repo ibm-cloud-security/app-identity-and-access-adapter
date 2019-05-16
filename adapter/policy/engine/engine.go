@@ -16,15 +16,10 @@ import (
 
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
-	Type     policy.Type
-	Policies []PolicyAction
-}
-
-// PolicyAction captures data necessary to process a particular policy
-type PolicyAction struct {
+	Type   policy.Type
 	KeySet keyset.KeySet
 	Client *client.Client
-	// Rule []Rule
+	Rules  []policy.Rule
 }
 
 // PolicyEngine is responsible for making policy decisions
@@ -118,50 +113,50 @@ func (m *engine) getOIDCPolicies(endpoints []policy.Endpoint) []v1.OidcPolicySpe
 
 // createJWTAction creates api strategy actions
 func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) (*Action, error) {
-	actions := make([]PolicyAction, 0)
-	for i := 0; i < len(policies); i++ {
-		if server := m.store.GetAuthServer(policies[i].JwksURL); server != nil {
-			actions = append(actions, PolicyAction{
-				KeySet: server.KeySet(),
-			})
-		} else {
-			log.Errorf("Missing authentication server : cannot authenticate user")
-			return nil, errors.New("missing authentication server : cannot authenticate user")
-		}
+	if len(policies) == 0 {
+		return &Action{Type: policy.NONE}, nil
 	}
 
-	return &Action{
-		Type:     policy.JWT,
-		Policies: actions,
-	}, nil
+	if server := m.store.GetAuthServer(policies[0].JwksURL); server != nil {
+		return &Action{
+			Type:   policy.JWT,
+			KeySet: server.KeySet(),
+		}, nil
+	}
+
+	log.Errorf("Missing authentication server : cannot authenticate user")
+	return nil, errors.New("missing authentication server : cannot authenticate user")
 }
 
 // createOIDCAction creates web strategy actions
 func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error) {
-	actions := make([]PolicyAction, 0)
-	for i := 0; i < len(policies); i++ {
-		if client := m.store.GetClient(policies[i].ClientName); client != nil {
-			actions = append(actions, PolicyAction{
-				KeySet: client.AuthServer.KeySet(),
-				Client: client,
-			})
-		} else {
-			log.Errorf("Missing OIDC client : cannot authenticate user")
-			return nil, errors.New("missing OIDC client : cannot authenticate user")
-		}
+	if len(policies) == 0 {
+		return &Action{Type: policy.NONE}, nil
 	}
-	return &Action{
-		Type:     policy.OIDC,
-		Policies: actions,
-	}, nil
+
+	if c := m.store.GetClient(policies[0].ClientName); c != nil {
+		rules := []policy.Rule{{
+			Key:   "aud",
+			Value: c.ClientId,
+		}}
+		return &Action{
+			Type:   policy.OIDC,
+			Client: c,
+			Rules:  rules,
+		}, nil
+
+	}
+
+	log.Errorf("Missing OIDC client : cannot authenticate user")
+	return nil, errors.New("missing OIDC client : cannot authenticate user")
 }
 
 ////////////////// utils //////////////////
 
 func endpointsToCheck(namespace string, svc string, path string, method string) []policy.Endpoint {
 	return []policy.Endpoint{
-		policy.Endpoint{Namespace: namespace, Service: svc, Path: path, Method: method},
-		policy.Endpoint{Namespace: namespace, Service: svc, Path: path, Method: "*"},
-		policy.Endpoint{Namespace: namespace, Service: svc, Path: "*", Method: "*"},
+		{Namespace: namespace, Service: svc, Path: path, Method: method},
+		{Namespace: namespace, Service: svc, Path: path, Method: "*"},
+		{Namespace: namespace, Service: svc, Path: "*", Method: "*"},
 	}
 }

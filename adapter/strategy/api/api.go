@@ -38,7 +38,7 @@ func New() strategy.Strategy {
 ////////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, policies []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
+func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(r)
@@ -47,11 +47,20 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, policie
 		return buildErrorResponse(err), nil
 	}
 
-	// Validate Authorization Tokens
-	err = s.tokenUtil.Validate(*tokens, policies)
+	// Validate Access Token
+	err = s.tokenUtil.Validate(tokens.Access, action.KeySet, action.Rules)
 	if err != nil {
-		log.Debugf("Unauthorized: " + err.Error())
+		log.Debugf("Invalid access token: " + err.Error())
 		return buildErrorResponse(err), nil
+	}
+
+	// Validate ID Token
+	if tokens.ID != "" {
+		err = s.tokenUtil.Validate(tokens.ID, action.KeySet, action.Rules)
+		if err != nil {
+			log.Debugf("Invalid ID token: " + err.Error())
+			return buildErrorResponse(err), nil
+		}
 	}
 
 	log.Debug("Found valid authorization header")

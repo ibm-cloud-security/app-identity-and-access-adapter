@@ -2,11 +2,12 @@ package webstrategy
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"testing"
 
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 
 	"github.com/stretchr/testify/assert"
@@ -19,18 +20,18 @@ func TestNew(t *testing.T) {
 
 func TestHandleNewAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
-		req      *authnz.HandleAuthnZRequest
-		policies []engine.PolicyAction
-		message  string
-		code     int32
-		err      error
+		req     *authnz.HandleAuthnZRequest
+		action  *engine.Action
+		message string
+		code    int32
+		err     error
 	}{
 		{
 			generateAuthnzRequest("", "", "", "", "", ""),
-			make([]engine.PolicyAction, 0),
-			"invalid OIDC strategy configuration",
+			&engine.Action{},
+			"invalid OIDC configuration",
 			int32(16),
-			errors.New("invalid OIDC strategy configuration"),
+			errors.New("invalid OIDC configuration"),
 		},
 	}
 
@@ -40,7 +41,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 				err: nil,
 			},
 		}
-		_, err := api.HandleAuthnZRequest(test.req, test.policies)
+		_, err := api.HandleAuthnZRequest(test.req, test.action)
 		assert.EqualError(t, err, test.err.Error())
 	}
 }
@@ -68,6 +69,6 @@ type MockValidator struct {
 	err *err.OAuthError
 }
 
-func (v MockValidator) Validate(tokens validator.RawTokens, policies []engine.PolicyAction) *err.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
 	return v.err
 }

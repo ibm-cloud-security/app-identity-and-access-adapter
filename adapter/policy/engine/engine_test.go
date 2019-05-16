@@ -41,86 +41,86 @@ func TestNew(t *testing.T) {
 
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.TargetMsg
-		jwtpolicies         []v1.JwtPolicySpec
-		endpoints           []policy.Endpoint
-		expectedAction      policy.Type
-		expectedPolicyCount int
-		err                 error
+		input             *authnz.TargetMsg
+		jwtpolicies       []v1.JwtPolicySpec
+		endpoints         []policy.Endpoint
+		expectedAction    policy.Type
+		expectedRuleCount int
+		err               error
 	}{
 		{
 			// 1 - err - missing authorization server
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "another serverurl"},
+				{JwksURL: "another serverurl"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.NONE,
-			expectedPolicyCount: 0,
-			err:                 errors.New("missing authentication server : cannot authenticate user"),
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               errors.New("missing authentication server : cannot authenticate user"),
 		},
 		{
 			// 1 - no policies
-			input:               generateActionMessage("", "", "", ""),
-			jwtpolicies:         []v1.JwtPolicySpec{},
-			endpoints:           []policy.Endpoint{},
-			expectedAction:      policy.NONE,
-			expectedPolicyCount: 0,
-			err:                 nil,
+			input:             generateActionMessage("", "", "", ""),
+			jwtpolicies:       []v1.JwtPolicySpec{},
+			endpoints:         []policy.Endpoint{},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 		{
 			// 2 - 1 policy
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "serverurl"},
+				{JwksURL: "serverurl"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.JWT,
-			expectedPolicyCount: 1,
-			err:                 nil,
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 		{
 			// 3 - Diff method
 			input: generateActionMessage("namespace", "svc", "/path", "GET"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "serverurl"},
+				{JwksURL: "serverurl"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.NONE,
-			expectedPolicyCount: 0,
-			err:                 nil,
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 		{
 			// 4 - Generic Method
 			input: generateActionMessage("namespace", "svc", "/path", "OTHER"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "serverurl"},
+				{JwksURL: "serverurl"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "*"),
 			},
-			expectedAction:      policy.JWT,
-			expectedPolicyCount: 1,
-			err:                 nil,
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 		{
 			// 5- Generic Path / Method
 			input: generateActionMessage("namespace", "svc", "/path", "GET"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "serverurl"},
+				{JwksURL: "serverurl"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "*", "*"),
 			},
-			expectedAction:      policy.JWT,
-			expectedPolicyCount: 1,
-			err:                 nil,
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 	}
 
@@ -138,7 +138,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		if test.err != nil {
 			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
 		} else {
-			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of rules returned for test case : "+fmt.Sprintf("%v", i))
 			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))
 		}
 	}
@@ -146,47 +146,47 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.TargetMsg
-		oidcpolicies        []v1.OidcPolicySpec
-		endpoints           []policy.Endpoint
-		expectedAction      policy.Type
-		expectedPolicyCount int
-		err                 error
+		input             *authnz.TargetMsg
+		oidcpolicies      []v1.OidcPolicySpec
+		endpoints         []policy.Endpoint
+		expectedAction    policy.Type
+		expectedRuleCount int
+		err               error
 	}{
 		{
 			// 0 - No policies
-			input:               generateActionMessage("namespace", "svc", "/path", "POST"),
-			oidcpolicies:        []v1.OidcPolicySpec{},
-			endpoints:           []policy.Endpoint{},
-			expectedAction:      policy.NONE,
-			expectedPolicyCount: 0,
-			err:                 nil,
+			input:             generateActionMessage("namespace", "svc", "/path", "POST"),
+			oidcpolicies:      []v1.OidcPolicySpec{},
+			endpoints:         []policy.Endpoint{},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
 		},
 		{
 			// 1 - Error
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			oidcpolicies: []v1.OidcPolicySpec{
-				v1.OidcPolicySpec{ClientName: "unknown_client"},
+				{ClientName: "unknown_client"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.OIDC,
-			expectedPolicyCount: 0,
-			err:                 errors.New("missing OIDC client : cannot authenticate user"),
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               errors.New("missing OIDC client : cannot authenticate user"),
 		},
 		{
 			// 1 - 1 policy
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			oidcpolicies: []v1.OidcPolicySpec{
-				v1.OidcPolicySpec{ClientName: "client"},
+				{ClientName: "client"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.OIDC,
-			expectedPolicyCount: 1,
-			err:                 nil,
+			expectedAction:    policy.OIDC,
+			expectedRuleCount: 1,
+			err:               nil,
 		},
 	}
 
@@ -203,7 +203,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		if test.err != nil {
 			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
 		} else {
-			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
 			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))
 		}
 	}
@@ -211,29 +211,29 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 
 func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 	tests := []struct {
-		input               *authnz.TargetMsg
-		jwtpolicies         []v1.JwtPolicySpec
-		oidcpolicies        []v1.OidcPolicySpec
-		endpoints           []policy.Endpoint
-		expectedAction      policy.Type
-		expectedPolicyCount int
-		err                 error
+		input             *authnz.TargetMsg
+		jwtpolicies       []v1.JwtPolicySpec
+		oidcpolicies      []v1.OidcPolicySpec
+		endpoints         []policy.Endpoint
+		expectedAction    policy.Type
+		expectedRuleCount int
+		err               error
 	}{
 		{
 			// 1 - 1 policy
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			jwtpolicies: []v1.JwtPolicySpec{
-				v1.JwtPolicySpec{JwksURL: "serverurl"},
+				{JwksURL: "serverurl"},
 			},
 			oidcpolicies: []v1.OidcPolicySpec{
-				v1.OidcPolicySpec{ClientName: "client"},
+				{ClientName: "client"},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
-			expectedAction:      policy.NONE,
-			expectedPolicyCount: 0,
-			err:                 errors.New("conflicting OIDC and JWT policies"),
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               errors.New("conflicting OIDC and JWT policies"),
 		},
 	}
 
@@ -252,7 +252,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 		if test.err != nil {
 			assert.Equal(t, test.err.Error(), err.Error(), "Expected to receive error : "+fmt.Sprintf("%v", i))
 		} else {
-			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
 			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))
 		}
 	}

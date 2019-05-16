@@ -1,14 +1,15 @@
 package apistrategy
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
-	"github.com/stretchr/testify/assert"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
 )
 
@@ -20,42 +21,42 @@ func TestNew(t *testing.T) {
 func TestHandleAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req           *authnz.HandleAuthnZRequest
-		policies      []engine.PolicyAction
+		action        *engine.Action
 		message       string
 		code          int32
 		validationErr *errors.OAuthError
 	}{
 		{
 			generateAuthRequest(""),
-			make([]engine.PolicyAction, 0),
+			&engine.Action{},
 			"authorization header not provided",
 			int32(16),
 			nil,
 		},
 		{
 			generateAuthRequest("bearer"),
-			make([]engine.PolicyAction, 0),
+			&engine.Action{},
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer invalid"),
-			make([]engine.PolicyAction, 0),
+			&engine.Action{},
 			"invalid token",
 			int32(16),
 			errors.UnauthorizedHTTPException("invalid token", nil),
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			make([]engine.PolicyAction, 0),
+			&engine.Action{},
 			"",
 			int32(0),
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer access id"),
-			make([]engine.PolicyAction, 0),
+			&engine.Action{},
 			"",
 			int32(0),
 			nil,
@@ -68,7 +69,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 				err: test.validationErr,
 			},
 		}
-		checkresult, err := api.HandleAuthnZRequest(test.req, test.policies)
+		checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
 		assert.Nil(t, err)
 		assert.Equal(t, test.message, checkresult.Result.Status.Message)
 		assert.Equal(t, test.code, checkresult.Result.Status.Code)
@@ -175,6 +176,6 @@ type MockValidator struct {
 	err *errors.OAuthError
 }
 
-func (v MockValidator) Validate(tokens validator.RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
 	return v.err
 }
