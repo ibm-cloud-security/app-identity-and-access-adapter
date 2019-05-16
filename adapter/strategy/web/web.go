@@ -73,7 +73,10 @@ func New() strategy.Strategy {
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
 func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	tokens := w.isAuthorized(r.Instance.Request.Headers.Cookies, actions)
+	tokens, err := w.isAuthorized(r.Instance.Request.Headers.Cookies, actions)
+	if err != nil {
+		return nil, err
+	}
 	if tokens != nil {
 		log.Debug("User is already authenticated")
 		// If in a callback flow, redirect to original endpoint. Cookies are already stored/valid
@@ -105,27 +108,33 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, actions
 }
 
 // isAuthorized checks for the existence of valid cookies
-func (w *WebStrategy) isAuthorized(cookies string, actions []engine.PolicyAction) *validator.RawTokens {
-	// Parse cookies
+// returns an error in the event of an Internal Server Error
+func (w *WebStrategy) isAuthorized(cookies string, actions []engine.PolicyAction) (*validator.RawTokens, error) {
+	c, err := getOidcClient(actions)
+	if err != nil {
+		log.Debugf("An error occurred retrieving the OIDC client: %v", err)
+		return nil, err
+	}
+
 	header := http.Header{}
 	header.Add("Cookie", cookies)
 	request := http.Request{Header: header}
 
-	accessCookie, err := request.Cookie(accessTokenCookie)
-	accessTokenCookie, err := parseAndValidateCookie(accessCookie)
-	if err != nil {
+	accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, c))
+	accessTokenCookie := parseAndValidateCookie(accessCookie)
+	if accessTokenCookie == nil {
 		log.Debugf("Valid access token cookie not found: %v", err)
-		return nil
+		return nil, nil
 	}
 
 	tokens := validator.RawTokens{Access: accessTokenCookie.Token}
 	validationErr := w.tokenUtil.Validate(tokens, actions)
 	if validationErr != nil {
 		log.Debugf("Cookies failed token validation: %v", validationErr)
-		return nil
+		return nil, nil
 	}
 
-	return &tokens
+	return &tokens, nil
 }
 
 // handleErrorCallback returns an Unauthenticated CheckResult
@@ -140,15 +149,15 @@ func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZRespon
 
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
 func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	if len(actions) < 1 {
-		return nil, nil
+	c, err := getOidcClient(actions)
+	if err != nil {
+		return nil, err
 	}
-	p := actions[0]
 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := w.getTokens(code.(string), redirectURI, p.Client)
+	response, err := w.getTokens(code.(string), redirectURI, c)
 	if err != nil {
 		log.Errorf("Could not retrieve tokens : %s", err.Error())
 		return w.handleErrorCallback(err)
@@ -167,7 +176,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	}
 
 	// Create access_token cookie
-	accessTokenCookie, err := generateTokenCookie(accessTokenCookie, &OidcCookie{
+	accessTokenCookie, err := generateTokenCookie(buildTokenCookieName(accessTokenCookie, c), &OidcCookie{
 		Token:      *response.AccessToken,
 		Expiration: time.Now().Add(time.Minute * time.Duration(response.ExpiresIn)),
 	})
@@ -192,34 +201,12 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	return buildSuccessRedirectResponse(originalURL, []*http.Cookie{accessTokenCookie}), nil
 }
 
-// buildSuccessRedirectResponse constructs a HandleAuthnZResponse containing a 302 redirect
-// to the provided url with the accompanying cookie headers
-func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *authnz.HandleAuthnZResponse {
-	headers := make(map[string]string)
-	headers[location] = strings.Split(redirectURI, callbackEndpoint)[0]
-	for _, cookie := range cookies {
-		headers[setCookie] = cookie.String()
-	}
-	return &authnz.HandleAuthnZResponse{
-		Result: &v1beta1.CheckResult{
-			Status: rpc.Status{
-				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
-				Message: "Successfully authenticated : redirecting to original URL",
-				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
-					Code:    policy.Found, // Response Mixer remaps on request
-					Headers: headers,
-				})},
-			},
-		},
-	}
-}
-
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, actions []engine.PolicyAction) (*authnz.HandleAuthnZResponse, error) {
-	if len(actions) < 1 {
-		return nil, nil
+	c, err := getOidcClient(actions)
+	if err != nil {
+		return nil, err
 	}
-	p := actions[0] // Redirect to this identity provider
 	redirectURI := buildRequestURL(request) + callbackEndpoint
 	log.Infof("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
 	return &authnz.HandleAuthnZResponse{
@@ -229,7 +216,7 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 				Message: "Redirecting to identity provider",
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code:    policy.Found, // Response Mixer remaps on request
-					Headers: map[string]string{location: generateAuthorizationUrl(p.Client, redirectURI)},
+					Headers: map[string]string{location: generateAuthorizationUrl(c, redirectURI)},
 				})},
 			},
 		},
@@ -281,6 +268,28 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client *client.
 	return &tokenResponse, nil
 }
 
+// buildSuccessRedirectResponse constructs a HandleAuthnZResponse containing a 302 redirect
+// to the provided url with the accompanying cookie headers
+func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *authnz.HandleAuthnZResponse {
+	headers := make(map[string]string)
+	headers[location] = strings.Split(redirectURI, callbackEndpoint)[0]
+	for _, cookie := range cookies {
+		headers[setCookie] = cookie.String()
+	}
+	return &authnz.HandleAuthnZResponse{
+		Result: &v1beta1.CheckResult{
+			Status: rpc.Status{
+				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
+				Message: "Successfully authenticated : redirecting to original URL",
+				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
+					Code:    policy.Found, // Response Mixer remaps on request
+					Headers: headers,
+				})},
+			},
+		},
+	}
+}
+
 // generateTokenCookie creates an http.Cookie
 func generateTokenCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
 	// encode the struct
@@ -327,33 +336,49 @@ func generateAuthorizationUrl(c *client.Client, redirectURI string) string {
 }
 
 // parseAndValidateCookie
-func parseAndValidateCookie(cookie *http.Cookie) (*OidcCookie, error) {
+func parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 	if cookie == nil {
 		log.Debugf("Cookie does not exist")
-		return nil, errors.New("cookie does not exist")
+		return nil
 	}
 	value := []byte{}
 	if err := secretCookie.Decode(cookie.Name, cookie.Value, &value); err != nil {
 		log.Debugf("Could not read cookie: %v", err)
-		return nil, err
+		return nil
 	}
 	cookieObj := OidcCookie{}
 	if err := bson.Unmarshal(value, &cookieObj); err != nil {
 		log.Debugf("Could not parse cookie data: %v", err)
-		return nil, err
+		return nil
 	}
 	if cookieObj.Token == "" {
 		log.Debugf("Missing token value")
-		return nil, errors.New("missing token values")
+		return nil
 	}
 	if cookieObj.Expiration.Before(time.Now()) {
 		log.Debugf("Cookies have expired: %v - %v", cookieObj.Expiration, time.Now())
-		return nil, errors.New("cookie has expired")
+		return nil
 	}
-	return &cookieObj, nil
+	return &cookieObj
 }
 
 // buildRequestURL constructs the original url from the request object
 func buildRequestURL(action *authnz.RequestMsg) string {
 	return action.Scheme + "://" + action.Host + action.Path
+}
+
+// buildTokenCookieName constructs the cookie name
+func buildTokenCookieName(base string, c *client.Client) string {
+	return base + "-" + c.ClientId
+}
+
+// getOidcClient retrieves the OIDC client for an operation
+func getOidcClient(actions []engine.PolicyAction) (*client.Client, error) {
+	if len(actions) < 1 {
+		return nil, errors.New("invalid OIDC strategy configuration")
+	}
+	if actions[0].Client == nil {
+		return nil, errors.New("action missing OIDC client")
+	}
+	return actions[0].Client, nil
 }
