@@ -3,7 +3,7 @@ package validator
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"

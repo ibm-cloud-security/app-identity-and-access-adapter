@@ -3,3 +3,4 @@ bin/ibmcloudappid
 ./env.sh
 .vscode/**
 vendor
+main

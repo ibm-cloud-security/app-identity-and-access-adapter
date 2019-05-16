@@ -3,7 +3,7 @@ module github.com/ibm-cloud-security/policy-enforcer-mixer-adapter
 go 1.12
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/dgrijalva/jwt-go/v4 v4.0.0-20190410170817-8222805572f2
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/googleapis v1.2.0
 	github.com/gogo/protobuf v1.2.1
