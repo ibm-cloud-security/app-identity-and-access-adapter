@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/stretchr/testify/assert"
-	"ibmcloudappid/adapter/authserver/keyset"
-	"ibmcloudappid/adapter/client"
-	"ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/store"
-	"ibmcloudappid/config/template"
 )
 
 func TestNew(t *testing.T) {
@@ -209,7 +209,6 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 	}
 }
 
-// FUTURE no rules in place for collision
 func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 	tests := []struct {
 		input               *authnz.TargetMsg
@@ -234,6 +233,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 			},
 			expectedAction:      policy.NONE,
 			expectedPolicyCount: 0,
+			err:                 errors.New("conflicting OIDC and JWT policies"),
 		},
 	}
 
@@ -250,7 +250,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 		// Result
 		result, err := eng.Evaluate(test.input)
 		if test.err != nil {
-			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
+			assert.Equal(t, test.err.Error(), err.Error(), "Expected to receive error : "+fmt.Sprintf("%v", i))
 		} else {
 			assert.Equal(t, test.expectedPolicyCount, len(result.Policies), "Wrong number of policies returned for test case : "+fmt.Sprintf("%v", i))
 			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for test case : "+fmt.Sprintf("%v", i))

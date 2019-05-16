@@ -1,14 +1,14 @@
 package apistrategy
 
 import (
-	"ibmcloudappid/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
-	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/adapter/validator"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"istio.io/api/policy/v1beta1"
 )
 

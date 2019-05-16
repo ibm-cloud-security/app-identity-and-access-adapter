@@ -1,11 +1,13 @@
 package webstrategy
 
 import (
-	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/adapter/validator"
-	"ibmcloudappid/config/template"
+	"errors"
 	"testing"
+
+	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -17,38 +19,29 @@ func TestNew(t *testing.T) {
 
 func TestHandleNewAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
-		req           *authnz.HandleAuthnZRequest
-		policies      []engine.PolicyAction
-		message       string
-		code          int32
-		validationErr *errors.OAuthError
+		req      *authnz.HandleAuthnZRequest
+		policies []engine.PolicyAction
+		message  string
+		code     int32
+		err      error
 	}{
 		{
 			generateAuthnzRequest("", "", "", "", "", ""),
 			make([]engine.PolicyAction, 0),
-			"authorization header not provided",
+			"invalid OIDC strategy configuration",
 			int32(16),
-			nil,
-		},
-		{
-			generateAuthnzRequest("", "", "", "", "", ""),
-			make([]engine.PolicyAction, 0),
-			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
-			int32(16),
-			nil,
+			errors.New("invalid OIDC strategy configuration"),
 		},
 	}
 
 	for _, test := range tests {
 		api := WebStrategy{
 			tokenUtil: MockValidator{
-				err: test.validationErr,
+				err: nil,
 			},
 		}
-		checkresult, err := api.HandleAuthnZRequest(test.req, test.policies)
-		assert.Nil(t, err)
-		assert.Equal(t, test.message, checkresult.Result.Status.Message)
-		assert.Equal(t, test.code, checkresult.Result.Status.Code)
+		_, err := api.HandleAuthnZRequest(test.req, test.policies)
+		assert.EqualError(t, err, test.err.Error())
 	}
 }
 
@@ -72,9 +65,9 @@ func generateAuthnzRequest(cookie string, code string, error string, scheme stri
 }
 
 type MockValidator struct {
-	err *errors.OAuthError
+	err *err.OAuthError
 }
 
-func (v MockValidator) Validate(tokens validator.RawTokens, policies []engine.PolicyAction) *errors.OAuthError {
+func (v MockValidator) Validate(tokens validator.RawTokens, policies []engine.PolicyAction) *err.OAuthError {
 	return v.err
 }

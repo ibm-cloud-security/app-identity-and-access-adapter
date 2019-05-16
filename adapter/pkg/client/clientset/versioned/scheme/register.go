@@ -19,7 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	appidv1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
+	appidv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"ibmcloudappid/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 )
 
 // AuthorizationServer represents an authorization server instance

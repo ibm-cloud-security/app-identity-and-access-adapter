@@ -1,25 +1,25 @@
 // nolint:lll
 // Generates the appidadpater's resource yaml. It contains the adapter's configuration, name, supported template
 // names (metric in this case), and whether it is session or no-session based.
-//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/ibmcloudappid/adapter/config/config.proto -x "-s=false -n ibmcloudappid -t authorization"
+//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config/config.proto -x "-s=false -n ibmcloudappid -t authorization"
 
 package adapter
 
 import (
 	"context"
 	"fmt"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/initializer"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/api"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/web"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"google.golang.org/grpc"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/adapter/policy/initializer"
-	"ibmcloudappid/adapter/policy/store"
-	"ibmcloudappid/adapter/strategy"
-	"ibmcloudappid/adapter/strategy/api"
-	"ibmcloudappid/adapter/strategy/web"
-	"ibmcloudappid/config/template"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/istio/pkg/log"
+	"istio.io/pkg/log"
 	"net"
 )
 

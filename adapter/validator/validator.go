@@ -4,14 +4,14 @@ package validator
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"ibmcloudappid/adapter/authserver/keyset"
-	"ibmcloudappid/adapter/errors"
-	"ibmcloudappid/adapter/policy/engine"
-	"istio.io/istio/pkg/log"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"istio.io/pkg/log"
 )
 
 const (
-	kid    = "kid"
+	kid = "kid"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies

@@ -20,7 +20,7 @@ package externalversions
 
 import (
 	"fmt"
-	v1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"

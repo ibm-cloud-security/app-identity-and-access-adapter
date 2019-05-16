@@ -2,8 +2,8 @@ package strategy
 
 import (
 	"fmt"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	policy "istio.io/api/policy/v1beta1"
 )
 

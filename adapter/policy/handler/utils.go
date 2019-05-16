@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint {

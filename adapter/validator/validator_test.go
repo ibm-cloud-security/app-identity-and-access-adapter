@@ -2,13 +2,14 @@ package validator
 
 import (
 	"crypto"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/stretchr/testify/assert"
-	"ibmcloudappid/adapter/authserver/keyset"
-	"ibmcloudappid/adapter/policy/engine"
 )
 
 const (
@@ -86,14 +87,14 @@ func TestAccessTokenValidation(t *testing.T) {
 	}
 	v := New()
 
-	for _, e := range tests {
+	for i, e := range tests {
 		err := v.Validate(RawTokens{Access: e.accessToken, ID: e.idToken}, e.policies)
 		if err != nil && e.expectErr {
 			assert.Equal(t, e.expectedMsg, err.Error())
 		} else if err != nil && !e.expectErr {
-			assert.Fail(t, "Unexpected error: "+err.Error())
+			assert.Fail(t, fmt.Sprintf("Test %v: Unexpected error: "+err.Error(), i))
 		} else if err == nil && e.expectErr {
-			assert.Fail(t, "Expected to receive error: "+e.expectedMsg)
+			assert.Fail(t, fmt.Sprintf("Test %v: Expected to receive error: "+e.expectedMsg, i))
 		}
 	}
 }

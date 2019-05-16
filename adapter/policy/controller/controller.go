@@ -2,11 +2,11 @@ package controller
 
 import (
 	"fmt"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/handler"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
 	"time"
 
-	"istio.io/istio/pkg/log"
+	"istio.io/pkg/log"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"

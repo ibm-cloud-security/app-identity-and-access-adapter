@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"ibmcloudappid/adapter/authserver"
-	"ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"istio.io/istio/pkg/log"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"istio.io/pkg/log"
 )
 
 // ProviderConfig encapsulates the discovery endpoint configuration

@@ -19,7 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	appidv1 "ibmcloudappid/adapter/pkg/client/clientset/versioned/typed/policies/v1"
+	appidv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1"
 
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"

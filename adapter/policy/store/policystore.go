@@ -3,10 +3,10 @@ package store
 import (
 	"reflect"
 
-	"ibmcloudappid/adapter/authserver"
-	"ibmcloudappid/adapter/client"
-	"ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 )
 
 // LocalStore is responsible for storing and managing policy/client data

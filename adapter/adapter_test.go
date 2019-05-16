@@ -7,9 +7,9 @@ import (
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"istio.io/istio/mixer/pkg/status"
 )
 

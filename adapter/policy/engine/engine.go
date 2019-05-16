@@ -3,15 +3,15 @@ package engine
 
 import (
 	"errors"
-	"ibmcloudappid/adapter/authserver/keyset"
-	"ibmcloudappid/adapter/client"
-	"ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/store"
-	"ibmcloudappid/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"strings"
 
-	"istio.io/istio/pkg/log"
+	"istio.io/pkg/log"
 )
 
 // Action encapsulates information needed to begin executing a policy
@@ -65,7 +65,7 @@ func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
 	}
 
 	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
-		log.Fatal("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
+		log.Error("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
 		return nil, errors.New("conflicting OIDC and JWT policies")
 	}
 

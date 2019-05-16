@@ -19,8 +19,8 @@ limitations under the License.
 package appid
 
 import (
-	internalinterfaces "ibmcloudappid/adapter/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "ibmcloudappid/adapter/pkg/client/informers/externalversions/policies/v1"
+	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/policies/v1"
 )
 
 // Interface provides access to each of this group's versions.

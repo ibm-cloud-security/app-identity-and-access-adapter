@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "ibmcloudappid/adapter/pkg/client/clientset/versioned"
-	internalinterfaces "ibmcloudappid/adapter/pkg/client/informers/externalversions/internalinterfaces"
-	policies "ibmcloudappid/adapter/pkg/client/informers/externalversions/policies"
+	versioned "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
+	policies "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/policies"
 	reflect "reflect"
 	sync "sync"
 	time "time"

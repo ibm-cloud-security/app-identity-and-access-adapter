@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"ibmcloudappid/adapter"
-	"istio.io/istio/pkg/log"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
+	"istio.io/pkg/log"
 )
 
 // args represents args consumed by IBMCloudAppID OOP adapter.

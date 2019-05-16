@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/stretchr/testify/assert"
-	v1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
-	"ibmcloudappid/adapter/policy/store"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )

@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"golang.org/x/sync/singleflight"
-	"istio.io/istio/pkg/log"
+	"istio.io/pkg/log"
 )
 
 // KeySet retrieves public keys from OAuth server

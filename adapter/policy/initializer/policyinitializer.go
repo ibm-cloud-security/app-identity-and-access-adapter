@@ -11,12 +11,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 
-	policiesClientSet "ibmcloudappid/adapter/pkg/client/clientset/versioned"
-	policiesInformer "ibmcloudappid/adapter/pkg/client/informers/externalversions"
-	policyController "ibmcloudappid/adapter/policy/controller"
-	"ibmcloudappid/adapter/policy/handler"
-	"ibmcloudappid/adapter/policy/store"
-	"istio.io/istio/pkg/log"
+	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
+	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
+	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	"istio.io/pkg/log"
 )
 
 // Initializer interface contains the methods that are required

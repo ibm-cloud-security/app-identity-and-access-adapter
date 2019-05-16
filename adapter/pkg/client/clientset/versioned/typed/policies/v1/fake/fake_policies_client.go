@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1 "ibmcloudappid/adapter/pkg/client/clientset/versioned/typed/policies/v1"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1"
 
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"

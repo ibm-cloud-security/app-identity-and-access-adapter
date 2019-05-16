@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	v1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
-	scheme "ibmcloudappid/adapter/pkg/client/clientset/versioned/scheme"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	scheme "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/scheme"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

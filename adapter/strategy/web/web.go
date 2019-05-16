@@ -14,15 +14,15 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
 	"gopkg.in/mgo.v2/bson"
-	"ibmcloudappid/adapter/client"
-	"ibmcloudappid/adapter/policy/engine"
-	"ibmcloudappid/adapter/strategy"
-	"ibmcloudappid/adapter/validator"
-	"ibmcloudappid/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/istio/pkg/log"
+	"istio.io/pkg/log"
 )
 
 const (

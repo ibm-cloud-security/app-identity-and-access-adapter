@@ -2,10 +2,10 @@ package store
 
 import (
 	"github.com/stretchr/testify/assert"
-	"ibmcloudappid/adapter/authserver"
-	"ibmcloudappid/adapter/client"
-	v1 "ibmcloudappid/adapter/pkg/apis/policies/v1"
-	"ibmcloudappid/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"testing"
 )
 
