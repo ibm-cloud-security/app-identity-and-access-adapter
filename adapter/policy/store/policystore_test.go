@@ -1,25 +1,25 @@
 package store
 
 import (
-	"github.com/stretchr/testify/assert"
+	"crypto"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 const (
-	clientname = "clientname"
-	servername = "servername"
-	jwksurl = "http://mockserver"
-	service = "service"
-	namespace = "ns"
-	path = "path"
+	clientname   = "clientname"
+	servername   = "servername"
+	jwksurl      = "http://mockserver"
+	service      = "service"
+	namespace    = "ns"
+	path         = "path"
 	samplePolicy = "policy"
 )
 
-func GetEndpoint(ns string, service string, path string, method string) policy.Endpoint{
+func GetEndpoint(ns string, service string, path string, method string) policy.Endpoint {
 	return policy.Endpoint{Namespace: ns, Service: service, Path: path, Method: method}
 }
 
@@ -28,7 +28,7 @@ func GetTargetElement(service string, paths []string) v1.TargetElement {
 }
 
 func TargetGenerator(service []string, paths []string) []v1.TargetElement {
-	target := make([]v1.TargetElement,0)
+	target := make([]v1.TargetElement, 0)
 	for _, svc := range service {
 		target = append(target, GetTargetElement(svc, paths))
 	}
@@ -43,19 +43,27 @@ func GetOidcPolicySpec(name string, target []v1.TargetElement) v1.OidcPolicySpec
 	return v1.OidcPolicySpec{ClientName: name, Target: target}
 }
 
-func GetDefaultEndpoint() policy.Endpoint{
-	return GetEndpoint(namespace, service,"*", "*")
+func GetDefaultEndpoint() policy.Endpoint {
+	return GetEndpoint(namespace, service, "*", "*")
 }
 
 func TestNew(t *testing.T) {
 	assert.NotNil(t, New())
 }
 
+func TestLocalStore_KeySet(t *testing.T) {
+	store := New()
+	assert.Nil(t, (&LocalStore{}).GetKeySet(jwksurl))
+	assert.Nil(t, store.GetKeySet(jwksurl))
+	store.AddKeySet(jwksurl, &mockKeySet{})
+	assert.NotNil(t, store.GetKeySet(jwksurl))
+}
+
 func TestLocalStore_Client(t *testing.T) {
 	store := New()
 	assert.Nil(t, (&LocalStore{}).GetClient(clientname))
 	assert.Nil(t, store.GetClient(clientname))
-	store.AddClient(clientname, &client.Client{AuthServer:authserver.New(jwksurl)})
+	store.AddClient(clientname, &mockClient{})
 	assert.NotNil(t, store.GetClient(clientname))
 }
 
@@ -107,3 +115,17 @@ func TestLocalStore_PolicyMapping(t *testing.T) {
 	store.DeletePolicyMapping(samplePolicy)
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))
 }
+
+type mockClient struct {
+	server authserver.AuthorizationServer
+}
+
+func (m *mockClient) Name() string                                        { return "" }
+func (m *mockClient) ID() string                                          { return "" }
+func (m *mockClient) Secret() string                                      { return "" }
+func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
+
+type mockKeySet struct{}
+
+func (m *mockKeySet) PublicKeyURL() string                  { return "" }
+func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }

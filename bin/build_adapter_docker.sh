@@ -3,7 +3,7 @@
 # 
 
 APP_NAME=istio-adapter-ibmcloudappid
-APP_VERSION=latest
+APP_VERSION=testing
 IMAGE_REGISTRY_NAMESPACE=aliberat1
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${APP_VERSION}
 

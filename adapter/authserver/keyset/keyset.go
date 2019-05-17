@@ -5,11 +5,11 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
 	"golang.org/x/sync/singleflight"
+	"io/ioutil"
 	"istio.io/pkg/log"
+	"net/http"
+	"time"
 )
 
 // KeySet retrieves public keys from OAuth server
@@ -36,8 +36,18 @@ func New(publicKeyURL string, httpClient *http.Client) KeySet {
 		httpClient:   httpClient,
 	}
 
-	pku.updateKeysGrouped()
+	if httpClient == nil {
+		pku.httpClient = &http.Client{
+			Timeout: 5 * time.Second,
+		}
+	}
 
+	err := pku.updateKeysGrouped()
+	if err != nil {
+		log.Debugf("Error loading public keys for url: %s. Will retry later.", publicKeyURL)
+		return &pku
+	}
+	log.Infof("Synced JWKS successfully: %s", publicKeyURL)
 	return &pku
 }
 

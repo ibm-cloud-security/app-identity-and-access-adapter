@@ -3,6 +3,7 @@ package handler
 
 import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
@@ -40,8 +41,8 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		log.Debugf("Create/Update JwtPolicy : ID: %s", crd.ObjectMeta.UID)
 
 		// If we already are tracking this authentication server, skip
-		if c.store.GetAuthServer(crd.Spec.JwksURL) == nil {
-			c.store.AddAuthServer(crd.Spec.JwksURL, authserver.New(crd.Spec.JwksURL))
+		if c.store.GetKeySet(crd.Spec.JwksURL) == nil {
+			c.store.AddKeySet(crd.Spec.JwksURL, keyset.New(crd.Spec.JwksURL, nil))
 		}
 
 		mappingKey := crd.ObjectMeta.Namespace + "/" + crd.ObjectMeta.Name
@@ -57,28 +58,40 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		}
 		log.Debugf("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcPolicy:
-		log.Debugf("OidcPolicy created : ID: %s", crd.ObjectMeta.UID)
+		log.Debugf("OIDC Policy created : ID: %s", crd.ObjectMeta.UID)
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		for _, ep := range policyEndpoints {
 			c.store.SetWebPolicy(ep, crd.Spec)
 		}
-		log.Infof("OidcPolicy created : ID %s", crd.ObjectMeta.UID)
+		log.Infof("OIDC Policy created : ID %s", crd.ObjectMeta.UID)
 	case *v1.OidcClient:
-		log.Debugf("Creating OidcClient : ID: %s", crd.ObjectMeta.UID)
-		// If we already are tracking this authentication server, skip
-		oidcClient := client.New(crd.Spec)
-		if oidcClient.JWKSURL != "" {
-			if server := c.store.GetAuthServer(oidcClient.JWKSURL); server != nil {
-				oidcClient.AuthServer = server
-			} else {
-				server := authserver.New(oidcClient.JWKSURL)
-				c.store.AddAuthServer(oidcClient.JWKSURL, server)
-				oidcClient.AuthServer = server
+		log.Debugf("Creating OIDC Client : ID: %s", crd.ObjectMeta.UID)
 
+		// If we already are tracking this authentication server, skip
+		authorizationServer := c.store.GetAuthServer(crd.Spec.DiscoveryUrl)
+		if authorizationServer == nil {
+			authorizationServer = authserver.New(crd.Spec.DiscoveryUrl)
+			c.store.AddAuthServer(crd.Spec.DiscoveryUrl, authorizationServer)
+		}
+
+		// If the server synced successfully, we can configure the JWKs instance
+		// Otherwise, it will be configured lazily
+		if jwksURL := authorizationServer.JwksEndpoint(); jwksURL != "" {
+			// If we already track the JWKs for this OAuth 2.0 server, we can share the original instance
+			if jwks := c.store.GetKeySet(jwksURL); jwks != nil {
+				authorizationServer.SetKeySet(jwks)
+			} else {
+				jwks = keyset.New(jwksURL, nil)
+				authorizationServer.SetKeySet(jwks)
+				c.store.AddKeySet(jwksURL, jwks)
 			}
 		}
-		c.store.AddClient(oidcClient.ClientName, &oidcClient)
-		log.Infof("OidcClient created : ID %s", crd.ObjectMeta.UID)
+
+		// Create and store OIDC Client
+		oidcClient := client.New(crd.Spec, authorizationServer)
+		c.store.AddClient(oidcClient.Name(), oidcClient)
+
+		log.Infof("OIDC Client created : ID %s", crd.ObjectMeta.UID)
 	default:
 		log.Errorf("Could not create object. Unknown type : %f", crd)
 	}

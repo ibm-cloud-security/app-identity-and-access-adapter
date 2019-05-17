@@ -126,7 +126,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 		return nil, nil
 	}
 
-	validationErr := w.tokenUtil.Validate(accessTokenCookie.Token, action.Client.AuthServer.KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(accessTokenCookie.Token, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		log.Debugf("Cookies failed token validation: %v", validationErr)
 		return nil, nil
@@ -140,7 +140,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 			return nil, nil
 		}
 
-		validationErr = w.tokenUtil.Validate(idTokenCookie.Token, action.Client.AuthServer.KeySet(), action.Rules)
+		validationErr = w.tokenUtil.Validate(idTokenCookie.Token, action.Client.AuthorizationServer.KeySet(), action.Rules)
 		if validationErr != nil {
 			log.Debugf("Cookies failed token validation: %v", validationErr)
 			return nil, nil
@@ -176,13 +176,13 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	}
 
 	// Validate Tokens
-	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthServer.KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		log.Debugf("Cookies failed token validation: %v", validationErr)
 		return w.handleErrorCallback(err)
 	}
 
-	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthServer.KeySet(), action.Rules)
+	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		log.Debugf("Cookies failed token validation: %v", validationErr)
 		return w.handleErrorCallback(err)
@@ -233,21 +233,21 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 }
 
 // getTokens retrieves tokens from the authorization server using the authorization grant code
-func (w *WebStrategy) getTokens(code string, redirectURI string, client *client.Client) (*TokenResponse, error) {
+func (w *WebStrategy) getTokens(code string, redirectURI string, client client.Client) (*TokenResponse, error) {
 
 	form := url.Values{}
-	form.Add("client_id", client.ClientId)
+	form.Add("client_id", client.ID())
 	form.Add("grant_type", "authorization_code")
 	form.Add("code", code)
 	form.Add("redirect_uri", redirectURI)
 
-	req, err := http.NewRequest("POST", client.TokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
 	if err != nil {
 		log.Errorf("Failed to retrieve tokens")
 		return nil, err
 	}
 
-	req.SetBasicAuth(client.ClientId, client.ClientSecret)
+	req.SetBasicAuth(client.ID(), client.Secret())
 	req.Header.Set("xFilterType", "IstioAdapter")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -324,8 +324,8 @@ func generateTokenCookie(cookieName string, cookieData *OidcCookie) (*http.Cooki
 }
 
 // generateAuthorizationUrl builds the /authorization request that begins an OAuth 2.0 / OIDC flow
-func generateAuthorizationUrl(c *client.Client, redirectURI string) string {
-	baseUrl, err := url.Parse(c.AuthURL)
+func generateAuthorizationUrl(c client.Client, redirectURI string) string {
+	baseUrl, err := url.Parse(c.AuthorizationServer().AuthorizationEndpoint())
 	if err != nil {
 		log.Errorf("Malformed Auth URL: %s", err.Error())
 		return ""
@@ -333,7 +333,7 @@ func generateAuthorizationUrl(c *client.Client, redirectURI string) string {
 
 	// Prepare Query Parameters
 	params := url.Values{}
-	params.Add("client_id", c.ClientId)
+	params.Add("client_id", c.ID())
 	params.Add("response_type", "code")
 	params.Add("redirect_uri", redirectURI)
 	params.Add("scope", "oidc")
@@ -377,6 +377,6 @@ func buildRequestURL(action *authnz.RequestMsg) string {
 }
 
 // buildTokenCookieName constructs the cookie name
-func buildTokenCookieName(base string, c *client.Client) string {
-	return base + "-" + c.ClientId
+func buildTokenCookieName(base string, c client.Client) string {
+	return base + "-" + c.ID()
 }

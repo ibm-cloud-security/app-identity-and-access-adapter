@@ -1,12 +1,13 @@
 package engine
 
 import (
+	"crypto"
 	"errors"
 	"fmt"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"testing"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
@@ -49,7 +50,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		err               error
 	}{
 		{
-			// 1 - err - missing authorization server
+			// 0 - err - missing authorization server
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			jwtpolicies: []v1.JwtPolicySpec{
 				{JwksURL: "another serverurl"},
@@ -128,6 +129,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
 		store.AddAuthServer("serverurl", &mockAuthServer{})
+		store.AddKeySet("serverurl", &mockKeySet{})
 		for _, ep := range test.endpoints {
 			store.SetApiPolicies(ep, test.jwtpolicies)
 		}
@@ -193,7 +195,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 	for i, test := range tests {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
-		store.AddClient("client", &client.Client{AuthServer: &mockAuthServer{}})
+		store.AddClient("client", &mockClient{server: &mockAuthServer{}})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			store.SetWebPolicies(ep, test.oidcpolicies)
@@ -241,7 +243,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
 		store.AddAuthServer("serverurl", &mockAuthServer{})
-		store.AddClient("client", &client.Client{AuthServer: store.GetAuthServer("serverurl")})
+		store.AddClient("client", &mockClient{server: store.GetAuthServer("serverurl")})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			store.SetApiPolicies(ep, test.jwtpolicies)
@@ -276,6 +278,24 @@ func generateActionMessage(ns string, svc string, path string, method string) *a
 	}
 }
 
+type mockKeySet struct{}
+
+func (m *mockKeySet) PublicKeyURL() string                  { return "" }
+func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }
+
+type mockClient struct {
+	server authserver.AuthorizationServer
+}
+
+func (m *mockClient) Name() string                                        { return "" }
+func (m *mockClient) ID() string                                          { return "" }
+func (m *mockClient) Secret() string                                      { return "" }
+func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
+
 type mockAuthServer struct{}
 
-func (m *mockAuthServer) KeySet() keyset.KeySet { return nil }
+func (m *mockAuthServer) JwksEndpoint() string          { return "" }
+func (m *mockAuthServer) TokenEndpoint() string         { return "" }
+func (m *mockAuthServer) AuthorizationEndpoint() string { return "" }
+func (m *mockAuthServer) KeySet() keyset.KeySet         { return nil }
+func (m *mockAuthServer) SetKeySet(keyset.KeySet)       {}

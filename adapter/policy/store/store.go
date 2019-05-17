@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
@@ -9,8 +10,10 @@ import (
 
 // PolicyStore stores policy information
 type PolicyStore interface {
-	GetClient(clientName string) *client.Client
-	AddClient(clientName string, client *client.Client)
+	GetKeySet(jwksURL string) keyset.KeySet
+	AddKeySet(jwksURL string, jwks keyset.KeySet)
+	GetClient(clientName string) client.Client
+	AddClient(clientName string, client client.Client)
 	GetAuthServer(serverName string) authserver.AuthorizationServer
 	AddAuthServer(serverName string, server authserver.AuthorizationServer)
 	GetApiPolicies(ep policy.Endpoint) []v1.JwtPolicySpec

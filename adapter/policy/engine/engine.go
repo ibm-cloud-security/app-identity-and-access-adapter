@@ -18,7 +18,7 @@ import (
 type Action struct {
 	Type   policy.Type
 	KeySet keyset.KeySet
-	Client *client.Client
+	Client client.Client
 	Rules  []policy.Rule
 }
 
@@ -117,10 +117,10 @@ func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) (*Action, error) {
 		return &Action{Type: policy.NONE}, nil
 	}
 
-	if server := m.store.GetAuthServer(policies[0].JwksURL); server != nil {
+	if keyset := m.store.GetKeySet(policies[0].JwksURL); keyset != nil {
 		return &Action{
 			Type:   policy.JWT,
-			KeySet: server.KeySet(),
+			KeySet: keyset,
 		}, nil
 	}
 
@@ -137,7 +137,7 @@ func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error)
 	if c := m.store.GetClient(policies[0].ClientName); c != nil {
 		rules := []policy.Rule{{
 			Key:   "aud",
-			Value: c.ClientId,
+			Value: c.ID(),
 		}}
 		return &Action{
 			Type:   policy.OIDC,

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"reflect"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
@@ -12,7 +13,7 @@ import (
 // LocalStore is responsible for storing and managing policy/client data
 type LocalStore struct {
 	// clients maps client_name -> client_config
-	clients map[string]*client.Client
+	clients map[string]client.Client
 	// authserver maps jwksurl -> AuthorizationServers
 	authservers map[string]authserver.AuthorizationServer
 	// policies maps endpoint -> list of policies
@@ -21,29 +22,45 @@ type LocalStore struct {
 	webPolicies map[policy.Endpoint][]v1.OidcPolicySpec
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
 	policyMappings map[string]*policy.PolicyMapping
+	keysets        map[string]keyset.KeySet
 }
 
 // New creates a new local store
 func New() PolicyStore {
 	return &LocalStore{
-		clients:        make(map[string]*client.Client),
+		clients:        make(map[string]client.Client),
 		authservers:    make(map[string]authserver.AuthorizationServer),
 		apiPolicies:    make(map[policy.Endpoint][]v1.JwtPolicySpec),
 		webPolicies:    make(map[policy.Endpoint][]v1.OidcPolicySpec),
 		policyMappings: make(map[string]*policy.PolicyMapping),
+		keysets:        make(map[string]keyset.KeySet),
 	}
 }
 
-func (l *LocalStore) GetClient(clientName string) *client.Client {
+func (l *LocalStore) GetKeySet(jwksURL string) keyset.KeySet {
+	if l.keysets != nil {
+		return l.keysets[jwksURL]
+	}
+	return nil
+}
+
+func (l *LocalStore) AddKeySet(jwksURL string, jwks keyset.KeySet) {
+	if l.keysets != nil {
+		l.keysets = make(map[string]keyset.KeySet)
+	}
+	l.keysets[jwksURL] = jwks
+}
+
+func (l *LocalStore) GetClient(clientName string) client.Client {
 	if l.clients != nil {
 		return l.clients[clientName]
 	}
 	return nil
 }
 
-func (l *LocalStore) AddClient(clientName string, clientObject *client.Client) {
+func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
 	if l.clients != nil {
-		l.clients = make(map[string]*client.Client)
+		l.clients = make(map[string]client.Client)
 	}
 	l.clients[clientName] = clientObject
 

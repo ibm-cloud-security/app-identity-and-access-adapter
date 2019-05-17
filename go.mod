@@ -7,7 +7,7 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/googleapis v1.2.0
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
+	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
