@@ -8,4 +8,4 @@ spec:
   target:
     - serviceName: svc-demo-backend
       paths:
-        - /api/user/data
+        - /api/headers

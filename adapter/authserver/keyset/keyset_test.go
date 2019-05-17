@@ -2,6 +2,7 @@ package keyset
 
 import (
 	"context"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -46,7 +47,7 @@ func TestNew(t *testing.T) {
 		url := server.URL + "/publicKeys"
 
 		// Test
-		util := New(url, &http.Client{}).(*RemoteKeySet)
+		util := New(url, networking.New()).(*RemoteKeySet)
 		if util == nil {
 			t.Errorf("Could not convert KeySet interface to RemoteKeySet")
 			return
@@ -75,7 +76,7 @@ func TestUpdateKeys(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		// Overrite Http req handler
+		// Overwrite Http req handler
 		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(e.status)
 			w.Write([]byte(e.res))
@@ -127,7 +128,7 @@ func TestUpdateKeysGrouped(t *testing.T) {
 }
 
 // httpClient mock
-func httpClient(handler http.Handler) (*http.Client, *httptest.Server) {
+func httpClient(handler http.Handler) (*networking.HttpClient, *httptest.Server) {
 	s := httptest.NewServer(handler)
 
 	cli := &http.Client{
@@ -138,5 +139,8 @@ func httpClient(handler http.Handler) (*http.Client, *httptest.Server) {
 		},
 	}
 
-	return cli, s
+	n := &networking.HttpClient{
+		Client: cli,
+	}
+	return n, s
 }

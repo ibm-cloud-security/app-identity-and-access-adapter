@@ -3,8 +3,8 @@ appName: ibmcloudappid
 replicaCount: 1
 image:
   repository: aliberat1/istio-adapter-ibmcloudappid
-  tag: testing
-  pullPolicy: Always
+  tag: latest
+  pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP

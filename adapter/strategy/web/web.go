@@ -1,10 +1,7 @@
 package webstrategy
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
@@ -26,6 +24,7 @@ import (
 )
 
 const (
+	bearer            = "Bearer"
 	callbackEndpoint  = "/oidc/callback"
 	location          = "location"
 	setCookie         = "Set-Cookie"
@@ -40,7 +39,7 @@ var secretCookie = securecookie.New(hashKey, blockKey)
 // WebStrategy handles OAuth 2.0 / OIDC flows
 type WebStrategy struct {
 	tokenUtil  validator.TokenValidator
-	httpClient *http.Client
+	httpClient *networking.HttpClient
 }
 
 // TokenResponse models an OAuth 2.0 /Token endpoint response
@@ -64,10 +63,8 @@ type OidcCookie struct {
 // New creates an instance of an OIDC protection agent.
 func New() strategy.Strategy {
 	return &WebStrategy{
-		tokenUtil: validator.New(),
-		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
-		},
+		tokenUtil:  validator.New(),
+		httpClient: networking.New(),
 	}
 }
 
@@ -133,10 +130,10 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 	}
 
 	/*
-		accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, action.Client))
-		accessTokenCookie := parseAndValidateCookie(accessCookie)
+		idCookie, err := request.Cookie(buildTokenCookieName(idTokenCookie, action.Client))
+		idTokenCookie := parseAndValidateCookie(accessCookie)
 		if accessTokenCookie == nil {
-			log.Debugf("Valid access token cookie not found: %v", err)
+			log.Debugf("Valid ID token cookie not found: %v", err)
 			return nil, nil
 		}
 
@@ -248,29 +245,10 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client client.C
 	}
 
 	req.SetBasicAuth(client.ID(), client.Secret())
-	req.Header.Set("xFilterType", "IstioAdapter")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := w.httpClient.Do(req)
-	if err != nil {
-		log.Errorf("Failed to get tokens : %s", err)
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		log.Debugf("Unexpected response - status code: %d , msg: %s", res.StatusCode, string(body))
-		return nil, fmt.Errorf("token endpoint returned non 200 status code: %d", res.StatusCode)
-	}
-
 	var tokenResponse TokenResponse
-	if err := json.Unmarshal(body, &tokenResponse); err != nil {
-		log.Debugf("Could not parse request body - status code: %d , msg: %s", res.StatusCode, string(body))
+	if err := w.httpClient.Do(req, http.StatusOK, &tokenResponse); err != nil {
 		return nil, err
 	}
 
@@ -379,4 +357,11 @@ func buildRequestURL(action *authnz.RequestMsg) string {
 // buildTokenCookieName constructs the cookie name
 func buildTokenCookieName(base string, c client.Client) string {
 	return base + "-" + c.ID()
+}
+
+func (r *TokenResponse) OK() error {
+	if r.AccessToken == nil {
+		return errors.New("invalid token endpoint response: access_token does not exist")
+	}
+	return nil
 }

@@ -2,24 +2,22 @@
 package authserver
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"net/http"
-	"time"
-
 	"github.com/golang/groupcache/singleflight"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"istio.io/pkg/log"
+	"net/http"
 )
 
 // DiscoveryConfig encapsulates the discovery endpoint configuration
 type DiscoveryConfig struct {
-	Issuer      string `json:"issuer"`
-	AuthURL     string `json:"authorization_endpoint"`
-	TokenURL    string `json:"token_endpoint"`
-	JWKSURL     string `json:"jwks_uri"`
-	UserInfoURL string `json:"userinfo_endpoint"`
+	DiscoveryUrl string
+	Issuer       string `json:"issuer"`
+	AuthURL      string `json:"authorization_endpoint"`
+	TokenURL     string `json:"token_endpoint"`
+	JwksURL      string `json:"jwks_uri"`
+	UserInfoURL  string `json:"userinfo_endpoint"`
 }
 
 // AuthorizationServer represents an authorization server instance
@@ -37,7 +35,7 @@ type RemoteServer struct {
 	DiscoveryConfig
 	discoveryURL string
 	jwks         keyset.KeySet
-	httpclient   *http.Client
+	httpclient   *networking.HttpClient
 	requestGroup singleflight.Group
 	initialized  bool
 }
@@ -45,27 +43,25 @@ type RemoteServer struct {
 // New creates a RemoteServer returning a AuthorizationServer interface
 func New(discoveryEndpoint string) AuthorizationServer {
 	s := &RemoteServer{
-		httpclient: &http.Client{
-			Timeout: 5 * time.Second,
-		},
+		httpclient:   networking.New(),
 		discoveryURL: discoveryEndpoint,
 		jwks:         nil,
 		initialized:  false,
 	}
 	err := s.initialize()
 	if err != nil {
-		log.Infof("Could not load authorization server config from discovery endpoint: %s. Will retry later.", discoveryEndpoint)
+		log.Infof("Initialization from discovery endpoint failed: %s. Will retry later.", discoveryEndpoint)
 		return s
 	}
-	log.Infof("Loaded discovery configuration successfully: %s", discoveryEndpoint)
+	log.Infof("Initialized discovery configuration successfully: %s", discoveryEndpoint)
 	return s
 }
 
 // KeySet returns the instance's keyset
 func (s *RemoteServer) KeySet() keyset.KeySet {
 	_ = s.initialize()
-	if s.jwks == nil && s.JWKSURL != "" {
-		s.jwks = keyset.New(s.JWKSURL, s.httpclient)
+	if s.jwks == nil && s.JwksURL != "" {
+		s.jwks = keyset.New(s.JwksURL, s.httpclient)
 	}
 	return s.jwks
 }
@@ -78,7 +74,7 @@ func (s *RemoteServer) SetKeySet(jwks keyset.KeySet) {
 // JwksEndpoint returns the /publicKeys endpoint of the OAuth server
 func (s *RemoteServer) JwksEndpoint() string {
 	_ = s.initialize()
-	return s.JWKSURL
+	return s.JwksURL
 }
 
 // TokenEndpoint returns the /token endpoint of the OAuth server
@@ -98,7 +94,15 @@ func (s *RemoteServer) initialize() error {
 	if s.initialized {
 		return nil
 	}
+
+	// Retrieve configuration from .well-known endpoint.
+	// RequestGroup will prevent multiple calls to the discovery url from
+	// taking place at once. All threads coming into this call will wait for
+	// a single response, which can then be processed
 	_, err := s.requestGroup.Do(s.discoveryURL, func() (interface{}, error) {
+		if s.initialized {
+			return http.StatusOK, nil
+		}
 		return s.loadDiscoveryEndpoint()
 	})
 
@@ -117,34 +121,36 @@ func (s *RemoteServer) loadDiscoveryEndpoint() (interface{}, error) {
 		return nil, err
 	}
 
-	req.Header.Set("xFilterType", "IstioAdapter")
-
-	res, err := s.httpclient.Do(req)
-	if err != nil {
-		log.Infof("Error %s", err)
-		return nil, err
+	config := DiscoveryConfig{
+		DiscoveryUrl: s.discoveryURL,
 	}
 
-	if res.StatusCode != http.StatusOK {
-		log.Infof("Error status code %d", res.StatusCode)
-		return nil, errors.New("unexpected error code")
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Infof("Error parsing response %s", err)
-		return nil, err
-	}
-
-	var config DiscoveryConfig
-
-	if err := json.Unmarshal(body, &config); err != nil {
+	if err := s.httpclient.Do(req, http.StatusOK, &config); err != nil {
 		return nil, err
 	}
 
 	s.initialized = true
 	s.DiscoveryConfig = config
 
-	return res.Status, nil
+	return http.StatusOK, nil
+}
+
+// OK validates the result from a discovery configuration
+func (c *DiscoveryConfig) OK() error {
+	if c.Issuer == "" {
+		return errors.New("invalid discovery config: missing `issuer`")
+	}
+	if c.JwksURL == "" {
+		return errors.New("invalid discovery config: missing `jwks_uri`")
+	}
+	if c.AuthURL == "" {
+		return errors.New("invalid discovery config: missing `authorization_endpoint`")
+	}
+	if c.TokenURL == "" {
+		return errors.New("invalid discovery config: missing `token_endpoint`")
+	}
+	if c.UserInfoURL == "" {
+		return errors.New("invalid discovery config: missing `userinfo_endpoint`")
+	}
+	return nil
 }

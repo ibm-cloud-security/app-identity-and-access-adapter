@@ -3,13 +3,12 @@ package keyset
 
 import (
 	"crypto"
-	"encoding/json"
-	"fmt"
-	"golang.org/x/sync/singleflight"
-	"io/ioutil"
-	"istio.io/pkg/log"
+	"errors"
 	"net/http"
-	"time"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
+	"golang.org/x/sync/singleflight"
+	"istio.io/pkg/log"
 )
 
 // KeySet retrieves public keys from OAuth server
@@ -21,7 +20,7 @@ type KeySet interface {
 // RemoteKeySet manages the retrieval and storage of OIDC public keys
 type RemoteKeySet struct {
 	publicKeyURL string
-	httpClient   *http.Client
+	httpClient   *networking.HttpClient
 
 	requestGroup singleflight.Group
 	publicKeys   map[string]crypto.PublicKey
@@ -30,16 +29,14 @@ type RemoteKeySet struct {
 ////////////////// constructor //////////////////////////
 
 // New creates a new Public Key Util
-func New(publicKeyURL string, httpClient *http.Client) KeySet {
+func New(publicKeyURL string, httpClient *networking.HttpClient) KeySet {
 	pku := RemoteKeySet{
 		publicKeyURL: publicKeyURL,
 		httpClient:   httpClient,
 	}
 
 	if httpClient == nil {
-		pku.httpClient = &http.Client{
-			Timeout: 5 * time.Second,
-		}
+		pku.httpClient = networking.New()
 	}
 
 	err := pku.updateKeysGrouped()
@@ -47,7 +44,7 @@ func New(publicKeyURL string, httpClient *http.Client) KeySet {
 		log.Debugf("Error loading public keys for url: %s. Will retry later.", publicKeyURL)
 		return &pku
 	}
-	log.Infof("Synced JWKS successfully: %s", publicKeyURL)
+	log.Infof("Synced JWKs successfully: %s", publicKeyURL)
 	return &pku
 }
 
@@ -92,50 +89,39 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 
 	req.Header.Set("xFilterType", "IstioAdapter")
 
-	res, err := s.httpClient.Do(req)
-	if err != nil {
+	var ks keySet
+	if err := s.httpClient.Do(req, http.StatusOK, &ks); err != nil {
 		log.Errorf("KeySet - failed to retrieve public keys for url: %s", s.publicKeyURL)
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		log.Errorf("KeySet - failed to retrieve public keys for url %s", s.publicKeyURL)
-		return nil, fmt.Errorf("public key url returned non 200 status code: %d", res.StatusCode)
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var jwks []key
-	var ks keySet
-
-	if err := json.Unmarshal(body, &ks); err == nil { // an RFC compliant JWK Set object, extract key array
-		jwks = ks.Keys
-	} else if err := json.Unmarshal(body, &jwks); err != nil { // attempt to decode as JWK array directly
-		return nil, err
-	}
-
+	// Convert JSON keys to crypto keys
 	keymap := make(map[string]crypto.PublicKey)
-	for _, k := range jwks {
+	for _, k := range ks.Keys {
 		if k.Kid == "" {
 			log.Infof("KeySet - public key missing kid %s", k)
 			continue
 		}
 
-		pubkey, err := k.decodePublicKey()
+		pubKey, err := k.decodePublicKey()
 		if err != nil {
 			log.Errorf("KeySet - could not decode public key err %s : %s", err, k)
 			continue
 		}
-		keymap[k.Kid] = pubkey
+		keymap[k.Kid] = pubKey
 	}
 
 	log.Infof("KeySet - updated public keys for %s", s.publicKeyURL)
 
 	s.publicKeys = keymap
 
-	return res.Status, nil
+	return http.StatusOK, nil
+}
+
+// OK validates a KeySet Response
+func (k *keySet) OK() error {
+	if k.Keys == nil {
+		return errors.New("invalid public keys response : missing keys array")
+	}
+	return nil
 }

@@ -13,30 +13,30 @@ type Client interface {
 	AuthorizationServer() authserver.AuthorizationServer
 }
 
-type RemoteClient struct {
+type remoteClient struct {
 	v1.OidcClientSpec
 	authServer authserver.AuthorizationServer
 }
 
-func (c *RemoteClient) Name() string {
+func (c *remoteClient) Name() string {
 	return c.ClientName
 }
 
-func (c *RemoteClient) ID() string {
+func (c *remoteClient) ID() string {
 	return c.ClientId
 }
 
-func (c *RemoteClient) Secret() string {
+func (c *remoteClient) Secret() string {
 	return c.ClientSecret
 }
 
-func (c *RemoteClient) AuthorizationServer() authserver.AuthorizationServer {
+func (c *remoteClient) AuthorizationServer() authserver.AuthorizationServer {
 	return c.authServer
 }
 
 // New creates a new client
 func New(cfg v1.OidcClientSpec, s authserver.AuthorizationServer) Client {
-	return &RemoteClient{
+	return &remoteClient{
 		OidcClientSpec: cfg,
 		authServer:     s,
 	}
