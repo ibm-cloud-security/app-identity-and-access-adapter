@@ -4,11 +4,11 @@ package keyset
 import (
 	"crypto"
 	"errors"
+	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"golang.org/x/sync/singleflight"
-	"istio.io/pkg/log"
 )
 
 // KeySet retrieves public keys from OAuth server
@@ -41,10 +41,10 @@ func New(publicKeyURL string, httpClient *networking.HttpClient) KeySet {
 
 	err := pku.updateKeysGrouped()
 	if err != nil {
-		log.Debugf("Error loading public keys for url: %s. Will retry later.", publicKeyURL)
+		zap.L().Debug("Error loading public keys for url. Will retry later.", zap.String("url", publicKeyURL))
 		return &pku
 	}
-	log.Infof("Synced JWKs successfully: %s", publicKeyURL)
+	zap.L().Info("Synced JWKs successfully.", zap.String("url", publicKeyURL))
 	return &pku
 }
 
@@ -71,7 +71,7 @@ func (s *RemoteKeySet) updateKeysGrouped() error {
 	})
 
 	if err != nil {
-		log.Debugf("An error occurred requesting public keys: %v", err)
+		zap.L().Debug("An error occurred requesting public keys", zap.Error(err))
 		return err
 	}
 
@@ -83,7 +83,7 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 
 	req, err := http.NewRequest("GET", s.publicKeyURL, nil)
 	if err != nil {
-		log.Errorf("KeySet - failed to create public key request : %s", s.publicKeyURL)
+		zap.L().Warn("Failed to create public key request", zap.String("url", s.publicKeyURL))
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 
 	var ks keySet
 	if err := s.httpClient.Do(req, http.StatusOK, &ks); err != nil {
-		log.Errorf("KeySet - failed to retrieve public keys for url: %s", s.publicKeyURL)
+		zap.L().Info("Failed to retrieve public keys", zap.String("url", s.publicKeyURL), zap.Error(err))
 		return nil, err
 	}
 
@@ -99,19 +99,19 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 	keymap := make(map[string]crypto.PublicKey)
 	for _, k := range ks.Keys {
 		if k.Kid == "" {
-			log.Infof("KeySet - public key missing kid %s", k)
+			zap.L().Info("Invalid public key format - missing kid", zap.String("url", s.publicKeyURL), zap.Error(err))
 			continue
 		}
 
 		pubKey, err := k.decodePublicKey()
 		if err != nil {
-			log.Errorf("KeySet - could not decode public key err %s : %s", err, k)
+			zap.L().Warn("Could not decode public key err", zap.Error(err))
 			continue
 		}
 		keymap[k.Kid] = pubKey
 	}
 
-	log.Infof("KeySet - updated public keys for %s", s.publicKeyURL)
+	zap.L().Info("Synced public keys", zap.String("url", s.publicKeyURL))
 
 	s.publicKeys = keymap
 

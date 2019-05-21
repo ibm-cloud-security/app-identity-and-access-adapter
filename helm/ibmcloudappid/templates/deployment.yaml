@@ -18,6 +18,11 @@ spec:
       containers:
         - name: {{ .Values.appName }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          {{ if .Values.logging.verbose }}
+          args: ["-v", "-p", "{{ .Values.service.port }}"]
+          {{ else }}
+          args: ["-p", "{{ .Values.service.port }}"]
+          {{ end }}
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           ports:
             - containerPort: {{ .Values.service.port }}

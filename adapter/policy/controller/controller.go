@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
+	"go.uber.org/zap"
 	"time"
 
-	"istio.io/pkg/log"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -32,7 +32,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	// have completed existing items then shutdown
 	defer c.Queue.ShutDown()
 
-	log.Debug("Controller.Run: initiating")
+	zap.L().Debug("Controller.Run: initiating")
 
 	// run the informer to start listing and watching resources
 	go c.Informer.Run(stopCh)
@@ -42,7 +42,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 		utilruntime.HandleError(fmt.Errorf("Error syncing cache"))
 		return
 	}
-	log.Debug("Controller.Run: cache sync complete")
+	zap.L().Debug("Controller.Run: cache sync complete")
 
 	// run the runWorker method every second with a stop channel
 	wait.Until(c.runWorker, time.Second, stopCh)
@@ -56,22 +56,22 @@ func (c *Controller) HasSynced() bool {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Debug("Controller.runWorker: starting")
+	zap.L().Debug("Controller.runWorker: starting")
 
 	// invoke processNextItem to fetch and consume the next change
 	// to a watched or listed resource
 	for c.processNextItem() {
-		log.Debug("Controller.runWorker: processing next item")
+		zap.L().Debug("Controller.runWorker: processing next item")
 	}
 
-	log.Debug("Controller.runWorker: completed")
+	zap.L().Debug("Controller.runWorker: completed")
 }
 
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of if the item was
 // created or deleted
 func (c *Controller) processNextItem() bool {
-	log.Debug("Controller.processNextItem: start")
+	zap.L().Debug("Controller.processNextItem: start")
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -93,10 +93,10 @@ func (c *Controller) processNextItem() bool {
 	item, exists, err := c.Informer.GetIndexer().GetByKey(keyRaw)
 	if err != nil {
 		if c.Queue.NumRequeues(key) < 5 {
-			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, retrying", key, err)
+			zap.L().Error("Controller.processNextItem: Failed processing item retrying", zap.String("key", keyRaw), zap.Error(err))
 			c.Queue.AddRateLimited(key)
 		} else {
-			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, no more retries", key, err)
+			zap.L().Error("Controller.processNextItem: Failed processing item no more retries", zap.String("key", keyRaw), zap.Error(err))
 			c.Queue.Forget(key)
 			utilruntime.HandleError(err)
 		}
@@ -109,11 +109,11 @@ func (c *Controller) processNextItem() bool {
 	// after both instances, we want to forget the key from the queue, as this indicates
 	// a code path of successful queue key processing
 	if !exists {
-		log.Debugf("Controller.processNextItem: object deleted detected: %s", keyRaw)
+		zap.L().Debug("Controller.processNextItem: object deleted detected: %s", zap.String("key", keyRaw))
 		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw})
 		c.Queue.Forget(key)
 	} else {
-		log.Debugf("Controller.processNextItem: object created detected: %s", keyRaw)
+		zap.L().Debug("Controller.processNextItem: object created detected: %s", zap.String("key", keyRaw))
 		c.Handler.HandleAddUpdateEvent(item)
 		c.Queue.Forget(key)
 	}

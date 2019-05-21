@@ -1,6 +1,7 @@
 package initializer
 
 import (
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,7 +11,6 @@ import (
 	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
-	"istio.io/pkg/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -60,7 +60,7 @@ func getKubeConfig() (*rest.Config, error) {
 	// attempt to create an the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Error("Error creating a in-cluster config. Attempting local config...")
+		zap.L().Warn("Error creating an in-cluster config. Attempting local config...", zap.Error(err))
 
 		// attempt to create a local config client
 		kubeConfigPath := os.Getenv("HOME") + "/.kube/config"
@@ -68,7 +68,7 @@ func getKubeConfig() (*rest.Config, error) {
 		// create the config from the path
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 		if err != nil {
-			log.Errorf("Could not create local config: %v", err)
+			zap.L().Error("Could not create local config", zap.Error(err))
 			return nil, err
 		}
 	}
@@ -81,24 +81,24 @@ func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface, e
 
 	config, err := getKubeConfig()
 	if err != nil {
-		log.Fatalf("Error creating a cluster config: %s", err)
+		zap.L().Fatal("Error creating a cluster config", zap.Error(err))
 		return nil, nil, err
 	}
 
 	// creates the clientset
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("Error creating a client set: %s", err)
+		zap.L().Fatal("Error creating a client set", zap.Error(err))
 		return nil, nil, err
 	}
 
 	policiesClient, err := policiesClientSet.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("NewForConfig: %v", err)
+		zap.L().Fatal("Error creating a NewForConfig", zap.Error(err))
 		return nil, nil, err
 	}
 
-	log.Info("Successfully constructed k8s client")
+	zap.L().Info("Successfully constructed k8s client")
 	return client, policiesClient, nil
 }
 
@@ -117,7 +117,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 			// convert the resource object into a key (in this case
 			// we are just doing it in the format of 'namespace/name')
 			key, err := cache.MetaNamespaceKeyFunc(obj)
-			log.Debugf("Add myresource: %s", key)
+			zap.L().Debug("Adding resource", zap.String("key", key))
 			if err == nil {
 				// add the key to the queue for the handler to get
 				queue.Add(key)
@@ -125,7 +125,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
-			log.Debugf("Update myresource: %s", key)
+			zap.L().Debug("Updating resource", zap.String("key", key))
 			if err == nil {
 				queue.Add(key)
 			}
@@ -137,7 +137,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 			//
 			// this then in turn calls MetaNamespaceKeyFunc
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			log.Debugf("Delete myresource: %s", key)
+			zap.L().Debug("Delete resource", zap.String("key", key))
 			if err == nil {
 				queue.Add(key)
 			}

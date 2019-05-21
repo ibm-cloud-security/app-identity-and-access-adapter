@@ -7,7 +7,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"istio.io/pkg/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -51,17 +51,18 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []policy.R
 	// Parse the access token - validate expiration and signature
 	token, err := validateSignature(tokenStr, jwks)
 	if err != nil {
+		zap.L().Debug("Unauthorized - invalid token", zap.Error(err))
 		return errors.UnauthorizedHTTPException(err.Error(), nil)
 	}
 
 	// Validate access token
 	claimErr := validateClaims(token, rules)
 	if claimErr != nil {
-		log.Debugf("Unauthorized - invalid token - %s", claimErr)
+		zap.L().Debug("Unauthorized - invalid token", zap.Error(err))
 		return claimErr
 	}
 
-	log.Debug("Token has been validated")
+	zap.L().Debug("Token has been validated")
 
 	return nil
 }
@@ -77,14 +78,14 @@ func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 		// Validate token signature against
 		keyID, ok := token.Header[kid].(string)
 		if keyID == "" || !ok {
-			log.Debug("Token validation error - kid is missing")
+			zap.L().Debug("Token validation error - kid is missing")
 			return nil, fmt.Errorf("token validation error - kid is missing")
 		}
 
 		// Find public key in client
 		key := jwks.PublicKey(keyID)
 		if key == nil {
-			log.Debugf("Token validation error - key not found for kid: %s", token.Header[kid])
+			zap.S().Debug("Token validation error - key not found for kid", "kid", token.Header[kid])
 			return nil, fmt.Errorf("token validation error - key not found for kid: %s", token.Header[kid])
 		}
 
@@ -97,14 +98,14 @@ func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 // validateClaims validates claims based on policies
 func validateClaims(token *jwt.Token, rules []policy.Rule) *errors.OAuthError {
 	if token == nil {
-		log.Error("Unexpectedly received nil token during validation")
+		zap.L().Error("Unexpectedly received nil token during validation")
 		return &errors.OAuthError{Msg: errors.InternalServerError}
 	}
 
 	// Retrieve claims map from token
 	claims, err := getClaims(token)
 	if err != nil {
-		log.Debug("Token validation error - error obtaining claims from token")
+		zap.L().Warn("Token validation error - error obtaining claims from token")
 		return err
 	}
 
@@ -129,13 +130,13 @@ func validateClaim(name string, expected string, claims jwt.MapClaims) error {
 	default:
 		if found, ok := claims[name].(string); ok {
 			if found != expected {
-				log.Debugf("Token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
+				zap.L().Debug("Token validation error - claim invalid", zap.String("claim_name", name), zap.String("expected", expected), zap.String("found", found))
 				return fmt.Errorf("token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
 			}
-			log.Debugf("Validated token claim: `%s`", name)
+			zap.L().Debug("Validated token claim", zap.String("claim_name", name))
 			return nil
 		}
-		log.Debugf("Token validation error - expected claim `%s` to exist", name)
+		zap.L().Debug("Token validation error - expected claim to exist", zap.String("claim_name", name))
 		return fmt.Errorf("token validation error - expected claim `%s` to exist", name)
 	}
 	return nil
@@ -148,6 +149,6 @@ func getClaims(token *jwt.Token) (jwt.MapClaims, *errors.OAuthError) {
 			return claims, nil
 		}
 	}
-	log.Debugf("Token validation error - invalid JWT token: %v", token)
+	zap.L().Debug("Token validation error - invalid JWT token")
 	return nil, &errors.OAuthError{Msg: errors.InternalServerError}
 }

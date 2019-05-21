@@ -13,3 +13,6 @@ service:
 keys:
   hashKeySize: 32
   blockKeySize: 16
+
+logging:
+  verbose: false

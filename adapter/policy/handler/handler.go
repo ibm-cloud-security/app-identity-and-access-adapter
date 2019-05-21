@@ -8,8 +8,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
-
-	"istio.io/pkg/log"
+	"go.uber.org/zap"
 )
 
 // PolicyHandler is responsible for storing and managing policy/client data
@@ -38,7 +37,7 @@ func New(store store.PolicyStore) PolicyHandler {
 func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtPolicy:
-		log.Debugf("Create/Update JwtPolicy : ID: %s", crd.ObjectMeta.UID)
+		zap.L().Debug("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 
 		// If we already are tracking this authentication server, skip
 		if c.store.GetKeySet(crd.Spec.JwksURL) == nil {
@@ -49,23 +48,23 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		if c.store.GetPolicyMapping(mappingKey) != nil {
 			// for update delete the old object mappings
-			log.Debugf("Update event for Policy. Calling Delete to remove the old mappings")
+			zap.L().Debug("Update event for Policy. Calling Delete to remove the old mappings")
 			c.HandleDeleteEvent(policy.CrdKey{Id: mappingKey})
 		}
 		c.store.AddPolicyMapping(mappingKey, &policy.PolicyMapping{Type: policy.JWT, Endpoints: policyEndpoints, Spec: crd.Spec})
 		for _, ep := range policyEndpoints {
 			c.store.SetApiPolicy(ep, crd.Spec)
 		}
-		log.Debugf("JwtPolicy created/updated : ID %s", crd.ObjectMeta.UID)
+		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 	case *v1.OidcPolicy:
-		log.Debugf("OIDC Policy created : ID: %s", crd.ObjectMeta.UID)
+		zap.L().Debug("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		for _, ep := range policyEndpoints {
 			c.store.SetWebPolicy(ep, crd.Spec)
 		}
-		log.Infof("OIDC Policy created : ID %s", crd.ObjectMeta.UID)
+		zap.L().Info("OIDCPolicy created", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcClient:
-		log.Debugf("Creating OIDC Client : ID: %s", crd.ObjectMeta.UID)
+		zap.L().Debug("OIDCClient created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 
 		// If we already are tracking this authentication server, skip
 		authorizationServer := c.store.GetAuthServer(crd.Spec.DiscoveryUrl)
@@ -91,9 +90,9 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		oidcClient := client.New(crd.Spec, authorizationServer)
 		c.store.AddClient(oidcClient.Name(), oidcClient)
 
-		log.Infof("OIDC Client created : ID %s", crd.ObjectMeta.UID)
+		zap.L().Info("OIDCClient created", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 	default:
-		log.Errorf("Could not create object. Unknown type : %f", crd)
+		zap.S().Warn("Could not create object. Unknown type: %f", crd)
 	}
 }
 
@@ -101,25 +100,25 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 	crdKey, ok := obj.(policy.CrdKey)
 	if !ok {
-		log.Errorf("Expected to receive CrdKey")
+		zap.L().Warn("Expected to receive CrdKey from Kubernetes informer")
 		return
 	}
 
 	mapping := c.store.GetPolicyMapping(crdKey.Id)
 	if mapping == nil {
-		log.Errorf("CRD was not found.") // happens with OIDC policies at the moment
+		zap.L().Warn("CRD was not found") // happens with OIDC policies at the moment
 		return
 	}
 
 	switch mapping.Type {
 	case policy.JWT:
-		log.Debugf("Deleting Object of type : %d", policy.JWT)
+		zap.L().Debug("Deleting JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
 		for _, ep := range mapping.Endpoints {
 			c.store.DeleteApiPolicy(ep, mapping.Spec)
 		}
 		c.store.DeletePolicyMapping(crdKey.Id)
-		log.Debug("Delete Complete")
+		zap.L().Info("Successfully deleted JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
 	default:
-		log.Errorf("Could not delete object. Unknown type : %d", mapping.Type)
+		zap.L().Warn("Unknown policy type")
 	}
 }

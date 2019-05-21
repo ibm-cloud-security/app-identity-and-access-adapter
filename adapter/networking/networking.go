@@ -3,10 +3,9 @@ package networking
 import (
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
-
-	"istio.io/pkg/log"
 )
 
 const (
@@ -42,19 +41,19 @@ func (c *HttpClient) Do(req *http.Request, status int, v OK) error {
 	// Issue original request
 	res, err := c.Client.Do(req)
 	if err != nil {
-		log.Errorf("Request failed: %s", err)
+		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode))
 		return err
 	}
 
 	// Check status code
 	if res.StatusCode != status {
-		log.Debugf("Unexpected response for request to %s | status code: %d", req.URL.Path, res.StatusCode)
+		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode))
 		return fmt.Errorf("unexpected response for request to %s | status code: %d", req.URL.Path, res.StatusCode)
 	}
 
 	// Decode response
 	if err := decodeJSON(res, v); err != nil {
-		log.Infof("Unexpected response for request to %s | status code: %d", req.URL.Path, res.StatusCode)
+		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode))
 		return err
 	}
 
@@ -65,7 +64,7 @@ func (c *HttpClient) Do(req *http.Request, status int, v OK) error {
 func decodeJSON(r *http.Response, v OK) error {
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		log.Debugf("Could not parse request body - status code: %d", r.StatusCode)
+		zap.L().Debug("Could not parse request body.", zap.Error(err))
 		return err
 	}
 	return v.OK()
@@ -76,7 +75,7 @@ func Retry(attempts int, sleep time.Duration, fn func() (interface{}, error)) (i
 	res, err := fn()
 	if err != nil {
 		if attempts--; attempts > 0 {
-			log.Debugf("Call failed, retrying with attempts remaining %v", attempts)
+			zap.L().Debug("Call failed, retrying.", zap.Int("attempts", attempts))
 			time.Sleep(sleep)
 			return Retry(attempts, 2*sleep, fn)
 		} else {

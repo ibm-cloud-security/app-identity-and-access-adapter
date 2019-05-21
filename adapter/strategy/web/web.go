@@ -19,11 +19,11 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"go.uber.org/zap"
 	"gopkg.in/mgo.v2/bson"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -82,7 +82,7 @@ func New(kubeClient kubernetes.Interface) strategy.Strategy {
 	// reading or creating a new HMAC and AES symmetric key
 	_, err := w.getSecureCookie()
 	if err != nil {
-		log.Errorf("Could not sync signing / encryption secrets, will retry later: %s", err.Error())
+		zap.L().Warn("Could not sync signing / encryption secrets, will retry later", zap.Error(err))
 	}
 
 	return w
@@ -95,7 +95,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 		return nil, err
 	}
 	if tokens != nil {
-		log.Debug("User is already authenticated")
+		zap.L().Debug("User is already authenticated")
 		// If in a callback flow, redirect to original endpoint. Cookies are already stored/valid
 		if strings.HasSuffix(r.Instance.Request.Path, callbackEndpoint) {
 			return buildSuccessRedirectResponse(r.Instance.Request.Path, nil), nil
@@ -111,16 +111,16 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 
 	if strings.HasSuffix(r.Instance.Request.Path, callbackEndpoint) {
 		if r.Instance.Request.Params.Error != "" {
-			log.Debugf("An error occurred during authentication : %s", r.Instance.Request.Params.Error)
+			zap.L().Debug("An error occurred during authentication", zap.String("error_query_param", r.Instance.Request.Params.Error))
 			return w.handleErrorCallback(errors.New(r.Instance.Request.Params.Error))
 		} else if r.Instance.Request.Params.Code != "" {
-			log.Debugf("Received authorization code : %s", r.Instance.Request.Params.Code)
+			zap.L().Debug("Received authorization code")
 			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, r.Instance.Request, action)
 		} else {
-			log.Infof("Unexpected response on callback endpoint /oidc/callback. Triggering re-authentication.")
+			zap.L().Debug("Unexpected response on callback endpoint /oidc/callback. Triggering re-authentication.")
 		}
 	}
-	log.Debug("Handling new user authentication")
+	zap.L().Debug("Handling new user authentication")
 	return w.handleAuthorizationCodeFlow(r.Instance.Request, action)
 }
 
@@ -128,7 +128,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 // returns an error in the event of an Internal Server Error
 func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*validator.RawTokens, error) {
 	if action.Client == nil {
-		log.Errorf("Internal server error: OIDC client not provided")
+		zap.L().Warn("Internal server error: OIDC client not provided")
 		return nil, errors.New("invalid OIDC configuration")
 	}
 
@@ -139,13 +139,13 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 	accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, action.Client))
 	accessTokenCookie := w.parseAndValidateCookie(accessCookie)
 	if accessTokenCookie == nil {
-		log.Debugf("Valid access token cookie not found: %v", err)
+		zap.L().Debug("Valid access token cookie not found: %v", zap.Error(err))
 		return nil, nil
 	}
 
 	validationErr := w.tokenUtil.Validate(accessTokenCookie.Token, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		log.Debugf("Cookies failed token validation: %v", validationErr)
+		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
 		return nil, nil
 	}
 
@@ -176,20 +176,20 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	// Get Tokens
 	response, err := w.getTokens(code.(string), redirectURI, action.Client)
 	if err != nil {
-		log.Errorf("Could not retrieve tokens : %s", err.Error())
+		zap.L().Info("Could not retrieve tokens", zap.Error(err))
 		return w.handleErrorCallback(err)
 	}
 
 	// Validate Tokens
 	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		log.Debugf("Cookies failed token validation: %v", validationErr)
+		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
 		return w.handleErrorCallback(err)
 	}
 
 	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		log.Debugf("Cookies failed token validation: %v", validationErr)
+		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
 		return w.handleErrorCallback(err)
 	}
 
@@ -199,21 +199,21 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		Expiration: time.Now().Add(time.Minute * time.Duration(response.ExpiresIn)),
 	})
 	if err != nil {
-		log.Debugf("Could not generate cookie: %v", err)
+		zap.L().Debug("Could not generate cookie", zap.Error(err))
 		return nil, err
 	}
 
 	// TODO: generate ID encrypted token cookie
 
 	originalURL := strings.Split(redirectURI, callbackEndpoint)[0]
-	log.Debugf("Authenticated. Redirecting to %v", originalURL)
+	zap.S().Debugf("Authenticated. Redirecting to %s", originalURL)
 	return buildSuccessRedirectResponse(originalURL, []*http.Cookie{accessTokenCookie}), nil
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
-	log.Infof("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
+	zap.S().Debugf("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{
 			Status: rpc.Status{
@@ -239,7 +239,7 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client client.C
 
 	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
 	if err != nil {
-		log.Errorf("Failed to retrieve tokens")
+		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
 		return nil, err
 	}
 
@@ -248,6 +248,7 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client client.C
 
 	var tokenResponse TokenResponse
 	if err := w.httpClient.Do(req, http.StatusOK, &tokenResponse); err != nil {
+		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
 		return nil, err
 	}
 
@@ -283,20 +284,20 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 	})
 
 	if err != nil {
-		log.Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
+		zap.S().Info("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
 		secret, err = w.generateKeySecret(32, 16)
 		if err != nil {
-			log.Errorf("Could not generate secret: %v", err)
+			zap.L().Info("Failed to retrieve tokens", zap.Error(err))
 			return nil, err
 		}
 	}
 
 	if s, ok := secret.(*v1.Secret); ok {
-		log.Debugf("Synced secret: %v", defaultKeySecret)
+		zap.S().Info("Synced secret: %v", defaultKeySecret)
 		w.secureCookie = securecookie.New(s.Data[hashKey], s.Data[blockKey])
 		return w.secureCookie, nil
 	} else {
-		log.Errorf("Could not convert interface to secret")
+		zap.S().Error("Could not convert interface to secret")
 		return nil, errors.New("could not sync signing / encryption secrets")
 	}
 }
@@ -348,11 +349,13 @@ func (w *WebStrategy) generateTokenCookie(cookieName string, cookieData *OidcCoo
 	// encode the struct
 	data, err := bson.Marshal(&cookieData)
 	if err != nil {
+		zap.L().Warn("Could not marshal cookie data", zap.Error(err))
 		return nil, err
 	}
 
 	sc, err := w.getSecureCookie()
 	if err != nil {
+		zap.L().Warn("Could not get secure cookie instance", zap.Error(err))
 		return nil, err
 	}
 
@@ -367,7 +370,7 @@ func (w *WebStrategy) generateTokenCookie(cookieName string, cookieData *OidcCoo
 			Expires:  time.Now().Add(time.Hour * time.Duration(4)),
 		}, nil
 	} else {
-		log.Infof("Error encoding the cookie length is %s", encoded)
+		zap.S().Error("Error encoding cookie: length: %s", len(encoded))
 		return nil, err
 	}
 }
@@ -376,7 +379,7 @@ func (w *WebStrategy) generateTokenCookie(cookieName string, cookieData *OidcCoo
 func generateAuthorizationUrl(c client.Client, redirectURI string) string {
 	baseUrl, err := url.Parse(c.AuthorizationServer().AuthorizationEndpoint())
 	if err != nil {
-		log.Errorf("Malformed Auth URL: %s", err.Error())
+		zap.L().Warn("Malformed Authorization URL", zap.Error(err))
 		return ""
 	}
 
@@ -397,30 +400,30 @@ func generateAuthorizationUrl(c client.Client, redirectURI string) string {
 // and returns an OIDCCookie
 func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 	if cookie == nil {
-		log.Debug("Cookie does not exist")
+		zap.L().Debug("Cookie does not exist")
 		return nil
 	}
 	sc, err := w.getSecureCookie()
 	if err != nil {
-		log.Debugf("Error getting securecookie: %s", err)
+		zap.L().Debug("Error getting securecookie", zap.Error(err))
 		return nil
 	}
 	value := []byte{}
 	if err := sc.Decode(cookie.Name, cookie.Value, &value); err != nil {
-		log.Debugf("Could not read cookie: %v", err)
+		zap.L().Debug("Could not decode cookie:", zap.Error(err))
 		return nil
 	}
 	cookieObj := OidcCookie{}
 	if err := bson.Unmarshal(value, &cookieObj); err != nil {
-		log.Debugf("Could not parse cookie data: %v", err)
+		zap.L().Debug("Could not unmarshal cookie:", zap.Error(err))
 		return nil
 	}
 	if cookieObj.Token == "" {
-		log.Debugf("Missing token value")
+		zap.L().Debug("Cookie does not have a token value")
 		return nil
 	}
 	if cookieObj.Expiration.Before(time.Now()) {
-		log.Debugf("Cookies have expired: %v - %v", cookieObj.Expiration, time.Now())
+		zap.S().Debug("Cookies have expired: %v - %v", cookieObj.Expiration, time.Now())
 		return nil
 	}
 	return &cookieObj

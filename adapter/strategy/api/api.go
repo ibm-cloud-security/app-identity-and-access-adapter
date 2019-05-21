@@ -1,6 +1,7 @@
 package apistrategy
 
 import (
+	"go.uber.org/zap"
 	"strings"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -13,7 +14,6 @@ import (
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/pkg/log"
 )
 
 const (
@@ -43,14 +43,14 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(r)
 	if err != nil {
-		log.Debugf("Unauthorized: " + err.Error())
+		zap.L().Debug("JWT request Unauthorized", zap.Error(err))
 		return buildErrorResponse(err), nil
 	}
 
 	// Validate Access Token
 	err = s.tokenUtil.Validate(tokens.Access, action.KeySet, action.Rules)
 	if err != nil {
-		log.Debugf("Invalid access token: " + err.Error())
+		zap.L().Debug("Invalid access token", zap.Error(err))
 		return buildErrorResponse(err), nil
 	}
 
@@ -58,12 +58,12 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 	if tokens.ID != "" {
 		err = s.tokenUtil.Validate(tokens.ID, action.KeySet, action.Rules)
 		if err != nil {
-			log.Debugf("Invalid ID token: " + err.Error())
+			zap.L().Debug("Invalid ID token", zap.Error(err))
 			return buildErrorResponse(err), nil
 		}
 	}
 
-	log.Debug("Found valid authorization header")
+	zap.L().Info("Authorized: found valid authorization header")
 
 	return &authnz.HandleAuthnZResponse{
 		Result: &adapter.CheckResult{Status: status.OK},

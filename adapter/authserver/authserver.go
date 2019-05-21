@@ -6,7 +6,7 @@ import (
 	"github.com/golang/groupcache/singleflight"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	"istio.io/pkg/log"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -50,10 +50,10 @@ func New(discoveryEndpoint string) AuthorizationServer {
 	}
 	err := s.initialize()
 	if err != nil {
-		log.Infof("Initialization from discovery endpoint failed: %s. Will retry later.", discoveryEndpoint)
+		zap.L().Debug("Initialization from discovery endpoint failed. Will retry later.", zap.String("url", discoveryEndpoint))
 		return s
 	}
-	log.Infof("Initialized discovery configuration successfully: %s", discoveryEndpoint)
+	zap.L().Debug("Initialized discovery configuration successfully", zap.String("url", discoveryEndpoint))
 	return s
 }
 
@@ -107,7 +107,7 @@ func (s *RemoteServer) initialize() error {
 	})
 
 	if err != nil {
-		log.Debugf("An error occurred loading: %v", err)
+		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))
 		return err
 	}
 
@@ -118,6 +118,7 @@ func (s *RemoteServer) initialize() error {
 func (s *RemoteServer) loadDiscoveryEndpoint() (interface{}, error) {
 	req, err := http.NewRequest("GET", s.discoveryURL, nil)
 	if err != nil {
+		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))
 		return nil, err
 	}
 
@@ -126,6 +127,7 @@ func (s *RemoteServer) loadDiscoveryEndpoint() (interface{}, error) {
 	}
 
 	if err := s.httpclient.Do(req, http.StatusOK, &config); err != nil {
+		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))
 		return nil, err
 	}
 

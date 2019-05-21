@@ -9,9 +9,8 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"go.uber.org/zap"
 	"strings"
-
-	"istio.io/pkg/log"
 )
 
 // Action encapsulates information needed to begin executing a policy
@@ -34,7 +33,7 @@ type engine struct {
 // New creates a PolicyEngine
 func New(store store.PolicyStore) (PolicyEngine, error) {
 	if store == nil {
-		log.Errorf("Trying to create PolicyEngine with an undefined.")
+		zap.L().Error("Trying to create PolicyEngine, but no store provided.")
 		return nil, errors.New("could not create policy engine using undefined store")
 	}
 	return &engine{store: store}, nil
@@ -45,14 +44,20 @@ func New(store store.PolicyStore) (PolicyEngine, error) {
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
 func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
-	log.Infof("Action:\n\tNamespace: %s\n\tService: %s\n\tPath: %s\n\tMethod: %s\n", action.Namespace, action.Service, action.Path, action.Method)
+	zap.L().Debug("Evaluating policies",
+		zap.String("namespace", action.Namespace),
+		zap.String("service", action.Service),
+		zap.String("path", action.Path),
+		zap.String("method", action.Method),
+	)
+
 	if strings.HasSuffix(action.Path, "/oidc/callback") {
 		action.Path = strings.Split(action.Path, "/oidc/callback")[0]
 	}
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)
-	log.Debugf("JWT policies: %v | OIDC policies: %v", len(jwtPolicies), len(oidcPolicies))
+	zap.L().Debug("Checking policies", zap.Int("jwt-policy-count", len(jwtPolicies)), zap.Int("oidc-policy-count", len(oidcPolicies)))
 	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
 		return &Action{
 			Type: policy.NONE,
@@ -60,7 +65,7 @@ func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
 	}
 
 	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
-		log.Error("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
+		zap.L().Warn("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
 		return nil, errors.New("conflicting OIDC and JWT policies")
 	}
 
@@ -124,7 +129,7 @@ func (m *engine) createJWTAction(policies []v1.JwtPolicySpec) (*Action, error) {
 		}, nil
 	}
 
-	log.Errorf("Missing authentication server : cannot authenticate user")
+	zap.L().Error("Missing authentication server : cannot authenticate user")
 	return nil, errors.New("missing authentication server : cannot authenticate user")
 }
 
@@ -147,7 +152,7 @@ func (m *engine) createOIDCAction(policies []v1.OidcPolicySpec) (*Action, error)
 
 	}
 
-	log.Errorf("Missing OIDC client : cannot authenticate user")
+	zap.L().Error("Missing OIDC client : cannot authenticate user")
 	return nil, errors.New("missing OIDC client : cannot authenticate user")
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
 	"github.com/spf13/cobra"
-	"istio.io/pkg/log"
+	"go.uber.org/zap"
 )
 
 // args represents args consumed by IBMCloudAppID OOP adapter.
@@ -48,19 +48,26 @@ func getCmd() *cobra.Command {
 	return cmd
 }
 
-func runServer(args *args) {
-	// Set logs
+func configureLogger(args *args) {
+	var config zap.Config
 	if args.verbose {
-		scope := log.Scopes()["default"]
-		scope.SetOutputLevel(log.DebugLevel)
+		config = zap.NewDevelopmentConfig()
+	} else {
+		config = zap.NewProductionConfig()
 	}
+	config.InitialFields = map[string]interface{}{"source": "ibmcloudappid-adapter"}
+	logger, _ := config.Build()
+	zap.ReplaceGlobals(logger)
+}
+
+func runServer(args *args) {
+	configureLogger(args)
 
 	// Configure Adapter
 	addr := fmt.Sprintf(":%d", args.adapterPort)
 	s, err := adapter.NewAppIDAdapter(addr)
 	if err != nil {
-		log.Errorf("Failed to create ibmcloudappid.NewAppIDAdapter: %s", err)
-		os.Exit(-1)
+		zap.L().Fatal("Failed to create ibmcloudappid.NewAppIDAdapter: %s", zap.Error(err))
 	}
 
 	shutdown := make(chan error, 1)
@@ -71,7 +78,6 @@ func runServer(args *args) {
 }
 
 func main() {
-	log.Info("Starting ibmcloudappid adapter")
 	cmd := getCmd()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(-1)

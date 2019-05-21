@@ -7,7 +7,8 @@ package adapter
 
 import (
 	"context"
-	"fmt"
+	"net"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/initializer"
@@ -16,11 +17,10 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/api"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/web"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
-	"istio.io/pkg/log"
-	"net"
 )
 
 type (
@@ -48,19 +48,19 @@ func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZR
 	// Check policy
 	action, err := s.engine.Evaluate(r.Instance.Target)
 	if err != nil {
-		log.Errorf("Could not check policies")
+		zap.L().Debug("Could not check policies", zap.Error(err))
 		return nil, err
 	}
 
 	switch action.Type {
 	case policy.JWT:
-		log.Info("Executing JWT policies")
+		zap.L().Info("Executing JWT policies")
 		return s.apistrategy.HandleAuthnZRequest(r, action)
 	case policy.OIDC:
-		log.Info("Executing OIDC policies")
+		zap.L().Info("Executing OIDC policies")
 		return s.webstrategy.HandleAuthnZRequest(r, action)
 	default:
-		log.Debug("No OIDC/JWT policies configured")
+		zap.L().Info("No OIDC/JWT policies configured")
 		return &authnz.HandleAuthnZResponse{
 			Result: &v1beta1.CheckResult{Status: status.OK},
 		}, nil
@@ -100,8 +100,8 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	// Being listening for requests
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Errorf("Unable to listen on socket: %v", err)
-		return nil, fmt.Errorf("unable to listen on socket: %v", err)
+		zap.L().Fatal("Unable to listen on socket", zap.Error(err))
+		return nil, err
 	}
 
 	localStore := store.New()
@@ -109,13 +109,13 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	// Initialize Kubernetes
 	init, err := initializer.New(localStore)
 	if err != nil {
-		log.Errorf("Unable to initialize adapter: %v", err)
+		zap.L().Fatal("Unable to initialize adapter", zap.Error(err))
 		return nil, err
 	}
 
 	eng, err := engine.New(localStore)
 	if err != nil {
-		log.Errorf("Unable to initialize policy engine: %v", err)
+		zap.L().Fatal("Unable to initialize policy engine", zap.Error(err))
 		return nil, err
 	}
 
@@ -127,7 +127,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 		engine:      eng,
 	}
 
-	log.Infof("Listening on : \"%v\"\n", s.Addr())
+	zap.S().Infof("Listening on: %v", s.Addr())
 
 	authnz.RegisterHandleAuthnZServiceServer(s.server, s)
 
