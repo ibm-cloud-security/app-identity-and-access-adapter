@@ -23,6 +23,19 @@
 helm init
 helm install ./helm/ibmcloudappid --name ibmcloudappid
 ```
+
+### Upgrading
+
+```
+```
+
+### Cleanup
+
+```
+helm delete --purge ibmcloudappid
+kubectl delete rule ibmcloudappid-keys -n istio-system
+```
+
 ### Logging
 
 #### Adapter

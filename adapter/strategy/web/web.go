@@ -2,9 +2,12 @@ package webstrategy
 
 import (
 	"errors"
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -21,6 +24,7 @@ import (
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
 	"istio.io/pkg/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -29,17 +33,22 @@ const (
 	location          = "location"
 	setCookie         = "Set-Cookie"
 	accessTokenCookie = "ibmcloudappid-access-cookie"
-	idTokenCookie     = "ibmcloudappid-identity-cookie"
+	//idTokenCookie     = "ibmcloudappid-identity-cookie"
+	hashKey          = "HASH_KEY"
+	blockKey         = "BLOCK_KEY"
+	defaultNamespace = "istio-system"
+	defaultKeySecret = "ibmcloudappid-cookie-sig-enc-keadys"
 )
-
-var hashKey = securecookie.GenerateRandomKey(32)
-var blockKey = securecookie.GenerateRandomKey(16)
-var secretCookie = securecookie.New(hashKey, blockKey)
 
 // WebStrategy handles OAuth 2.0 / OIDC flows
 type WebStrategy struct {
 	tokenUtil  validator.TokenValidator
 	httpClient *networking.HttpClient
+	kubeClient kubernetes.Interface
+
+	// mutex protects all fields below
+	mutex        *sync.Mutex
+	secureCookie *securecookie.SecureCookie
 }
 
 // TokenResponse models an OAuth 2.0 /Token endpoint response
@@ -61,11 +70,22 @@ type OidcCookie struct {
 }
 
 // New creates an instance of an OIDC protection agent.
-func New() strategy.Strategy {
-	return &WebStrategy{
+func New(kubeClient kubernetes.Interface) strategy.Strategy {
+	w := &WebStrategy{
 		tokenUtil:  validator.New(),
 		httpClient: networking.New(),
+		kubeClient: kubeClient,
+		mutex:      &sync.Mutex{},
 	}
+
+	// Instantiate the secure cookie encryption instance by
+	// reading or creating a new HMAC and AES symmetric key
+	_, err := w.getSecureCookie()
+	if err != nil {
+		log.Errorf("Could not sync signing / encryption secrets, will retry later: %s", err.Error())
+	}
+
+	return w
 }
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
@@ -84,7 +104,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 		return &authnz.HandleAuthnZResponse{
 			Result: &v1beta1.CheckResult{Status: status.OK},
 			Output: &authnz.OutputMsg{
-				Authorization: "Bearer " + tokens.Access + " " + tokens.ID,
+				Authorization: strings.Join([]string{bearer, tokens.Access, tokens.ID}, " "),
 			},
 		}, nil
 	}
@@ -117,7 +137,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 	request := http.Request{Header: header}
 
 	accessCookie, err := request.Cookie(buildTokenCookieName(accessTokenCookie, action.Client))
-	accessTokenCookie := parseAndValidateCookie(accessCookie)
+	accessTokenCookie := w.parseAndValidateCookie(accessCookie)
 	if accessTokenCookie == nil {
 		log.Debugf("Valid access token cookie not found: %v", err)
 		return nil, nil
@@ -129,20 +149,8 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 		return nil, nil
 	}
 
-	/*
-		idCookie, err := request.Cookie(buildTokenCookieName(idTokenCookie, action.Client))
-		idTokenCookie := parseAndValidateCookie(accessCookie)
-		if accessTokenCookie == nil {
-			log.Debugf("Valid ID token cookie not found: %v", err)
-			return nil, nil
-		}
+	// TODO: Validate ID token cookie here
 
-		validationErr = w.tokenUtil.Validate(idTokenCookie.Token, action.Client.AuthorizationServer.KeySet(), action.Rules)
-		if validationErr != nil {
-			log.Debugf("Cookies failed token validation: %v", validationErr)
-			return nil, nil
-		}
-	*/
 	return &validator.RawTokens{Access: accessTokenCookie.Token}, nil
 }
 
@@ -186,7 +194,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	}
 
 	// Create access_token cookie
-	accessTokenCookie, err := generateTokenCookie(buildTokenCookieName(accessTokenCookie, action.Client), &OidcCookie{
+	accessTokenCookie, err := w.generateTokenCookie(buildTokenCookieName(accessTokenCookie, action.Client), &OidcCookie{
 		Token:      *response.AccessToken,
 		Expiration: time.Now().Add(time.Minute * time.Duration(response.ExpiresIn)),
 	})
@@ -195,16 +203,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return nil, err
 	}
 
-	// Create id_token cookie
-	/*
-		_, err = generateTokenCookie(idTokenCookie, &OidcCookie{
-			Token: *response.IdentityToken,
-		})
-		if err != nil {
-			log.Debugf("Could not generate cookie: %v", err)
-			return nil, err
-		}
-	*/
+	// TODO: generate ID encrypted token cookie
 
 	originalURL := strings.Split(redirectURI, callbackEndpoint)[0]
 	log.Debugf("Authenticated. Redirecting to %v", originalURL)
@@ -255,6 +254,73 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client client.C
 	return &tokenResponse, nil
 }
 
+// getSecureCookie retrieves the SecureCookie encryption struct in a
+// thread safe manner.
+func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
+	// Allow all threads to check if instance already exists
+	if w.secureCookie != nil {
+		return w.secureCookie, nil
+	}
+	w.mutex.Lock()
+	// Once this thread has the lock check again to see if it had been set while waiting
+	if w.secureCookie != nil {
+		w.mutex.Unlock()
+		return w.secureCookie, nil
+	}
+	// We need to generate a new key set
+	sc, err := w.generateSecureCookie()
+	w.mutex.Unlock()
+	return sc, err
+}
+
+// generateSecureCookie instantiates a SecureCookie instance using either the preconfigured
+// key secret cookie or a dynamically generated pair.
+func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error) {
+	var secret interface{}
+	// Check if key set was already configured. This should occur during helm install
+	secret, err := networking.Retry(3, 1, func() (interface{}, error) {
+		return w.kubeClient.CoreV1().Secrets(defaultNamespace).Get(defaultKeySecret, metav1.GetOptions{})
+	})
+
+	if err != nil {
+		log.Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
+		secret, err = w.generateKeySecret(32, 16)
+		if err != nil {
+			log.Errorf("Could not generate secret: %v", err)
+			return nil, err
+		}
+	}
+
+	if s, ok := secret.(*v1.Secret); ok {
+		log.Debugf("Synced secret: %v", defaultKeySecret)
+		w.secureCookie = securecookie.New(s.Data[hashKey], s.Data[blockKey])
+		return w.secureCookie, nil
+	} else {
+		log.Errorf("Could not convert interface to secret")
+		return nil, errors.New("could not sync signing / encryption secrets")
+	}
+}
+
+// generateKeySecret builds and stores a key pair used for the signing and encryption
+// of session cookies.
+func (w *WebStrategy) generateKeySecret(hashKeySize int, blockKeySize int) (interface{}, error) {
+	data := make(map[string][]byte)
+	data[hashKey] = securecookie.GenerateRandomKey(hashKeySize)
+	data[blockKey] = securecookie.GenerateRandomKey(blockKeySize)
+
+	newSecret := v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultKeySecret,
+			Namespace: defaultNamespace,
+		},
+		Data: data,
+	}
+
+	return networking.Retry(3, 1, func() (interface{}, error) {
+		return w.kubeClient.CoreV1().Secrets(defaultNamespace).Create(&newSecret)
+	})
+}
+
 // buildSuccessRedirectResponse constructs a HandleAuthnZResponse containing a 302 redirect
 // to the provided url with the accompanying cookie headers
 func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *authnz.HandleAuthnZResponse {
@@ -277,16 +343,21 @@ func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *a
 	}
 }
 
-// generateTokenCookie creates an http.Cookie
-func generateTokenCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
+// generateTokenCookie creates an encodes and encrypts cookieData into an http.Cookie
+func (w *WebStrategy) generateTokenCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
 	// encode the struct
 	data, err := bson.Marshal(&cookieData)
 	if err != nil {
 		return nil, err
 	}
 
+	sc, err := w.getSecureCookie()
+	if err != nil {
+		return nil, err
+	}
+
 	// create the cookie
-	if encoded, err := secretCookie.Encode(cookieName, data); err == nil {
+	if encoded, err := sc.Encode(cookieName, data); err == nil {
 		return &http.Cookie{
 			Name:     cookieName,
 			Value:    encoded,
@@ -322,14 +393,20 @@ func generateAuthorizationUrl(c client.Client, redirectURI string) string {
 	return baseUrl.String()
 }
 
-// parseAndValidateCookie
-func parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
+// parseAndValidateCookie parses a raw http.Cookie, performs basic validation
+// and returns an OIDCCookie
+func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 	if cookie == nil {
-		log.Debugf("Cookie does not exist")
+		log.Debug("Cookie does not exist")
+		return nil
+	}
+	sc, err := w.getSecureCookie()
+	if err != nil {
+		log.Debugf("Error getting securecookie: %s", err)
 		return nil
 	}
 	value := []byte{}
-	if err := secretCookie.Decode(cookie.Name, cookie.Value, &value); err != nil {
+	if err := sc.Decode(cookie.Name, cookie.Value, &value); err != nil {
 		log.Debugf("Could not read cookie: %v", err)
 		return nil
 	}
@@ -359,6 +436,7 @@ func buildTokenCookieName(base string, c client.Client) string {
 	return base + "-" + c.ID()
 }
 
+// OK validates a TokenResponse
 func (r *TokenResponse) OK() error {
 	if r.AccessToken == nil {
 		return errors.New("invalid token endpoint response: access_token does not exist")

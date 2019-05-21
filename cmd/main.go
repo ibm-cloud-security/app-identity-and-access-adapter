@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
+	"github.com/spf13/cobra"
 	"istio.io/pkg/log"
 )
 

@@ -70,3 +70,18 @@ func decodeJSON(r *http.Response, v OK) error {
 	}
 	return v.OK()
 }
+
+// retry provides a recursive function retry implementation
+func Retry(attempts int, sleep time.Duration, fn func() (interface{}, error)) (interface{}, error) {
+	res, err := fn()
+	if err != nil {
+		if attempts--; attempts > 0 {
+			log.Debugf("Call failed, retrying with attempts remaining %v", attempts)
+			time.Sleep(sleep)
+			return Retry(attempts, 2*sleep, fn)
+		} else {
+			return nil, err
+		}
+	}
+	return res, nil
+}

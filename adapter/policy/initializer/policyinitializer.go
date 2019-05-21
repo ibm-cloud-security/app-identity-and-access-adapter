@@ -5,27 +5,32 @@ import (
 	"os/signal"
 	"syscall"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/workqueue"
-
 	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
 	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"istio.io/pkg/log"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/workqueue"
 )
 
 // Initializer interface contains the methods that are required
 type Initializer interface {
 	GetHandler() handler.PolicyHandler
+	GetKubeClient() kubernetes.Interface
 }
 
 type PolicyInitializer struct {
-	Handler handler.PolicyHandler
+	KubeClient kubernetes.Interface
+	Handler    handler.PolicyHandler
+}
+
+func (pi *PolicyInitializer) GetKubeClient() kubernetes.Interface {
+	return pi.KubeClient
 }
 
 func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
@@ -34,12 +39,13 @@ func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
 
 func New(store store.PolicyStore) (Initializer, error) {
 	handler := handler.New(store)
-	policyInitializer := &PolicyInitializer{handler}
+	policyInitializer := &PolicyInitializer{Handler: handler}
 
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
+	policyInitializer.KubeClient = client
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
 	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Handler)
 	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Handler)

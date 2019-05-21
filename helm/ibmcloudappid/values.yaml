@@ -4,8 +4,12 @@ replicaCount: 1
 image:
   repository: aliberat1/istio-adapter-ibmcloudappid
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   type: ClusterIP
   port: 47304
+
+keys:
+  hashKeySize: 32
+  blockKeySize: 16

@@ -7,6 +7,7 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/googleapis v1.2.0
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
@@ -28,7 +29,7 @@ require (
 	istio.io/api v0.0.0-20190515205759-982e5c3888c6
 	istio.io/istio v0.0.0-20190516081059-beb17827e164
 	istio.io/pkg v0.0.0-20190513000936-0187f41267ce
-	k8s.io/api v0.0.0-20190313235455-40a48860b5ab // indirect
+	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20190510232812-a01b7d5d6c22 // indirect

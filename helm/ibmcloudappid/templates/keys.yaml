@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: {{ .Values.appName }}-cookie-sig-enc-keys
+    namespace: istio-system
+    annotations:
+        "helm.sh/hook": "pre-install"
+        "helm.sh/hook-delete-policy": "before-hook-creation"
+    labels:
+        app: {{ .Values.appName }}
+        chart: {{ .Chart.Name }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+data:
+    HASH_KEY: {{ randAlphaNum (.Values.keys.hashKeySize | int) | b64enc | quote }}
+    BLOCK_KEY: {{ randAlphaNum (.Values.keys.blockKeySize | int) | b64enc | quote }}
+

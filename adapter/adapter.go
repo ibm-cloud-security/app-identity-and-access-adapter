@@ -107,7 +107,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	localStore := store.New()
 
 	// Initialize Kubernetes
-	_, err = initializer.New(localStore)
+	init, err := initializer.New(localStore)
 	if err != nil {
 		log.Errorf("Unable to initialize adapter: %v", err)
 		return nil, err
@@ -122,7 +122,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	s := &AppidAdapter{
 		listener:    listener,
 		apistrategy: apistrategy.New(),
-		webstrategy: webstrategy.New(),
+		webstrategy: webstrategy.New(init.GetKubeClient()),
 		server:      grpc.NewServer(),
 		engine:      eng,
 	}
