@@ -41,7 +41,7 @@ func (c *HttpClient) Do(req *http.Request, status int, v OK) error {
 	// Issue original request
 	res, err := c.Client.Do(req)
 	if err != nil {
-		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode))
+		zap.L().Info("Request failed", zap.String("url", req.URL.Path), zap.Error(err))
 		return err
 	}
 

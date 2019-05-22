@@ -13,6 +13,11 @@ import (
 	"strings"
 )
 
+const (
+	logoutEndpoint   = "/oidc/logout"
+	callbackEndpoint = "/oidc/callback"
+)
+
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
 	Type   policy.Type
@@ -51,9 +56,12 @@ func (m *engine) Evaluate(action *authnz.TargetMsg) (*Action, error) {
 		zap.String("method", action.Method),
 	)
 
-	if strings.HasSuffix(action.Path, "/oidc/callback") {
-		action.Path = strings.Split(action.Path, "/oidc/callback")[0]
+	if strings.HasSuffix(action.Path, callbackEndpoint) {
+		action.Path = strings.Split(action.Path, callbackEndpoint)[0]
+	} else if strings.HasSuffix(action.Path, logoutEndpoint) {
+		action.Path = strings.Split(action.Path, logoutEndpoint)[0]
 	}
+
 	endpoints := endpointsToCheck(action.Namespace, action.Service, action.Path, action.Method)
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)

@@ -7,6 +7,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
@@ -45,7 +46,13 @@ type (
 
 // HandleAuthnZ evaluates authn/z policies using api/web strategy
 func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZRequest) (*authnz.HandleAuthnZResponse, error) {
-	// Check policy
+	///// Validate input /////
+	if err := validateAuthnzRequest(r); err != nil {
+		zap.S().Errorf("Unexpected template format for HandleAuthnZRequest: %v", r)
+		return nil, err
+	}
+
+	///// Check policy
 	action, err := s.engine.Evaluate(r.Instance.Target)
 	if err != nil {
 		zap.L().Debug("Could not check policies", zap.Error(err))
@@ -132,4 +139,18 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	authnz.RegisterHandleAuthnZServiceServer(s.server, s)
 
 	return s, nil
+}
+
+////////////////// utils //////////////////////////
+
+func validateAuthnzRequest(r *authnz.HandleAuthnZRequest) error {
+	if r == nil || r.Instance == nil || r.Instance.Request == nil || r.Instance.Target == nil {
+		zap.L().Error("Invalid instance format. Please check that the instance.yaml is sending telemetry according to the template.")
+		return errors.New("invalid *authnz.HandleAuthnZRequest instance format")
+	}
+	if r.Instance.Request.Params == nil || r.Instance.Request.Headers == nil {
+		zap.L().Error("Invalid instance format. Please check that the instance.yaml is sending telemetry according to the template.")
+		return errors.New("invalid *authnz.HandleAuthnZRequest instance format")
+	}
+	return nil
 }

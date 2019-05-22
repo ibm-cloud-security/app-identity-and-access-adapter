@@ -29,6 +29,7 @@ import (
 
 const (
 	bearer            = "Bearer"
+	logoutEndpoint    = "/oidc/logout"
 	callbackEndpoint  = "/oidc/callback"
 	location          = "location"
 	setCookie         = "Set-Cookie"
@@ -37,7 +38,7 @@ const (
 	hashKey          = "HASH_KEY"
 	blockKey         = "BLOCK_KEY"
 	defaultNamespace = "istio-system"
-	defaultKeySecret = "ibmcloudappid-cookie-sig-enc-keadys"
+	defaultKeySecret = "ibmcloudappid-cookie-sig-enc-keys"
 )
 
 // WebStrategy handles OAuth 2.0 / OIDC flows
@@ -90,23 +91,9 @@ func New(kubeClient kubernetes.Interface) strategy.Strategy {
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
 func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
-	tokens, err := w.isAuthorized(r.Instance.Request.Headers.Cookies, action)
-	if err != nil {
-		return nil, err
-	}
-	if tokens != nil {
-		zap.L().Debug("User is already authenticated")
-		// If in a callback flow, redirect to original endpoint. Cookies are already stored/valid
-		if strings.HasSuffix(r.Instance.Request.Path, callbackEndpoint) {
-			return buildSuccessRedirectResponse(r.Instance.Request.Path, nil), nil
-		}
-		// Pass request through to service
-		return &authnz.HandleAuthnZResponse{
-			Result: &v1beta1.CheckResult{Status: status.OK},
-			Output: &authnz.OutputMsg{
-				Authorization: strings.Join([]string{bearer, tokens.Access, tokens.ID}, " "),
-			},
-		}, nil
+	if strings.HasSuffix(r.Instance.Request.Path, logoutEndpoint) {
+		zap.L().Debug("Received logout request.", zap.String("client_name", action.Client.Name()))
+		return w.handleLogout(r.Instance.Request.Path, action)
 	}
 
 	if strings.HasSuffix(r.Instance.Request.Path, callbackEndpoint) {
@@ -118,7 +105,14 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, r.Instance.Request, action)
 		} else {
 			zap.L().Debug("Unexpected response on callback endpoint /oidc/callback. Triggering re-authentication.")
+			return w.handleAuthorizationCodeFlow(r.Instance.Request, action)
 		}
+	}
+
+	// Not in an OAuth 2.0 / OIDC flow, check for current authn/z session
+	res, err := w.isAuthorized(r.Instance.Request.Headers.Cookies, action)
+	if res != nil || err != nil {
+		return res, err
 	}
 	zap.L().Debug("Handling new user authentication")
 	return w.handleAuthorizationCodeFlow(r.Instance.Request, action)
@@ -126,7 +120,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 
 // isAuthorized checks for the existence of valid cookies
 // returns an error in the event of an Internal Server Error
-func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*validator.RawTokens, error) {
+func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	if action.Client == nil {
 		zap.L().Warn("Internal server error: OIDC client not provided")
 		return nil, errors.New("invalid OIDC configuration")
@@ -151,7 +145,14 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*vali
 
 	// TODO: Validate ID token cookie here
 
-	return &validator.RawTokens{Access: accessTokenCookie.Token}, nil
+	zap.L().Debug("User is currently authenticated")
+	// Pass request through to service
+	return &authnz.HandleAuthnZResponse{
+		Result: &v1beta1.CheckResult{Status: status.OK},
+		Output: &authnz.OutputMsg{
+			Authorization: strings.Join([]string{bearer, accessTokenCookie.Token}, " "),
+		},
+	}, nil
 }
 
 // handleErrorCallback returns an Unauthenticated CheckResult
@@ -166,6 +167,22 @@ func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZRespon
 			Message: message,
 		}},
 	}, nil
+}
+
+// handleLogout processes logout requests by deleting session cookies and returning to the base path
+func (w *WebStrategy) handleLogout(path string, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
+	expiration := time.Now().Add(-100 * time.Hour)
+	cookies := make([]*http.Cookie, 1) // TODO: Change to 3 and add other tokens when supported
+	for i, name := range []string{accessTokenCookie} {
+		cookies[i] = &http.Cookie{
+			Name:    buildTokenCookieName(name, action.Client),
+			Value:   "deleted",
+			Path:    "/",
+			Expires: expiration,
+		}
+	}
+	redirectURL := strings.Split(path, logoutEndpoint)[0]
+	return buildSuccessRedirectResponse(redirectURL, cookies), nil
 }
 
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
@@ -284,7 +301,7 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 	})
 
 	if err != nil {
-		zap.S().Info("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
+		zap.S().Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
 		secret, err = w.generateKeySecret(32, 16)
 		if err != nil {
 			zap.L().Info("Failed to retrieve tokens", zap.Error(err))
@@ -293,7 +310,7 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 	}
 
 	if s, ok := secret.(*v1.Secret); ok {
-		zap.S().Info("Synced secret: %v", defaultKeySecret)
+		zap.S().Infof("Synced secret: %v", defaultKeySecret)
 		w.secureCookie = securecookie.New(s.Data[hashKey], s.Data[blockKey])
 		return w.secureCookie, nil
 	} else {

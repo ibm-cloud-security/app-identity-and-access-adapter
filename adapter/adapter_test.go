@@ -102,8 +102,12 @@ func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 				Headers: &authnz.HeadersMsg{
 					Authorization: header,
 				},
+				Params: &authnz.QueryParamsMsg{
+					Error: "",
+					Code:  "",
+				},
 			},
-			Target: nil,
+			Target: &authnz.TargetMsg{},
 		},
 	}
 }
