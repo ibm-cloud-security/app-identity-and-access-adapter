@@ -1,4 +1,4 @@
-# IBM Cloud AppID Istio Adapter
+# IBM Cloud App ID Istio Adapter
 
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
