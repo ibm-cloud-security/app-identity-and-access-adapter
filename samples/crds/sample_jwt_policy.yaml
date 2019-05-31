@@ -1,0 +1,13 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: JwtPolicy
+metadata:
+  name: samplejwtpolicy
+  namespace: sample-app
+spec:
+  jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/39a37f57-a227-4bfe-a044-93b6e6060b61/publickeys
+
+  target:
+    - serviceName: svc-sample-app
+      paths:
+        - /api/headers
+        - /api/headers/2

@@ -1,0 +1,11 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: OidcPolicy
+metadata:
+  name: samploidcpolicy
+  namespace: sample-app
+spec:
+  oidcClientName: AppID1
+  target:
+    - serviceName: svc-sample-app
+      paths:
+        - /web/home

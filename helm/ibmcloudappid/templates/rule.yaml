@@ -1,0 +1,16 @@
+# rule to dispatch the app ID adapter handler
+apiVersion: "config.istio.io/v1alpha2"
+kind: rule
+metadata:
+  name: rule-{{ .Values.appName }}
+  namespace: istio-system
+spec:
+  actions:
+    - handler: handler-{{ .Values.appName }}.istio-system
+      instances:
+        - instance-{{ .Values.appName }}
+      name: a1
+  requestHeaderOperations:
+    - name: Authorization
+      values: [ a1.output.authorization ]
+      operation: REPLACE

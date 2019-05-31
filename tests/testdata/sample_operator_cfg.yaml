@@ -1,0 +1,53 @@
+# handler for adapter ibmcloudappid
+apiVersion: "config.istio.io/v1alpha2"
+kind: handler
+metadata:
+  name: handler-ibmcloudappid
+  namespace: istio-system
+spec:
+  adapter: ibmcloudappid
+  connection:
+    address: "[::]:47304"
+---
+# instance for authorization template
+apiVersion: "config.istio.io/v1alpha2"
+kind: instance
+metadata:
+  name: instance-ibmcloudappid
+  namespace: istio-system
+spec:
+  template: authnz
+  params:
+    target:
+      path: request.url_path | "/"
+      method: request.method | "get"
+      service: destination.service.name | ""
+      namespace: destination.service.namespace | "default"
+    request:
+      scheme: request.scheme | ""
+      host: request.host | ""
+      path: request.url_path | ""
+      headers:
+        cookies: request.headers["cookie"] | ""
+        authorization: request.headers["authorization"] | ""
+      params:
+        code: request.query_params["code"] | ""
+        error: request.query_params["error"] | ""
+---
+# rule to dispatch the app ID adapter handler
+apiVersion: "config.istio.io/v1alpha2"
+kind: rule
+metadata:
+  name: rule-ibmcloudappid
+  namespace: istio-system
+spec:
+  actions:
+    - handler: handler-ibmcloudappid.istio-system
+      instances:
+        - instance-ibmcloudappid
+      name: a1
+  requestHeaderOperations:
+    - name: Authorization
+      values: [ a1.output.authorization ]
+      operation: REPLACE
+---

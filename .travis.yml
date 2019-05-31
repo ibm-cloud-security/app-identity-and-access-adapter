@@ -1,0 +1,49 @@
+language: go
+
+branches:
+  only:
+    - master
+    - development
+    - travis
+    - /\d+\.\d+\.\d+/
+
+go:
+  - 1.12.x
+  - tip
+
+env:
+  - GO111MODULE=on
+
+services:
+  - docker
+
+matrix:
+  # It's ok if our code fails on unstable development versions of Go.
+  allow_failures:
+    - go: tip
+  # Don't wait for tip tests to finish. Mark the tests run green if the
+  # tests pass on the stable versions of Go.
+  fast_finish: true
+
+git:
+  depth: 3
+
+install: true
+
+script:
+  - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
+  # After unit tests, run integration tests
+  - bash ./bin/install_tools.sh || travis_terminate 1;
+  - source ./bin/ibmcloud_login.sh || travis_terminate 1;
+  - bash ./bin/build_deploy.sh || travis_terminate 1;
+  - go test -v -race ./tests/e2e/...  # Run all e2e tests
+
+# Send to codecov.io afterwards
+# after_success:
+#  - bash <(curl -s https://codecov.io/bash)
+
+notifications:
+  email:
+    on_success: always
+    on_failure: always
+

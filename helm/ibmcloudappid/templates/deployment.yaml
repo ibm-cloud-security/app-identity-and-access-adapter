@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: dpl-{{ .Values.appName }}
+  namespace: istio-system
+  labels:
+    app: {{ .Values.appName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+      annotations:
+        sidecar.istio.io/inject: "false"
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+    spec:
+      containers:
+        - name: {{ .Values.appName }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          {{ if .Values.logging.json }}
+          args: ["--json", "-p", "{{ .Values.service.port }}", "--level", "{{ .Values.logging.level }}"]
+          {{ else }}
+          args: ["-p", "{{ .Values.service.port }}", "--level", "{{ .Values.logging.level }}"]
+          {{ end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          volumeMounts:
+            - name: transient-storage
+              mountPath: /volume
+      volumes:
+        - name: transient-storage
+          emptyDir: {}

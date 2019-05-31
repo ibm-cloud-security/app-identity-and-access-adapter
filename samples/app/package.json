@@ -1,0 +1,17 @@
+{
+  "name": "demo-cloud-fund-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node $NODE_DEBUG_OPTION ."
+  },
+  "keywords": [],
+  "author": "Aaron Libeatore",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "express": "^4.16.4",
+    "jsonwebtoken": "^8.4.0",
+    "log4js": "^3.0.6"
+  }
+}

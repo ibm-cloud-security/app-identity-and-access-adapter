@@ -1,0 +1,19 @@
+appName: ibmcloudappid
+
+replicaCount: 1
+image:
+  repository: aliberat1/istio-adapter-ibmcloudappid
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 47304
+
+keys:
+  hashKeySize: 32
+  blockKeySize: 16
+
+logging:
+  json: true
+  level: 0 # Defaults to INFO :: https://godoc.org/go.uber.org/zap/zapcore#Level

@@ -1,0 +1,10 @@
+bin/ibmcloudappid
+.idea/**
+./env.sh
+.vscode/**
+vendor
+main
+node_modules
+.DS_Store
+coverage.txt
+profile.out
