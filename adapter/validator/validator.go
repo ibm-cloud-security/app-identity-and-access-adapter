@@ -85,8 +85,8 @@ func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 		// Find public key in client
 		key := jwks.PublicKey(keyID)
 		if key == nil {
-			zap.S().Debug("Token validation error - key not found for kid", "kid", token.Header[kid])
-			return nil, fmt.Errorf("token validation error - key not found for kid: %s", token.Header[kid])
+			zap.L().Debug("Token validation error - key not found", zap.String("kid", token.Header[kid].(string)))
+			return nil, fmt.Errorf("token validation error - key not found :: %s", token.Header[kid])
 		}
 
 		return key, nil

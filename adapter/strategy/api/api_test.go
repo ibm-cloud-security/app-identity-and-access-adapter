@@ -42,9 +42,9 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		{
 			generateAuthRequest("Bearer invalid"),
 			&policy.Action{},
-			"invalid token",
+			"invalid access token",
 			int32(16),
-			errors.UnauthorizedHTTPException("invalid token", nil),
+			errors.UnauthorizedHTTPException("invalid access token", nil),
 		},
 		{
 			generateAuthRequest("Bearer access"),
@@ -63,15 +63,17 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		api := APIStrategy{
-			tokenUtil: MockValidator{
-				err: test.validationErr,
-			},
-		}
-		checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
-		assert.Nil(t, err)
-		assert.Equal(t, test.message, checkresult.Result.Status.Message)
-		assert.Equal(t, test.code, checkresult.Result.Status.Code)
+		t.Run("Validation Test", func(st *testing.T) {
+			api := APIStrategy{
+				tokenUtil: MockValidator{
+					err: test.validationErr,
+				},
+			}
+			checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
+			assert.Nil(st, err)
+			assert.Equal(st, test.message, checkresult.Result.Status.Message)
+			assert.Equal(st, test.code, checkresult.Result.Status.Code)
+		})
 	}
 }
 
@@ -120,14 +122,15 @@ func TestParseRequest(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		tokens, err := getAuthTokensFromRequest(e.r)
-		if !e.expectErr && tokens != nil {
-			assert.Equal(t, "access", tokens.Access)
-			assert.Equal(t, "id", tokens.ID)
-		} else {
-			assert.EqualError(t, err, e.expectedMsg)
-		}
-
+		t.Run("Parsing Test", func(st *testing.T) {
+			tokens, err := getAuthTokensFromRequest(e.r)
+			if !e.expectErr && tokens != nil {
+				assert.Equal(st, "access", tokens.Access)
+				assert.Equal(st, "id", tokens.ID)
+			} else {
+				assert.EqualError(st, err, e.expectedMsg)
+			}
+		})
 	}
 }
 
@@ -152,10 +155,12 @@ func TestErrorResponse(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		checkresult := buildErrorResponse(test.err)
-		assert.Equal(t, checkresult.Result.Status.Code, int32(rpc.UNAUTHENTICATED))
-		assert.Equal(t, checkresult.Result.Status.Message, test.Message)
-		assert.NotNil(t, checkresult.Result.Status.Details)
+		t.Run("Error Parse", func(st *testing.T) {
+			checkresult := buildErrorResponse(test.err)
+			assert.Equal(st, checkresult.Result.Status.Code, int32(rpc.UNAUTHENTICATED))
+			assert.Equal(st, checkresult.Result.Status.Message, test.Message)
+			assert.NotNil(st, checkresult.Result.Status.Details)
+		})
 	}
 }
 

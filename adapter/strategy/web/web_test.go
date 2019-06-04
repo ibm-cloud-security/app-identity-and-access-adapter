@@ -1,14 +1,10 @@
 package webstrategy
 
 import (
-	"crypto"
 	"errors"
 	"github.com/gogo/protobuf/types"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	"k8s.io/client-go/kubernetes/fake"
-	"net/http"
-	"net/http/httptest"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"testing"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
@@ -20,7 +16,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	strategy := New(fake.NewSimpleClientset())
+	strategy := New(k8sfake.NewSimpleClientset())
 	assert.NotNil(t, strategy)
 }
 
@@ -44,8 +40,8 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 		{ // New Authentication
 			generateAuthnzRequest("", "", "", ""),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
+				Client: &fake.MockClient{
+					Server: &fake.MockAuthServer{Keys: &fake.MockKeySet{}},
 				},
 			},
 			&v1beta1.DirectHttpResponse{
@@ -96,8 +92,8 @@ func TestErrCallback(t *testing.T) {
 		{ // Err callback with cookies
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
+				Client: &fake.MockClient{
+					Server: &fake.MockAuthServer{Keys: &fake.MockKeySet{}},
 				},
 			},
 			nil,
@@ -108,8 +104,8 @@ func TestErrCallback(t *testing.T) {
 		{ // Err callback
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
+				Client: &fake.MockClient{
+					Server: &fake.MockAuthServer{Keys: &fake.MockKeySet{}},
 				},
 			},
 			nil,
@@ -142,34 +138,27 @@ func TestCodeCallback(t *testing.T) {
 		message        string
 		code           int32
 		err            error
-		statusCode     int
-		response       string
+		tokenResponse  *fake.TokenResponse
 	}{
 		{ // code callback without cookies
 			generateAuthnzRequest("", "mycode", "", callbackEndpoint),
 			nil,
-			"invalid token endpoint response: access_token does not exist",
+			"could not retrieve tokens",
 			int32(16),
 			nil,
-			200,
-			"{}",
+			&fake.TokenResponse{
+				Err: errors.New("could not retrieve tokens"),
+			},
 		},
 	}
 
 	for _, test := range tests {
-		// start server
-		h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			w.WriteHeader(test.statusCode)
-			w.Write([]byte(test.response))
-		})
-		s := httptest.NewServer(h)
-
 		// Test action
 		action := &policy.Action{
-			Client: &mockClient{
-				server: &mockAuthServer{
-					keys: &mockKeySet{},
-					url:  s.URL,
+			Client: &fake.MockClient{
+				TokenResponse: test.tokenResponse,
+				Server: &fake.MockAuthServer{
+					Keys: &fake.MockKeySet{},
 				},
 			},
 		}
@@ -179,7 +168,6 @@ func TestCodeCallback(t *testing.T) {
 			tokenUtil: MockValidator{
 				err: nil,
 			},
-			httpClient: &networking.HTTPClient{Client: s.Client()},
 		}
 
 		// Test
@@ -190,8 +178,6 @@ func TestCodeCallback(t *testing.T) {
 			assert.Equal(t, test.code, r.Result.Status.Code)
 			assert.Equal(t, test.message, r.Result.Status.Message)
 		}
-
-		s.Close()
 	}
 }
 
@@ -227,29 +213,3 @@ type MockValidator struct {
 func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
 	return v.err
 }
-
-type mockKeySet struct{}
-
-func (m *mockKeySet) PublicKeyURL() string                  { return "" }
-func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }
-
-type mockClient struct {
-	server authserver.AuthorizationServer
-}
-
-func (m *mockClient) Name() string                                        { return "name" }
-func (m *mockClient) ID() string                                          { return "id" }
-func (m *mockClient) Secret() string                                      { return "secret" }
-func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
-
-type mockAuthServer struct {
-	keys keyset.KeySet
-	s    *http.Client
-	url  string
-}
-
-func (m *mockAuthServer) JwksEndpoint() string          { return m.url }
-func (m *mockAuthServer) TokenEndpoint() string         { return m.url }
-func (m *mockAuthServer) AuthorizationEndpoint() string { return m.url }
-func (m *mockAuthServer) KeySet() keyset.KeySet         { return m.keys }
-func (m *mockAuthServer) SetKeySet(keyset.KeySet)       {}

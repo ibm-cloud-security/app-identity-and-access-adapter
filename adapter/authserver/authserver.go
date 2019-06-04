@@ -8,6 +8,8 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"go.uber.org/zap"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // DiscoveryConfig encapsulates the discovery endpoint configuration
@@ -20,6 +22,18 @@ type DiscoveryConfig struct {
 	UserInfoURL  string `json:"userinfo_endpoint"`
 }
 
+// TokenResponse models an OAuth 2.0 /Token endpoint response
+type TokenResponse struct {
+	// The OAuth 2.0 Access Token
+	AccessToken *string `json:"access_token"`
+	// The OIDC ID Token
+	IdentityToken *string `json:"id_token"`
+	// The OAuth 2.0 Refresh Token
+	RefreshToken *string `json:"refresh_token"`
+	// The token expiration time
+	ExpiresIn int `json:"expires_in"`
+}
+
 // AuthorizationServer represents an authorization server instance
 type AuthorizationServer interface {
 	JwksEndpoint() string
@@ -27,6 +41,7 @@ type AuthorizationServer interface {
 	AuthorizationEndpoint() string
 	KeySet() keyset.KeySet
 	SetKeySet(keyset.KeySet)
+	GetTokens(clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error)
 }
 
 // RemoteServer represents a remote authentication server
@@ -87,6 +102,32 @@ func (s *RemoteServer) TokenEndpoint() string {
 func (s *RemoteServer) AuthorizationEndpoint() string {
 	_ = s.initialize()
 	return s.AuthURL
+}
+
+// GetTokens performs a request to the token endpoint
+func (s *RemoteServer) GetTokens(clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error) {
+	form := url.Values{}
+	form.Add("client_id", clientID)
+	form.Add("grant_type", "authorization_code")
+	form.Add("code", authorizationCode)
+	form.Add("redirect_uri", redirectURI)
+
+	req, err := http.NewRequest("POST", s.TokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
+		return nil, err
+	}
+
+	req.SetBasicAuth(clientID, clientSecret)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var tokenResponse TokenResponse
+	if err := s.httpclient.Do(req, http.StatusOK, &tokenResponse); err != nil {
+		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
+		return nil, err
+	}
+
+	return &tokenResponse, nil
 }
 
 // initialize attempts to load the Client configuration from the discovery endpoint
@@ -153,6 +194,14 @@ func (c *DiscoveryConfig) OK() error {
 	}
 	if c.UserInfoURL == "" {
 		return errors.New("invalid discovery config: missing `userinfo_endpoint`")
+	}
+	return nil
+}
+
+// OK validates a TokenResponse
+func (r *TokenResponse) OK() error {
+	if r.AccessToken == nil {
+		return errors.New("invalid token endpoint response: access_token does not exist")
 	}
 	return nil
 }

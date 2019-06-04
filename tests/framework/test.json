@@ -1,0 +1,15 @@
+{
+  "adapter": {
+    "adapterName": "ibmcloudappid"
+  },
+  "cluster": {
+    "name": "appid-istio-dev-dal10",
+    "region": "us-south",
+    "root": "http://appid-istio-dev-dal10.us-south.containers.appdomain.cloud:31380"
+  },
+  "sample_app": {
+    "namespace": "sample-app",
+    "deploymentName": "dpl-sample-app",
+    "pathToYAML": "./samples/app/sample-app.yaml"
+  }
+}

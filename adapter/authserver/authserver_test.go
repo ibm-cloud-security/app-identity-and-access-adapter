@@ -1,11 +1,11 @@
 package authserver
 
 import (
-	"errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,17 +52,17 @@ func TestInitialize(t *testing.T) {
 	tests := []struct {
 		statusCode int
 		response   string
-		err        error
+		err        string
 	}{
 		{
 			400,
 			"{}",
-			errors.New("unexpected response for request to  | status code: 400"),
+			"status code: 400",
 		},
 		{
 			200,
 			"",
-			errors.New("EOF"),
+			"EOF",
 		},
 	}
 	for _, test := range tests {
@@ -74,8 +74,8 @@ func TestInitialize(t *testing.T) {
 		s := httptest.NewServer(h)
 		server := &RemoteServer{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
 		err := server.initialize()
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
+		if !strings.Contains(err.Error(), test.err) {
+			t.Fail()
 		}
 		s.Close()
 	}

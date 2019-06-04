@@ -31,16 +31,18 @@ git:
 install: true
 
 script:
-  - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
   # After unit tests, run integration tests
   - bash ./bin/install_tools.sh || travis_terminate 1;
   - source ./bin/ibmcloud_login.sh || travis_terminate 1;
   - bash ./bin/build_deploy.sh || travis_terminate 1;
-  - go test -v -race ./tests/e2e/...  # Run all e2e tests
+  - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
+  - go test -v -race ./tests/integration/...  # Run all integration tests
 
 # Send to codecov.io afterwards
 # after_success:
-#  - bash <(curl -s https://codecov.io/bash)
+#  - go get golang.org/x/tools/cmd/cover
+#  - go get github.com/mattn/goveralls
+#  - $HOME/gopath/bin/goveralls -coverprofile=coverage.txt -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 notifications:
   email:

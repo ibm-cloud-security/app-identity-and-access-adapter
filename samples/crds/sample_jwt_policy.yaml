@@ -4,7 +4,7 @@ metadata:
   name: samplejwtpolicy
   namespace: sample-app
 spec:
-  jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/39a37f57-a227-4bfe-a044-93b6e6060b61/publickeys
+  jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
 
   target:
     - serviceName: svc-sample-app

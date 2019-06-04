@@ -11,6 +11,7 @@ type Client interface {
 	ID() string
 	Secret() string
 	AuthorizationServer() authserver.AuthorizationServer
+	ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error)
 }
 
 type remoteClient struct {
@@ -32,6 +33,10 @@ func (c *remoteClient) Secret() string {
 
 func (c *remoteClient) AuthorizationServer() authserver.AuthorizationServer {
 	return c.authServer
+}
+
+func (c *remoteClient) ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error) {
+	return c.authServer.GetTokens(c.ClientID, c.ClientSecret, code, redirectURI)
 }
 
 // New creates a new client

@@ -5,7 +5,6 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
@@ -48,25 +48,12 @@ const (
 // WebStrategy handles OAuth 2.0 / OIDC flows
 type WebStrategy struct {
 	tokenUtil  validator.TokenValidator
-	httpClient *networking.HTTPClient
 	kubeClient kubernetes.Interface
 
 	// mutex protects all fields below
 	mutex        *sync.Mutex
 	secureCookie *securecookie.SecureCookie
 	tokenCache   *sync.Map
-}
-
-// TokenResponse models an OAuth 2.0 /Token endpoint response
-type TokenResponse struct {
-	// The OAuth 2.0 Access Token
-	AccessToken *string `json:"access_token"`
-	// The OIDC ID Token
-	IdentityToken *string `json:"id_token"`
-	// The OAuth 2.0 Refresh Token
-	RefreshToken *string `json:"refresh_token"`
-	// The token expiration time
-	ExpiresIn int `json:"expires_in"`
 }
 
 // OidcCookie represents a token stored in browser
@@ -79,7 +66,6 @@ type OidcCookie struct {
 func New(kubeClient kubernetes.Interface) strategy.Strategy {
 	w := &WebStrategy{
 		tokenUtil:  validator.New(),
-		httpClient: networking.New(),
 		kubeClient: kubeClient,
 		mutex:      &sync.Mutex{},
 		tokenCache: new(sync.Map),
@@ -150,14 +136,14 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
-	validationErr := w.tokenUtil.Validate(*response.(*TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(*response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
 		return nil, nil
 	}
 
-	validationErr = w.tokenUtil.Validate(*response.(*TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr = w.tokenUtil.Validate(*response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
@@ -170,7 +156,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{Status: status.OK},
 		Output: &authnz.OutputMsg{
-			Authorization: strings.Join([]string{bearer, *response.(*TokenResponse).AccessToken, *response.(*TokenResponse).IdentityToken}, " "),
+			Authorization: strings.Join([]string{bearer, *response.(*authserver.TokenResponse).AccessToken, *response.(*authserver.TokenResponse).IdentityToken}, " "),
 		},
 	}, nil
 }
@@ -237,7 +223,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := w.getTokens(code.(string), redirectURI, action.Client)
+	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
 	if err != nil {
 		zap.L().Info("Could not retrieve tokens", zap.Error(err))
 		return w.handleErrorCallback(err)
@@ -291,33 +277,6 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 			},
 		},
 	}, nil
-}
-
-// getTokens retrieves tokens from the authorization server using the authorization grant code
-func (w *WebStrategy) getTokens(code string, redirectURI string, client client.Client) (*TokenResponse, error) {
-
-	form := url.Values{}
-	form.Add("client_id", client.ID())
-	form.Add("grant_type", "authorization_code")
-	form.Add("code", code)
-	form.Add("redirect_uri", redirectURI)
-
-	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
-	if err != nil {
-		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
-		return nil, err
-	}
-
-	req.SetBasicAuth(client.ID(), client.Secret())
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var tokenResponse TokenResponse
-	if err := w.httpClient.Do(req, http.StatusOK, &tokenResponse); err != nil {
-		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
-		return nil, err
-	}
-
-	return &tokenResponse, nil
 }
 
 // getSecureCookie retrieves the SecureCookie encryption struct in a
@@ -449,14 +408,6 @@ func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 		return nil
 	}
 	return &cookieObj
-}
-
-// OK validates a TokenResponse
-func (r *TokenResponse) OK() error {
-	if r.AccessToken == nil {
-		return errors.New("invalid token endpoint response: access_token does not exist")
-	}
-	return nil
 }
 
 // buildSuccessRedirectResponse constructs a HandleAuthnZResponse containing a 302 redirect

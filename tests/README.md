@@ -37,13 +37,13 @@ Protobuf templates define the gRPC communication interface between Mixer and our
 
 #### Building the template
 
-Version 0.0.0 uses a custom template defining it's input and output.
+Version 0.0.0 uses a custom template defining its input and output.
 
 You can see the template at `github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template/template.proto`.
 
 Whenever you want the adapter to take in or output new parameters, you will have to rebuild template using Istio's bundled script.
 
-Run the following command under Istio root to generate the code stubs for the new template:
+Run the following command under your Istio repository's root folder to generate the code stubs for the new template:
 
 ```bash
 bin/mixer_codegen.sh -t ./path/to/config/template/template.proto
@@ -51,8 +51,7 @@ bin/mixer_codegen.sh -t ./path/to/config/template/template.proto
 
 #### Building the adapter config
 
-To implement an adapter for the updated template, will need to updates its configuration. 
-
+To implement an adapter for the updated template, you will need to updates its configuration. 
 
 Modify the file `github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/adapter/config.proto` with the following content:
 
@@ -65,6 +64,8 @@ bin/mixer_codegen.sh -a ./path/to/config/adapter/config.proto -x "-s=false -n ib
 This command produces a session-less adapter called `ibmcloudappid` that implements the template `authnZ`.
 
 ### Testing outside of a cluster
+
+> Note: Adjust paths as necessary
 
 1. Start the Istio Mixer
 
@@ -88,7 +89,7 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
 4. Test OIDC Request
     
     ```bash     
-    $GOPATH/out/darwin_amd64/release/mixc check --stringmap_attributes "request.query_params=code:asdf,request.headers=authorization:Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC1mODJkYzkxNy0zMDQ3LTRhZjEtOTc3NS02MGUwZTA3ZTFmYWMtMjAxOC0xMi0xOFQxNjoxMDo0Ni40NTkiLCJ2ZXIiOjN9.eyJpc3MiOiJhcHBpZC1vYXV0aC5ldS1nYi5ibHVlbWl4Lm5ldCIsImV4cCI6MTU1NjE1NDIwMiwiYXVkIjoiMWJmZDJkY2UtODE4My00ODcxLTg4ZjctYWNmYmY5MzZhMjI4Iiwic3ViIjoiMWJmZDJkY2UtODE4My00ODcxLTg4ZjctYWNmYmY5MzZhMjI4IiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxNTA2MDIsInRlbmFudCI6ImY4MmRjOTE3LTMwNDctNGFmMS05Nzc1LTYwZTBlMDdlMWZhYyIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCJ9.j2iDkDXJpFAHQRE2bSJpfIh-2Q25993otU0KMrya6EpSpd00COeRqLeRSilY3hu9hvMLcK1R4iK1ouSb2pRdSoeE69rhE42V8rhSeYQqkA5TphLnBxywn-ftCL4UbwfRlG7A-g0h7UjYKs-JfMz2R9Q6BfI41Vd-WsM6GPdQgMdEMaIwys3DwWhLRvTUapPvsGfmioKeFQj9hkKANuiC7OIjnXIFTlQob75Sr3ezTr8YTJeC9c2Mg3UB-CjFJi84J6NJHWgsYN4O-RsTV_sEYxhGKajQHD9Km_2Mf51gQkXbBaiU2wWRm23X_5qejuugZN_mC5RWzylZx7xJEd9U8A" --string_attributes request.url_path=/api/user/data,request.method=GET,destination.namespace=multi-cloud-tech-preview,destination.service.name=svc-hello-world-backend,destination.service.namespace=multi-cloud-tech-preview
+    $GOPATH/out/darwin_amd64/release/mixc check --stringmap_attributes "request.query_params=code:asdf,request.headers=authorization:bearer" --string_attributes request.url_path=/api/user/data,request.method=GET,destination.namespace=multi-cloud-tech-preview,destination.service.name=svc-hello-world-backend,destination.service.namespace=multi-cloud-tech-preview
     ```
 
 ### Testing within a cluster
@@ -96,27 +97,28 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
 1. Deploy a Sample app to an Istio enabled cluster
     > Ensure the cluster has policy checks enabled and the app pod is Istio enabled
 
-2. Update the Helm chart and `build_adapter_dockers.sh` with your Docker account.
+2. Update the Helm chart to use the requested paramters.
 
-3. Create executable 
-    
-    `sh build_executable.sh`
+3. Build the executable, deploy the docker image, and then deploy the adapter
 
-4. Deploy docker images 
-
-    `sh build_adapter_dockers.sh`
-
-5. Deploy the adapter
-
-    `helm install ./helm/ibmcloudappid --name ibmcloudappid`
+`sh build_deploy.sh`
    
 4. Apply policies and make requests to your adapter
 
 #### Logs
+
 ```
 // Follow adapter logs
-kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
 
 // Follow mixer logs
-kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
+export mixer_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
 ```
+
+**Note:** 
+   
+   If viewing JSON logs you may want to tail the logs and pretty print them using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/)
+   
+   ```bash
+    $ adapter_logs | jq
+   ```
