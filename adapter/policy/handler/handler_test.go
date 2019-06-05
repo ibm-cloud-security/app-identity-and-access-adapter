@@ -5,6 +5,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"github.com/stretchr/testify/assert"
+	k8sV1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"testing"
@@ -17,6 +18,8 @@ const (
 	OIDCPolicy
 	OIDCClient
 	NONE
+	secretFromRef string = "secretFromRef"
+	secretFromPlainText string = "secretFromPlainText"
 )
 
 func GetObjctMeta() meta_v1.ObjectMeta {
@@ -53,7 +56,7 @@ func GetOidcPolicySpec(name string, target []v1.TargetElement) v1.OidcPolicySpec
 
 func GetOidcClientSpec(name string, id string, url string) v1.OidcClientSpec {
 	emptyRef := v1.ClientSecretRef{}
-	return v1.OidcClientSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: "secretFromPlainText", ClientSecretRef: emptyRef}
+	return v1.OidcClientSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: secretFromPlainText, ClientSecretRef: emptyRef}
 }
 
 func GetJwtPolicy(spec v1.JwtPolicySpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.JwtPolicy {
@@ -66,6 +69,13 @@ func GetOidcPolicy(spec v1.OidcPolicySpec, objMeta meta_v1.ObjectMeta, typeMeta 
 
 func GetOidcClient(spec v1.OidcClientSpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.OidcClient {
 	return v1.OidcClient{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
+}
+
+func GetKubeSecret() *k8sV1.Secret {
+	// create kube secret
+	data := map[string][]byte { "secretKey": []byte(secretFromRef)}
+	objData := meta_v1.ObjectMeta{Name:"mysecret"}
+	return &k8sV1.Secret{Data: data, ObjectMeta: objData}
 }
 
 func JwtPolicyGenerator(targets []v1.TargetElement) v1.JwtPolicy {
@@ -115,6 +125,7 @@ func TestNew(t *testing.T) {
 func TestGetClientSecret(t *testing.T) {
 	testHandler := &CrdHandler{
 		store: store.New(),
+		kubeClient: fake.NewSimpleClientset(),
 	}
 	tests := []struct {
 		obj v1.OidcClient
@@ -122,7 +133,7 @@ func TestGetClientSecret(t *testing.T) {
 	}{
 		{
 			obj: GetOidcClient(GetOidcClientSpec("name", "id", "url"), GetObjctMeta(), GetTypeMeta()),
-			secret: "secretFromPlainText",
+			secret: secretFromPlainText,
 		},
 		{
 			obj: OidcClientNoSecret("name", "id", "url"),
@@ -130,9 +141,28 @@ func TestGetClientSecret(t *testing.T) {
 		},
 		{
 			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"mysecret", "secretKey"}),
-			secret: "secretFromRef",
+			secret: secretFromRef,
+		},
+		{
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"mysecret", "invalidKey"}),
+			secret: "",
+		},
+		{
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"invalidName", "secretKey"}),
+			secret: "",
+		},
+		{
+			obj: GetOidcClient(
+				v1.OidcClientSpec{
+					ClientName:"name",
+					ClientID: "id",
+					DiscoveryURL: "url",
+					ClientSecret:secretFromPlainText,
+					ClientSecretRef: v1.ClientSecretRef{Name:"invalid", Key: "invalid"}}, GetObjctMeta(), GetTypeMeta()),
+			secret: secretFromPlainText,
 		},
 	}
+	_, _ = testHandler.kubeClient.CoreV1().Secrets("sample").Create(GetKubeSecret())
 	for _, test := range tests {
 		res := testHandler.getClientSecret(&test.obj)
 		assert.Equal(t, test.secret, res)
