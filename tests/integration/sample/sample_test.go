@@ -43,7 +43,7 @@ func TestOK(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			_, _ = ctx.SendAuthRequest("GET", "/", "")
+			_, _ = ctx.SendRequest("GET", "/", nil)
 		})
 
 }

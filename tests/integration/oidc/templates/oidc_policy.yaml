@@ -3,8 +3,12 @@ kind: OidcPolicy
 metadata:
   name: {{.Name}}
 spec:
-  oidcClientName: {{.ClientName}}
+  oidcClientName: {{.Spec.ClientName}}
   target:
-    - serviceName: {{.Service}}
-      paths:
-        - {{.Path}}
+  {{ range .Spec.Target }}
+  - serviceName: {{.ServiceName}}
+    paths:
+    {{ range .Paths }}
+    - {{.}}
+    {{ end }}
+  {{ end }}

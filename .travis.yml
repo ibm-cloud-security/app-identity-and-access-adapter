@@ -35,12 +35,16 @@ before_script:
   - go get github.com/mattn/goveralls
 
 script:
-  # After unit tests, run integration tests
+  # Install all tooling
   - bash ./bin/install_tools.sh || travis_terminate 1;
+  # Login to IBMCloud and export KUBECONFIG env variable.
   - source ./bin/ibmcloud_login.sh || travis_terminate 1;
+  # Build executable, build docker image, and deploy to cluster
   - bash ./bin/build_deploy.sh || travis_terminate 1;
-  - go test -coverprofile=coverage.out ./adapter/... # only build application unit tests
-  - go test -v -race ./tests/integration/... # Run all integration tests
+  # Run coverage on unit tests
+  - go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
+  # Run all integration tests
+  - go test -v -race ./tests/integration/...
 
 after_success:
   - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.out

@@ -29,6 +29,10 @@ func (m *OAuthManager) PublicKeysURL() string {
 	return m.OAuthServerURL + "/publickeys"
 }
 
+func (m *OAuthManager) DiscoveryURL() string {
+	return m.OAuthServerURL + "/.well-known/openid-configuration"
+}
+
 func (m *OAuthManager) ROP(username string, password string) error {
 	form := url.Values{}
 	form.Add("client_id", m.ClientID)

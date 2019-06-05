@@ -3,11 +3,11 @@ kind: JwtPolicy
 metadata:
   name: {{.Name}}
 spec:
-  jwksUrl: {{.JwksURL}}
+  jwksUrl: {{.Spec.JwksURL}}
 
   target:
-  {{ range .Service }}
-    - serviceName: {{.Name}}
+  {{ range .Spec.Target }}
+    - serviceName: {{.ServiceName}}
       paths:
       {{ range .Paths }}
         - {{.}}

@@ -3,10 +3,11 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/crd"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/utils"
 	"github.com/stretchr/testify/require"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
 	"testing"
@@ -57,18 +58,13 @@ func TestInvalidJwkURL(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := crd.JWTPolicy{
-				Name:      "jwt-name-0",
-				NameSpace: "default",
-				JwksURL:   "https://test",
-				Service: []crd.JWTService{
-					{
-						"service-test",
-						[]string{"/service-test"},
-					},
+			policy := buildJWTPolicy("jwt-name-0", "default", "https://test", []v1.TargetElement{
+				{
+					ServiceName: "service-test",
+					Paths:       []string{"/service-test"},
 				},
-			}
-
+			},
+			)
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err == nil || !strings.Contains(err.Error(), "jwksUrl in body should match") {
 				t.Fail()
@@ -80,26 +76,16 @@ func TestValidJWTCRD(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := crd.JWTPolicy{
-				Name:      "jwt-name-1",
-				NameSpace: "default",
-				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service: []crd.JWTService{
-					{
-						"service-test",
-						[]string{"/api", "/web"},
-					},
-					{
-						"service-test2",
-						[]string{"/api", "/api/2"},
-					},
+			policy := buildJWTPolicy("jwt-name-1", "default", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+				{
+					ServiceName: "service-test",
+					Paths:       []string{"/api", "/web"},
 				},
-			}
+			},
+			)
 
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
-			if err != nil {
-				t.Fail()
-			}
+			require.NoError(t, err)
 		})
 }
 
@@ -107,23 +93,16 @@ func TestInvalidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := crd.JWTPolicy{
-				Name:      "jwt-name-2",
-				NameSpace: "sample-app",
-				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service: []crd.JWTService{
-					{
-						"svc-sample-app",
-						[]string{"/api/headers"},
-					},
+			policy := buildJWTPolicy("jwt-name-2", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+				{
+					ServiceName: "svc-sample-app",
+					Paths:       []string{"/api/headers"},
 				},
-			}
+			},
+			)
 
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
-			if err != nil {
-				t.Fail()
-				return
-			}
+			require.NoError(t, err)
 
 			tests := []struct {
 				err           string
@@ -151,7 +130,7 @@ func TestInvalidHeader(t *testing.T) {
 				time.Sleep(1 * time.Second) // Give a second to sync adapter
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
-					res, err := ctx.SendAuthRequest("GET", "/api/headers", test.authorization)
+					res, err := sendAuthRequest(ctx, "GET", "/api/headers", test.authorization)
 					if err != nil {
 						st.Fail()
 						return
@@ -169,17 +148,13 @@ func TestDeletePolicy(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := crd.JWTPolicy{
-				Name:      "jwt-name-5",
-				NameSpace: "sample-app",
-				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service: []crd.JWTService{
-					{
-						"svc-sample-app",
-						[]string{"/api/headers/header1"},
-					},
+			policy := buildJWTPolicy("jwt-name-5", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+				{
+					ServiceName: "svc-sample-app",
+					Paths:       []string{"/api/headers/header1"},
 				},
-			}
+			},
+			)
 
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err != nil {
@@ -217,24 +192,15 @@ func TestValidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := crd.JWTPolicy{
-				Name:      "jwt-name-3",
-				NameSpace: "sample-app",
-				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service: []crd.JWTService{
-					{
-						"svc-sample-app",
-						[]string{"/api/headers"},
-					},
+			policy := buildJWTPolicy("jwt-name-3", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+				{
+					ServiceName: "svc-sample-app",
+					Paths:       []string{"/api/headers"},
 				},
-			}
-
+			},
+			)
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
-			if err != nil {
-				t.Fail()
-				fmt.Println(err)
-				return
-			}
+			require.NoError(t, err)
 
 			tests := []struct {
 				authorization string
@@ -251,7 +217,7 @@ func TestValidHeader(t *testing.T) {
 				time.Sleep(1 * time.Second) // Give a second to sync adapter
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
-					res, err := ctx.SendAuthRequest("GET", "/api/headers", test.authorization)
+					res, err := sendAuthRequest(ctx, "GET", "/api/headers", test.authorization)
 					if err != nil {
 						st.Fail()
 						return
@@ -260,6 +226,10 @@ func TestValidHeader(t *testing.T) {
 				})
 			}
 		})
+}
+
+func sendAuthRequest(ctx *framework.Context, method string, path string, authorization string) (*http.Response, error) {
+	return ctx.SendRequest(method, path, map[string]string{"authorization": authorization})
 }
 
 func validateResponseCookie(t *testing.T, message string, headers http.Header) {
@@ -271,4 +241,17 @@ func validateResponseCookie(t *testing.T, message string, headers http.Header) {
 		fmt.Printf("%s | %s\n", val[0], message)
 	}
 	t.Fail()
+}
+
+func buildJWTPolicy(name string, namespace string, jwksURL string, target []v1.TargetElement) v1.JwtPolicy {
+	return v1.JwtPolicy{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1.JwtPolicySpec{
+			JwksURL: jwksURL,
+			Target:  target,
+		},
+	}
 }
