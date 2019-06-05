@@ -39,11 +39,11 @@ script:
   - bash ./bin/install_tools.sh || travis_terminate 1;
   - source ./bin/ibmcloud_login.sh || travis_terminate 1;
   - bash ./bin/build_deploy.sh || travis_terminate 1;
-  - cd ./adapter && $HOME/gopath/bin/goveralls -service=travis-ci && cd .. # only build application unit tests
+  - go test -coverprofile=coverage.out -coverpkg=adapter/... adapter/... # only build application unit tests
   - go test -v -race ./tests/integration/... # Run all integration tests
 
 after_success:
-  -
+  - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.out
 
 notifications:
   email:
