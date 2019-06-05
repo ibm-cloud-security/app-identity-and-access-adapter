@@ -1,0 +1,10 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: OidcPolicy
+metadata:
+  name: {{.Name}}
+spec:
+  oidcClientName: {{.ClientName}}
+  target:
+    - serviceName: {{.Service}}
+      paths:
+        - {{.Path}}

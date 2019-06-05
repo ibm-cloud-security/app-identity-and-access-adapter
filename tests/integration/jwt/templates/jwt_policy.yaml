@@ -1,0 +1,16 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: JwtPolicy
+metadata:
+  name: {{.Name}}
+spec:
+  jwksUrl: {{.JwksURL}}
+
+  target:
+  {{ range .Service }}
+    - serviceName: {{.Name}}
+      paths:
+      {{ range .Paths }}
+        - {{.}}
+      {{ end }}
+  {{ end }}
+    
