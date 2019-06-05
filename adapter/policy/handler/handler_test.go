@@ -140,15 +140,15 @@ func TestGetClientSecret(t *testing.T) {
 			secret: "",
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"mysecret", "secretKey"}),
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"mysecret", Key:"secretKey"}),
 			secret: secretFromRef,
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"mysecret", "invalidKey"}),
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"mysecret", Key:"invalidKey"}),
 			secret: "",
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"invalidName", "secretKey"}),
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"invalidName", Key:"secretKey"}),
 			secret: "",
 		},
 		{
@@ -158,7 +158,7 @@ func TestGetClientSecret(t *testing.T) {
 					ClientID: "id",
 					DiscoveryURL: "url",
 					ClientSecret:secretFromPlainText,
-					ClientSecretRef: v1.ClientSecretRef{Name:"invalid", Key: "invalid"}}, GetObjctMeta(), GetTypeMeta()),
+					ClientSecretRef: v1.ClientSecretRef{Name:"mysecret", Key: ""}}, GetObjctMeta(), GetTypeMeta()),
 			secret: secretFromPlainText,
 		},
 	}
