@@ -16,14 +16,14 @@
 #
 
 set -e
-echo "" > coverage.txt
+touch coverage.out
 
 rootDir="$(dirname "${BASH_SOURCE[0]}")"/..
 
 for d in $(go list ${rootDir}/adapter/...); do
-    go test -race -coverprofile=profile.out -covermode=atomic ${d}
+    go test -coverprofile=profile.out -covermode=count ${d}
     if [[ -f profile.out ]]; then
-        cat profile.out >> coverage.txt
+        cat profile.out >> coverage.out
         rm profile.out
     fi
 done

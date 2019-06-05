@@ -30,18 +30,20 @@ git:
 
 install: true
 
+before_script:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+
 script:
   # After unit tests, run integration tests
   - bash ./bin/install_tools.sh || travis_terminate 1;
   - source ./bin/ibmcloud_login.sh || travis_terminate 1;
   - bash ./bin/build_deploy.sh || travis_terminate 1;
-  - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
+  - $HOME/gopath/bin/goveralls -service=travis-ci
   - go test -v -race ./tests/integration/... # Run all integration tests
 
 after_success:
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/mattn/goveralls
-  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+  -
 
 notifications:
   email:
