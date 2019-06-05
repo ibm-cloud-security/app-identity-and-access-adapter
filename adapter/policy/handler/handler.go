@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
@@ -107,10 +106,8 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 				c.store.AddKeySet(jwksURL, jwks)
 			}
 		}
-		fmt.Println("before: ", crd.Spec.ClientSecret)
 		if secret := c.getClientSecret(crd); secret != "" {
 			crd.Spec.ClientSecret = secret
-			fmt.Println("after:", crd.Spec.ClientSecret)
 			// Create and store OIDC Client
 			oidcClient := client.New(crd.Spec, authorizationServer)
 			c.store.AddClient(oidcClient.Name(), oidcClient)
@@ -132,7 +129,6 @@ func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
 			zap.L().Debug("Failed to get kube secret...trying plaintext clientSecret")
 			return crd.Spec.ClientSecret
 		} else {
-			fmt.Println("data: " + string(secret.Data[crd.Spec.ClientSecretRef.Key]))
 			return string(secret.Data[crd.Spec.ClientSecretRef.Key])
 		}
 	} else if crd.Spec.ClientSecret != "" {
