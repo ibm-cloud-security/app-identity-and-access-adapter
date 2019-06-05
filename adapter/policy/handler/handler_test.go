@@ -6,6 +6,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"github.com/stretchr/testify/assert"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 )
 
@@ -51,7 +52,8 @@ func GetOidcPolicySpec(name string, target []v1.TargetElement) v1.OidcPolicySpec
 }
 
 func GetOidcClientSpec(name string, id string, url string) v1.OidcClientSpec {
-	return v1.OidcClientSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: "", ClientSecretKey: "", ClientSecretName: ""}
+	emptyRef := v1.ClientSecretRef{}
+	return v1.OidcClientSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: "secretFromPlainText", ClientSecretRef: emptyRef}
 }
 
 func GetJwtPolicy(spec v1.JwtPolicySpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.JwtPolicy {
@@ -86,8 +88,55 @@ func OidcClientGenerator(name string, id string, url string) v1.OidcClient {
 	return GetOidcClient(GetOidcClientSpec(name, id, url), GetObjctMeta(), GetTypeMeta())
 }
 
+func OidcClientWithRef(name string, id string, url string, ref v1.ClientSecretRef) v1.OidcClient {
+	return GetOidcClient(
+		v1.OidcClientSpec{
+			ClientName:name,
+			ClientID: id,
+			DiscoveryURL: url,
+			ClientSecret: "",
+			ClientSecretRef: ref,
+		}, GetObjctMeta(), GetTypeMeta())
+}
+
+func OidcClientNoSecret(name string, id string, url string) v1.OidcClient {
+	return GetOidcClient(
+		v1.OidcClientSpec{
+			ClientName:name,
+			ClientID: id,
+			DiscoveryURL: url,
+		}, GetObjctMeta(), GetTypeMeta())
+}
+
 func TestNew(t *testing.T) {
-	assert.NotNil(t, New(store.New()))
+	assert.NotNil(t, New(store.New(), fake.NewSimpleClientset()))
+}
+
+func TestGetClientSecret(t *testing.T) {
+	testHandler := &CrdHandler{
+		store: store.New(),
+	}
+	tests := []struct {
+		obj v1.OidcClient
+		secret string
+	}{
+		{
+			obj: GetOidcClient(GetOidcClientSpec("name", "id", "url"), GetObjctMeta(), GetTypeMeta()),
+			secret: "secretFromPlainText",
+		},
+		{
+			obj: OidcClientNoSecret("name", "id", "url"),
+			secret: "",
+		},
+		{
+			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{"mysecret", "secretKey"}),
+			secret: "secretFromRef",
+		},
+	}
+	for _, test := range tests {
+		res := testHandler.getClientSecret(&test.obj)
+		assert.Equal(t, test.secret, res)
+	}
 }
 
 func TestHandler_HandleAddEvent(t *testing.T) {
@@ -227,6 +276,5 @@ func TestCrdHandler_HandleDeleteEvent(t *testing.T) {
 		} else {
 			assert.NotNil(t, test.expected, testHandler.store.GetWebPolicies(test.endpoint))
 		}
-
 	}
 }

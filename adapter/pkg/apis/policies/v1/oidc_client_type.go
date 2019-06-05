@@ -21,8 +21,12 @@ type OidcClientSpec struct {
 	ClientID         string `json:"clientId"`
 	DiscoveryURL     string `json:"discoveryUrl"`
 	ClientSecret     string `json:"clientSecret"`
-	ClientSecretName string `json:"clientSecretRef.name"`
-	ClientSecretKey  string `json:"clientSecretRef.key"`
+	ClientSecretRef  ClientSecretRef  `json:"clientSecretRef"`
+}
+
+type ClientSecretRef struct {
+	Name	string `json:"name"`
+	Key		string `json:"key"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

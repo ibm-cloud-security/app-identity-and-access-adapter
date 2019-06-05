@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
@@ -9,6 +10,9 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"go.uber.org/zap"
+	k8sV1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // PolicyHandler is responsible for storing and managing policy/client data
@@ -20,14 +24,16 @@ type PolicyHandler interface {
 // CrdHandler is responsible for storing and managing policy/client data
 type CrdHandler struct {
 	store store.PolicyStore
+	kubeClient kubernetes.Interface
 }
 
 ////////////////// constructor //////////////////
 
 // New creates a PolicyManager
-func New(store store.PolicyStore) PolicyHandler {
+func New(store store.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler {
 	return &CrdHandler{
 		store: store,
+		kubeClient: kubeClient,
 	}
 }
 
@@ -59,7 +65,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		}
 		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 	case *v1.OidcPolicy:
-		zap.L().Debug("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		zap.L().Debug("Create/Update OIDCPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		mappingKey := generatePolicyMappingKey(policy.OIDC, crd.ObjectMeta.Namespace, crd.ObjectMeta.Name)
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 
@@ -78,9 +84,9 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 				ClientName: crd.Spec.ClientName,
 				Rules:      nil})
 		}
-		zap.L().Info("OIDCPolicy created", zap.String("ID", string(crd.ObjectMeta.UID)))
+		zap.L().Info("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcClient:
-		zap.L().Debug("OIDCClient created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		zap.L().Debug("Create/Update OIDCClient", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 
 		// If we already are tracking this authentication server, skip
 		authorizationServer := c.store.GetAuthServer(crd.Spec.DiscoveryURL)
@@ -101,15 +107,46 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 				c.store.AddKeySet(jwksURL, jwks)
 			}
 		}
+		fmt.Println("before: ", crd.Spec.ClientSecret)
+		if secret := c.getClientSecret(crd); secret != "" {
+			crd.Spec.ClientSecret = secret
+			fmt.Println("after:", crd.Spec.ClientSecret)
+			// Create and store OIDC Client
+			oidcClient := client.New(crd.Spec, authorizationServer)
+			c.store.AddClient(oidcClient.Name(), oidcClient)
 
-		// Create and store OIDC Client
-		oidcClient := client.New(crd.Spec, authorizationServer)
-		c.store.AddClient(oidcClient.Name(), oidcClient)
-
-		zap.L().Info("OIDCClient created", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+			zap.L().Info("OIDCClient created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		} else {
+			zap.L().Warn("Failed to create object: client secret is invalid")
+		}
 	default:
 		zap.S().Warn("Could not create object. Unknown type: %f", crd)
 	}
+}
+
+func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
+	//Return kube secret from reference if present, else try clientSecret
+	if crd.Spec.ClientSecretRef.Name != "" && crd.Spec.ClientSecretRef.Key != "" {
+		secret, err := c.getKubeSecret(crd.ObjectMeta.Namespace, crd.Spec.ClientSecretRef)
+		if err != nil || string(secret.Data[crd.Spec.ClientSecretRef.Key]) == "" {
+			zap.L().Debug("Failed to get kube secret...trying plaintext clientSecret")
+			return crd.Spec.ClientSecret
+		} else {
+			fmt.Println("data: " + string(secret.Data[crd.Spec.ClientSecretRef.Key]))
+			return string(secret.Data[crd.Spec.ClientSecretRef.Key])
+		}
+	} else if crd.Spec.ClientSecret != "" {
+		return crd.Spec.ClientSecret
+	}
+	return ""
+}
+
+func (c *CrdHandler) getKubeSecret(namespace string, ref v1.ClientSecretRef) (*k8sV1.Secret, error) {
+	secret, err := c.kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
 
 // HandleDeleteEvent updates the store after a CRD has been deleted

@@ -38,13 +38,13 @@ func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
 }
 
 func New(store store.PolicyStore) (Initializer, error) {
-	handler := handler.New(store)
-	policyInitializer := &PolicyInitializer{Handler: handler}
-
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
+
+	handler := handler.New(store, client)
+	policyInitializer := &PolicyInitializer{Handler: handler}
 	policyInitializer.KubeClient = client
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
 	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Handler)
