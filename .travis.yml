@@ -36,16 +36,14 @@ script:
   - source ./bin/ibmcloud_login.sh || travis_terminate 1;
   - bash ./bin/build_deploy.sh || travis_terminate 1;
   - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
-  - go test -v -race ./tests/integration/...  # Run all integration tests
+  - go test -v -race ./tests/integration/... # Run all integration tests
 
-# Send to codecov.io afterwards
-# after_success:
-#  - go get golang.org/x/tools/cmd/cover
-#  - go get github.com/mattn/goveralls
-#  - $HOME/gopath/bin/goveralls -coverprofile=coverage.txt -service=travis-ci -repotoken $COVERALLS_TOKEN
+after_success:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 notifications:
   email:
     on_success: always
     on_failure: always
-

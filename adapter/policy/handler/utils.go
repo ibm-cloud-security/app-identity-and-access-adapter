@@ -22,7 +22,6 @@ func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint 
 	return endpoints
 }
 
-
 func generatePolicyMappingKey(crdType policy.Type, namespace string, name string) string {
 	return crdType.String() + "/" + namespace + "/" + name
 }

@@ -49,7 +49,10 @@ func (c *HTTPClient) Do(req *http.Request, status int, v OK) error {
 	// Check status code
 	if res.StatusCode != status {
 		body, _ := ioutil.ReadAll(res.Body)
-		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode), zap.String("response_body", string(body)))
+		zap.L().Info("Unexpected response for request.",
+			zap.String("url", req.URL.Path),
+			zap.Int("status", res.StatusCode),
+			zap.String("response_body", string(body)))
 		return fmt.Errorf("unexpected response for request to %s | status code: %d | body %s", req.URL.String(), res.StatusCode, string(body))
 	}
 

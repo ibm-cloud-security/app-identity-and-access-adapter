@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	c "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/crd"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/utils"
 	"math/rand"
 	"os"
@@ -11,13 +12,8 @@ import (
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-type CRD interface {
-	GetName() string
-	GetNamespace() string
-}
-
 type crd struct {
-	CRD
+	c.CRD
 	pathToYAML string
 }
 
@@ -39,7 +35,7 @@ func (m *CRDManager) CleanUp() error {
 	return nil
 }
 
-func (m *CRDManager) AddCRD(pathToTemplate string, data CRD) error {
+func (m *CRDManager) AddCRD(pathToTemplate string, data c.CRD) error {
 	t, err := template.ParseFiles(pathToTemplate)
 	if err != nil {
 		return err
@@ -73,7 +69,7 @@ func (m *CRDManager) AddCRD(pathToTemplate string, data CRD) error {
 	return nil
 }
 
-func (m *CRDManager) DeleteCRD(savedCRD CRD) error {
+func (m *CRDManager) DeleteCRD(savedCRD c.CRD) error {
 	for i, crd := range m.crds {
 		if crd.GetName() == savedCRD.GetName() && crd.GetNamespace() == savedCRD.GetNamespace() {
 			err := utils.KubeDelete(crd.GetNamespace(), crd.pathToYAML, m.context.Env.KubeConfig)

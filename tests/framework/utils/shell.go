@@ -7,23 +7,23 @@ import (
 	"strings"
 )
 
-// Shell run command on shell and get back output and error if get one
+// Shell runs a command on shell and get back output and error if get one
 func Shell(format string, args ...interface{}) (string, error) {
 	return sh(context.Background(), format, true, true, true, args...)
 }
 
-// Shell run command on shell and get back output and error if get one
+// ShellMuteOutput runs a command on shell and get back output and error if get one
 func ShellMuteOutput(format string, args ...interface{}) (string, error) {
 	return sh(context.Background(), format, false, false, false, args...)
 }
 
-// Shell run command on shell and get back output and error if get one
+// Exists checks if an executable exists
 func Exists(executable string) bool {
 	res, err := ShellMuteOutput("command -v %s", executable)
 	if err != nil {
 		return false
 	}
-	return !(res == "")
+	return res != ""
 }
 
 func sh(ctx context.Context, format string, logCommand, logOutput, logError bool, args ...interface{}) (string, error) {

@@ -106,6 +106,7 @@ func (s *RemoteServer) AuthorizationEndpoint() string {
 
 // GetTokens performs a request to the token endpoint
 func (s *RemoteServer) GetTokens(clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error) {
+	_ = s.initialize()
 	form := url.Values{}
 	form.Add("client_id", clientID)
 	form.Add("grant_type", "authorization_code")

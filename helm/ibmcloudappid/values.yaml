@@ -1,19 +1,59 @@
+## The values define the operation of the 
+## oidc / jwt Istio adapter helm chart
+##
+## The current values represent opinionated defaults
+## but may be changed to better suit the use-case
+#
+
 appName: ibmcloudappid
 
+## Denotes the number of adapter replicas as part of the deployment. WARNING: due to 
+## current limitations, workloads using OIDC policies should not increment this number
 replicaCount: 1
+
+## The image provides the docker source of the cloud adapter
 image:
+  ## This is the source of the adapter docker image
   repository: aliberat1/istio-adapter-ibmcloudappid
+  ## The image version to pull. Tag "latest" always contains
+  ## the most up-to-date image. To avoid breaking changes during
+  ## installs, it is recommended to use a tag.
   tag: latest
+  ## The pullPolicy defines when the adapter image needs to be repulled
+  ## from the source repository. Set to Always when using "latest."
   pullPolicy: Always
 
+## Service defines the applications exposure
 service:
+  # The service type to use.
   type: ClusterIP
+  # The port the application should run on
   port: 47304
 
+## These keys are primarily used for cookie encryption
+## Symmetric signing and encryption keys are created on 
+## initialization. 
 keys:
+  ## The hashKey is required, used to authenticate 
+  ## the cookie value using HMAC. It is recommended 
+  ## to use a key with 32 or 64 bytes.
   hashKeySize: 32
+  ## The blockKey is used to encrypt the cookie value. 
+  ## The length must correspond to the block size of the AES encryption algorithm. 
+  ## Valid lengths are 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.
   blockKeySize: 16
 
+## Logging is facilitated by the zapcore uber library https://godoc.org/go.uber.org/zap/zapcore
 logging:
+  
+  ## By default logging is output in a json format
+  ## which can be easily consumed by the 3rd party 
+  ## logging systems. Setting this value to false 
+  ## produces a more easily readable string format
   json: true
-  level: 0 # Defaults to INFO :: https://godoc.org/go.uber.org/zap/zapcore#Level
+
+  ## The log output level defaults to INFO. For more 
+  ## voluminous using DEBUG (-1). Logging can be configured
+  ## from -1 to 7
+  ## See zapcore: https://godoc.org/go.uber.org/zap/zapcore#Level
+  level: 0  

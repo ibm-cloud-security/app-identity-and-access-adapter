@@ -54,9 +54,3 @@ func HelmParams(chartDir, chartName, valueFile, namespace, setValue string) stri
 
 	return helmCmd
 }
-
-// Obtain the version of Helm client and server with a timeout of 10s or return an error
-func helmVersion() (string, error) {
-	version, err := Shell("helm version")
-	return version, err
-}

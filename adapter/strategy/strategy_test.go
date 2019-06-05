@@ -20,27 +20,27 @@ func TestDecodeValueMap(t *testing.T) {
 
 func generateMap() map[string]*v1beta1.Value {
 	return map[string]*v1beta1.Value{
-		"Value_BoolValue": &v1beta1.Value{
+		"Value_BoolValue": {
 			Value: &v1beta1.Value_BoolValue{
 				BoolValue: true,
 			},
 		},
-		"Value_StringValue": &v1beta1.Value{
+		"Value_StringValue": {
 			Value: &v1beta1.Value_StringValue{
 				StringValue: "Value_StringValue",
 			},
 		},
-		"Value_Int64Value": &v1beta1.Value{
+		"Value_Int64Value": {
 			Value: &v1beta1.Value_Int64Value{
 				Int64Value: int64(1),
 			},
 		},
-		"Value_DoubleValue": &v1beta1.Value{
+		"Value_DoubleValue": {
 			Value: &v1beta1.Value_DoubleValue{
 				DoubleValue: 10,
 			},
 		},
-		"Value_IpAddressValue": &v1beta1.Value{
+		"Value_IpAddressValue": {
 			Value: &v1beta1.Value_IpAddressValue{
 				IpAddressValue: &v1beta1.IPAddress{
 					Value: make([]byte, 0),

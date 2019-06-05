@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/crd"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/utils"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -12,21 +13,9 @@ import (
 	"time"
 )
 
-type JWTPolicy struct {
-	Name      string
-	NameSpace string
-	JwksURL   string
-	Service   string
-	Path      string
-}
-
-func (p *JWTPolicy) GetName() string {
-	return p.Name
-}
-
-func (p *JWTPolicy) GetNamespace() string {
-	return p.NameSpace
-}
+const (
+	jwtTemplatePath = "./templates/jwt_policy.yaml"
+)
 
 ///
 // Create a before method to setup a suite before tests execute
@@ -68,15 +57,19 @@ func TestInvalidJwkURL(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := JWTPolicy{
+			policy := crd.JWTPolicy{
 				Name:      "jwt-name-0",
 				NameSpace: "default",
 				JwksURL:   "https://test",
-				Service:   "service-test",
-				Path:      "/service-test",
+				Service: []crd.JWTService{
+					{
+						"service-test",
+						[]string{"/service-test"},
+					},
+				},
 			}
 
-			err := ctx.CRDManager.AddCRD("./testdata/valid_jwt_policy.yaml", &policy)
+			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err == nil || !strings.Contains(err.Error(), "jwksUrl in body should match") {
 				t.Fail()
 			}
@@ -87,15 +80,23 @@ func TestValidJWTCRD(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := JWTPolicy{
+			policy := crd.JWTPolicy{
 				Name:      "jwt-name-1",
 				NameSpace: "default",
 				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service:   "service-test",
-				Path:      "/service-test",
+				Service: []crd.JWTService{
+					{
+						"service-test",
+						[]string{"/api", "/web"},
+					},
+					{
+						"service-test2",
+						[]string{"/api", "/api/2"},
+					},
+				},
 			}
 
-			err := ctx.CRDManager.AddCRD("./testdata/valid_jwt_policy.yaml", &policy)
+			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err != nil {
 				t.Fail()
 			}
@@ -106,39 +107,43 @@ func TestInvalidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := JWTPolicy{
+			policy := crd.JWTPolicy{
 				Name:      "jwt-name-2",
 				NameSpace: "sample-app",
 				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service:   "svc-sample-app",
-				Path:      "/api/headers",
+				Service: []crd.JWTService{
+					{
+						"svc-sample-app",
+						[]string{"/api/headers"},
+					},
+				},
 			}
 
-			err := ctx.CRDManager.AddCRD("./testdata/valid_jwt_policy.yaml", &policy)
+			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err != nil {
 				t.Fail()
 				return
 			}
 
 			tests := []struct {
-				err        string
-				authHeader string
+				err           string
+				authorization string
 			}{
 				{
-					err:        "authorization header not provided",
-					authHeader: "",
+					err:           "authorization header not provided",
+					authorization: "",
 				},
 				{
-					err:        "authorization header malformed",
-					authHeader: "Bearer",
+					err:           "authorization header malformed",
+					authorization: "Bearer",
 				},
 				{
-					err:        "invalid access token",
-					authHeader: "Bearer access.token.sig",
+					err:           "invalid access token",
+					authorization: "Bearer access.token.sig",
 				},
 				{
-					err:        "invalid access token",
-					authHeader: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + "123",
+					err:           "invalid access token",
+					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + "123",
 				},
 			}
 
@@ -146,7 +151,7 @@ func TestInvalidHeader(t *testing.T) {
 				time.Sleep(1 * time.Second) // Give a second to sync adapter
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
-					res, err := ctx.Env.SendBasicRequest("GET", "/api/headers", test.authHeader)
+					res, err := ctx.SendAuthRequest("GET", "/api/headers", test.authorization)
 					if err != nil {
 						st.Fail()
 						return
@@ -159,19 +164,24 @@ func TestInvalidHeader(t *testing.T) {
 }
 
 /*
+TODO: Uncomment when deletion is fixed
 func TestDeletePolicy(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := JWTPolicy{
+			policy := crd.JWTPolicy{
 				Name:      "jwt-name-5",
 				NameSpace: "sample-app",
 				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service:   "svc-sample-app",
-				Path:      "/api/headers/header1",
+				Service: []crd.JWTService{
+					{
+						"svc-sample-app",
+						[]string{"/api/headers/header1"},
+					},
+				},
 			}
 
-			err := ctx.CRDManager.AddCRD("./testdata/valid_jwt_policy.yaml", &policy)
+			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err != nil {
 				t.Fail()
 				return
@@ -179,7 +189,7 @@ func TestDeletePolicy(t *testing.T) {
 
 			time.Sleep(3 * time.Second)
 
-			res, err := framework.SendBasicRequest("GET", "/api/headers/header1", "")
+			res, err := ctx.SendAuthRequest("GET", "/api/headers/header1", "")
 			if err != nil {
 				t.Fail()
 				return
@@ -194,29 +204,32 @@ func TestDeletePolicy(t *testing.T) {
 
 			time.Sleep(3 * time.Second)
 
-			res, err = framework.SendBasicRequest("GET", "/api/headers/header1", "")
+			res, err = ctx.SendAuthRequest("GET", "/api/headers/header1", "")
 			if err != nil {
 				t.Fail()
 				return
 			}
 			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
-}
-*/
+}*/
 
 func TestValidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := JWTPolicy{
+			policy := crd.JWTPolicy{
 				Name:      "jwt-name-3",
 				NameSpace: "sample-app",
 				JwksURL:   ctx.OAuthManager.PublicKeysURL(),
-				Service:   "svc-sample-app",
-				Path:      "/api/headers",
+				Service: []crd.JWTService{
+					{
+						"svc-sample-app",
+						[]string{"/api/headers"},
+					},
+				},
 			}
 
-			err := ctx.CRDManager.AddCRD("./testdata/valid_jwt_policy.yaml", &policy)
+			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
 			if err != nil {
 				t.Fail()
 				fmt.Println(err)
@@ -224,13 +237,13 @@ func TestValidHeader(t *testing.T) {
 			}
 
 			tests := []struct {
-				authHeader string
+				authorization string
 			}{
 				{
-					authHeader: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken,
+					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken,
 				},
 				{
-					authHeader: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + " " + *ctx.OAuthManager.Tokens.IdentityToken,
+					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + " " + *ctx.OAuthManager.Tokens.IdentityToken,
 				},
 			}
 
@@ -238,7 +251,7 @@ func TestValidHeader(t *testing.T) {
 				time.Sleep(1 * time.Second) // Give a second to sync adapter
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
-					res, err := ctx.Env.SendBasicRequest("GET", "/api/headers", test.authHeader)
+					res, err := ctx.SendAuthRequest("GET", "/api/headers", test.authorization)
 					if err != nil {
 						st.Fail()
 						return

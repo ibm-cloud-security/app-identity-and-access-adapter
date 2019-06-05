@@ -9,7 +9,6 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 	github.com/golang/protobuf v1.3.1 // indirect
-	github.com/golang/sync v0.0.0-20180314180146-1d60e4601c6f
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gorilla/securecookie v1.1.1
@@ -26,10 +25,8 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20190328211700-ab21143f2384
 	google.golang.org/grpc v1.20.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
-	gotest.tools v2.2.0+incompatible
 	istio.io/api v0.0.0-20190515205759-982e5c3888c6
 	istio.io/istio v0.0.0-20190516081059-beb17827e164
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab

@@ -101,7 +101,7 @@ func (s *Suite) run() (errLevel int) {
 		fmt.Printf("Cleanup failed %v\n", err)
 	}
 
-	return
+	return 0
 }
 
 func (s *Suite) runModifierFns(ctx *Context, fns []ModifierFn) (err error) {

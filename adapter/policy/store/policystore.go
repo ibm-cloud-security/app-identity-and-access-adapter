@@ -14,9 +14,9 @@ type LocalStore struct {
 	// authserver maps jwksurl -> AuthorizationServers
 	authservers map[string]authserver.AuthorizationServer
 	// policies maps endpoint -> list of policies
-	apiPolicies map[policy.Endpoint] policy.Action
+	apiPolicies map[policy.Endpoint]policy.Action
 	// policies maps endpoint -> list of policies
-	webPolicies map[policy.Endpoint] policy.Action
+	webPolicies map[policy.Endpoint]policy.Action
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
 	policyMappings map[string]*policy.PolicyMapping
 	keysets        map[string]keyset.KeySet
@@ -91,7 +91,7 @@ func (l *LocalStore) GetApiPolicies(ep policy.Endpoint) *policy.Action {
 
 func (s *LocalStore) SetApiPolicy(ep policy.Endpoint, action policy.Action) {
 	if s.apiPolicies == nil {
-		s.apiPolicies = make(map[policy.Endpoint] policy.Action)
+		s.apiPolicies = make(map[policy.Endpoint]policy.Action)
 	}
 
 	s.apiPolicies[ep] = action
@@ -127,7 +127,7 @@ func (l *LocalStore) GetWebPolicies(ep policy.Endpoint) *policy.Action {
 
 func (s *LocalStore) SetWebPolicy(ep policy.Endpoint, action policy.Action) {
 	if s.webPolicies == nil {
-		s.webPolicies = make(map[policy.Endpoint] policy.Action)
+		s.webPolicies = make(map[policy.Endpoint]policy.Action)
 	}
 
 	s.webPolicies[ep] = action

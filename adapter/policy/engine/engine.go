@@ -55,18 +55,18 @@ func (m *engine) Evaluate(action *authnz.TargetMsg) (*policy.Action, error) {
 	jwtPolicies := m.getJWTPolicies(endpoints)
 	oidcPolicies := m.getOIDCPolicies(endpoints)
 	zap.L().Debug("Checking policies", zap.Int("jwt-policy-count", len(jwtPolicies)), zap.Int("oidc-policy-count", len(oidcPolicies)))
-	if (oidcPolicies == nil || len(oidcPolicies) == 0) && (jwtPolicies == nil || len(jwtPolicies) == 0) {
+	if len(oidcPolicies) == 0 && len(jwtPolicies) == 0 {
 		return &policy.Action{
 			Type: policy.NONE,
 		}, nil
 	}
 
-	if (oidcPolicies != nil && len(oidcPolicies) > 0) && (jwtPolicies != nil && len(jwtPolicies) > 0) {
+	if len(oidcPolicies) > 0 && len(jwtPolicies) > 0 {
 		zap.L().Warn("Found conflicting OIDC and JWT policies. Rejecting Request. Please check your policy configuration.")
 		return nil, errors.New("conflicting OIDC and JWT policies")
 	}
 
-	if oidcPolicies != nil && len(oidcPolicies) > 0 {
+	if len(oidcPolicies) > 0 {
 		return m.createOIDCAction(oidcPolicies)
 	}
 
