@@ -45,7 +45,6 @@ var emptyRule = []policy.Rule{}
 /////// Token Validation ///////
 
 func TestTokenValidation(t *testing.T) {
-	t.Parallel()
 	var tests = []struct {
 		token string
 		err   error
@@ -64,8 +63,10 @@ func TestTokenValidation(t *testing.T) {
 	}
 	v := New()
 
-	for _, e := range tests {
+	for _, test := range tests {
+		e := test
 		t.Run("Validate", func(st *testing.T) {
+			st.Parallel()
 			err := v.Validate(e.token, e.jwks, e.rules)
 			if e.err != nil {
 				assert.EqualError(st, err, e.err.Error())
