@@ -152,9 +152,29 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	validationErr := w.tokenUtil.Validate(*response.(*TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
-		w.tokenCache.Delete(sessionCookie.Value)
-		return nil, nil
+		if validationErr.Msg == "Token is expired" && response.(*TokenResponse).RefreshToken != nil {
+			zap.L().Info("Access token is expired")
+
+			res, err := w.getTokens("", "", action.Client,"refresh_token", *response.(*TokenResponse).RefreshToken)
+			if err != nil {
+				zap.L().Info("Could not retrieve tokens using refresh token", zap.Error(err))
+				return w.handleErrorCallback(err)
+			}
+
+			validationErr := w.tokenUtil.Validate(*res.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+			if validationErr != nil {
+				zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
+				return w.handleErrorCallback(err)
+			}
+			*response.(*TokenResponse).AccessToken = *res.AccessToken
+			*response.(*TokenResponse).IdentityToken = *res.IdentityToken
+			*response.(*TokenResponse).RefreshToken = *res.RefreshToken
+		} else {
+			zap.L().Debug("Cookies failed token validation: ", zap.Error(validationErr))
+			w.tokenCache.Delete(sessionCookie.Value)
+			return nil, nil
+		}
+
 	}
 
 	validationErr = w.tokenUtil.Validate(*response.(*TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
@@ -237,7 +257,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := w.getTokens(code.(string), redirectURI, action.Client)
+	response, err := w.getTokens(code.(string), redirectURI, action.Client, "authorization_code", "")
 	if err != nil {
 		zap.L().Info("Could not retrieve tokens", zap.Error(err))
 		return w.handleErrorCallback(err)
@@ -294,13 +314,17 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 }
 
 // getTokens retrieves tokens from the authorization server using the authorization grant code
-func (w *WebStrategy) getTokens(code string, redirectURI string, client client.Client) (*TokenResponse, error) {
+func (w *WebStrategy) getTokens(code string, redirectURI string, client client.Client, grantType string, refreshToken string) (*TokenResponse, error) {
 
 	form := url.Values{}
 	form.Add("client_id", client.ID())
-	form.Add("grant_type", "authorization_code")
+	form.Add("grant_type", grantType)
 	form.Add("code", code)
 	form.Add("redirect_uri", redirectURI)
+
+	if grantType == "refresh_token" {
+		form.Add("refresh_token", refreshToken)
+	}
 
 	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
 	if err != nil {
@@ -319,6 +343,40 @@ func (w *WebStrategy) getTokens(code string, redirectURI string, client client.C
 
 	return &tokenResponse, nil
 }
+
+//func (w *WebStrategy) getTokensUsingRefresh(client client.Client, refreshToken string) (*TokenResponse, error) {
+//	zap.L().Info("In get tokens using refresh")
+//
+//	form := url.Values{}
+//	form.Add("client_id", client.ID())
+//	form.Add("secret", client.Secret())
+//	form.Add("grant_type", "refresh_token")
+//	form.Add("refresh_token", refreshToken)
+//
+//	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
+//	if err != nil {
+//		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
+//		return nil, err
+//	}
+//
+//	zap.L().Info("after request ")
+//
+//	req.SetBasicAuth(client.ID(), client.Secret())
+//	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+//
+//	var tokenRes TokenResponse
+//	if err := w.httpClient.Do(req, http.StatusOK, &tokenRes); err != nil {
+//		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
+//		return nil, err
+//	}
+//
+//
+//	zap.L().Info("refresh token: ")
+//	zap.S().Info(tokenRes.RefreshToken)
+//	zap.S().Info(tokenRes.AccessToken)
+//
+//	return &tokenRes, nil
+//}
 
 // getSecureCookie retrieves the SecureCookie encryption struct in a
 // thread safe manner.
