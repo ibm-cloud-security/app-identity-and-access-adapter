@@ -23,6 +23,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		action        *policy.Action
 		message       string
 		code          int32
+		invalidToken  string
 		validationErr *errors.OAuthError
 	}{
 		{
@@ -30,6 +31,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 			&policy.Action{},
 			"authorization header not provided",
 			int32(16),
+			"",
 			nil,
 		},
 		{
@@ -37,13 +39,15 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 			&policy.Action{},
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
+			"",
 			nil,
 		},
 		{
-			generateAuthRequest("Bearer invalid"),
+			generateAuthRequest("Bearer access"),
 			&policy.Action{},
 			"invalid access token",
 			int32(16),
+			"access",
 			errors.UnauthorizedHTTPException("invalid access token", nil),
 		},
 		{
@@ -51,22 +55,27 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 			&policy.Action{},
 			"",
 			int32(0),
+			"",
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer access id"),
 			&policy.Action{},
-			"",
-			int32(0),
-			nil,
+			"invalid ID token",
+			int32(16),
+			"id",
+			errors.UnauthorizedHTTPException("invalid id token", nil),
 		},
 	}
 
-	for _, test := range tests {
+	for _, t_ := range tests {
+		test := t_
 		t.Run("Validation Test", func(st *testing.T) {
+			st.Parallel()
 			api := APIStrategy{
 				tokenUtil: MockValidator{
-					err: test.validationErr,
+					invalidToken: test.invalidToken,
+					err:          test.validationErr,
 				},
 			}
 			checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
@@ -177,9 +186,13 @@ func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 }
 
 type MockValidator struct {
-	err *errors.OAuthError
+	invalidToken string
+	err          *errors.OAuthError
 }
 
 func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
-	return v.err
+	if tkn == v.invalidToken {
+		return v.err
+	}
+	return nil
 }
