@@ -3,6 +3,9 @@ package handler
 import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint {
@@ -22,6 +25,13 @@ func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint 
 	return endpoints
 }
 
+func GetKubeSecret(kubeClient kubernetes.Interface, namespace string, ref v1.ClientSecretRef) (*k8sv1.Secret, error) {
+	secret, err := kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
 
 func generatePolicyMappingKey(crdType policy.Type, namespace string, name string) string {
 	return crdType.String() + "/" + namespace + "/" + name

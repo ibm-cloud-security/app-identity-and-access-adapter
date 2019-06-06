@@ -9,8 +9,6 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"go.uber.org/zap"
-	k8sV1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -124,7 +122,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
 	//Return kube secret from reference if present, else try clientSecret
 	if crd.Spec.ClientSecretRef.Name != "" && crd.Spec.ClientSecretRef.Key != "" {
-		secret, err := c.getKubeSecret(crd.ObjectMeta.Namespace, crd.Spec.ClientSecretRef)
+		secret, err := GetKubeSecret(c.kubeClient, crd.ObjectMeta.Namespace, crd.Spec.ClientSecretRef)
 		if err != nil || string(secret.Data[crd.Spec.ClientSecretRef.Key]) == "" {
 			zap.L().Debug("Failed to get kube secret...trying plaintext clientSecret")
 			return crd.Spec.ClientSecret
@@ -135,14 +133,6 @@ func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
 		return crd.Spec.ClientSecret
 	}
 	return ""
-}
-
-func (c *CrdHandler) getKubeSecret(namespace string, ref v1.ClientSecretRef) (*k8sV1.Secret, error) {
-	secret, err := c.kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return secret, nil
 }
 
 // HandleDeleteEvent updates the store after a CRD has been deleted

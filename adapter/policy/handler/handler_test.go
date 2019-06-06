@@ -71,7 +71,7 @@ func GetOidcClient(spec v1.OidcClientSpec, objMeta meta_v1.ObjectMeta, typeMeta 
 	return v1.OidcClient{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
 }
 
-func GetKubeSecret() *k8sV1.Secret {
+func MockKubeSecret() *k8sV1.Secret {
 	// create kube secret
 	data := map[string][]byte { "secretKey": []byte(secretFromRef)}
 	objData := meta_v1.ObjectMeta{Name:"mysecret"}
@@ -162,7 +162,7 @@ func TestGetClientSecret(t *testing.T) {
 			secret: secretFromPlainText,
 		},
 	}
-	_, _ = testHandler.kubeClient.CoreV1().Secrets("sample").Create(GetKubeSecret())
+	_, _ = testHandler.kubeClient.CoreV1().Secrets("sample").Create(MockKubeSecret())
 	for _, test := range tests {
 		res := testHandler.getClientSecret(&test.obj)
 		assert.Equal(t, test.secret, res)
