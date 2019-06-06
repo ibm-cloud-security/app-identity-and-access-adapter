@@ -3,6 +3,7 @@ module github.com/ibm-cloud-security/policy-enforcer-mixer-adapter
 go 1.12
 
 require (
+	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-20190410170817-8222805572f2
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/googleapis v1.2.0
@@ -21,7 +22,6 @@ require (
 	github.com/stretchr/testify v1.3.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
-	golang.org/x/net v0.0.0-20190514140710-3ec191127204 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect

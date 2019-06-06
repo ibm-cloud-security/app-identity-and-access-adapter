@@ -9,8 +9,12 @@ import (
 	"text/template"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	yamlExt     = ".yaml"
+)
 
+// CRD models a Kubernetes CRD exposing name and namespace
 type CRD interface {
 	GetName() string
 	GetNamespace() string
@@ -21,12 +25,14 @@ type crd struct {
 	pathToYAML string
 }
 
+// CRD Manager maintains Kubernetes CRDs locally and provides helper methods create/update/delete them
 type CRDManager struct {
 	crds []crd
 
 	context *Context
 }
 
+// CleanUp delete stored CRDs from Kubernetes then purges the local store
 func (m *CRDManager) CleanUp() error {
 	for _, crd := range m.crds {
 		err := utils.KubeDelete(crd.GetNamespace(), crd.pathToYAML, m.context.Env.KubeConfig)
@@ -39,15 +45,16 @@ func (m *CRDManager) CleanUp() error {
 	return nil
 }
 
+// AddCRD adds a custom resource definition from a given file
 func (m *CRDManager) AddCRD(pathToTemplate string, data CRD) error {
 	t, err := template.ParseFiles(pathToTemplate)
 	if err != nil {
 		return err
 	}
 
-	file := strings.Split(pathToTemplate, ".yaml")[0]
+	file := strings.Split(pathToTemplate, yamlExt)[0]
 
-	tmpPath := file + "-" + randStringBytes(4) + "-temp.yaml"
+	tmpPath := file + "-" + randStringBytes(4) + yamlExt
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err
@@ -73,6 +80,7 @@ func (m *CRDManager) AddCRD(pathToTemplate string, data CRD) error {
 	return nil
 }
 
+// DeleteCRD deletes a custom resource definition using a given CRD
 func (m *CRDManager) DeleteCRD(savedCRD CRD) error {
 	for i, crd := range m.crds {
 		if crd.GetName() == savedCRD.GetName() && crd.GetNamespace() == savedCRD.GetNamespace() {
@@ -88,7 +96,7 @@ func (m *CRDManager) DeleteCRD(savedCRD CRD) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("crd found")
+	return fmt.Errorf("crd not found")
 }
 
 func remove(s []crd, i int) []crd {

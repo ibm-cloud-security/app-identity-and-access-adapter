@@ -25,10 +25,10 @@ func before(ctx *framework.Context) error {
 	if !utils.Exists("kubectl") {
 		return errors.New("missing required executable kubectl")
 	}
-	if !ctx.OAuthManager.OK() {
+	if !ctx.AppIDManager.OK() {
 		return errors.New("missing oauth / oidc configuration")
 	}
-	if err := ctx.OAuthManager.ROP("testuser", "password"); err != nil {
+	if err := ctx.AppIDManager.ROP("testuser", "password"); err != nil {
 		return err
 	}
 	return nil
@@ -76,7 +76,7 @@ func TestValidJWTCRD(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := buildJWTPolicy("jwt-name-1", "default", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+			policy := buildJWTPolicy("jwt-name-1", "default", ctx.AppIDManager.PublicKeysURL(), []v1.TargetElement{
 				{
 					ServiceName: "service-test",
 					Paths:       []string{"/api", "/web"},
@@ -93,7 +93,7 @@ func TestInvalidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := buildJWTPolicy("jwt-name-2", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+			policy := buildJWTPolicy("jwt-name-2", "sample-app", ctx.AppIDManager.PublicKeysURL(), []v1.TargetElement{
 				{
 					ServiceName: "svc-sample-app",
 					Paths:       []string{"/api/headers"},
@@ -122,7 +122,7 @@ func TestInvalidHeader(t *testing.T) {
 				},
 				{
 					err:           "invalid access token",
-					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + "123",
+					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken + "123",
 				},
 			}
 
@@ -148,7 +148,7 @@ func TestDeletePolicy(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := buildJWTPolicy("jwt-name-5", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+			policy := buildJWTPolicy("jwt-name-5", "sample-app", ctx.AppIDManager.PublicKeysURL(), []v1.TargetElement{
 				{
 					ServiceName: "svc-sample-app",
 					Paths:       []string{"/api/headers/header1"},
@@ -192,7 +192,7 @@ func TestValidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			policy := buildJWTPolicy("jwt-name-3", "sample-app", ctx.OAuthManager.PublicKeysURL(), []v1.TargetElement{
+			policy := buildJWTPolicy("jwt-name-3", "sample-app", ctx.AppIDManager.PublicKeysURL(), []v1.TargetElement{
 				{
 					ServiceName: "svc-sample-app",
 					Paths:       []string{"/api/headers"},
@@ -206,10 +206,10 @@ func TestValidHeader(t *testing.T) {
 				authorization string
 			}{
 				{
-					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken,
+					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken,
 				},
 				{
-					authorization: "Bearer " + *ctx.OAuthManager.Tokens.AccessToken + " " + *ctx.OAuthManager.Tokens.IdentityToken,
+					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken + " " + *ctx.AppIDManager.Tokens.IdentityToken,
 				},
 			}
 

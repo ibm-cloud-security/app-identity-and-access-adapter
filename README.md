@@ -136,6 +136,5 @@ This package contains code licensed under the Apache License, Version 2.0 (the "
 
 [img-coveralls-master]: https://coveralls.io/repos/github/ibm-cloud-security/policy-enforcer-mixer-adapter/badge.svg
 [url-coveralls-master]: https://coveralls.io/github/ibm-cloud-security/policy-enforcer-mixer-adapter
-
-[img-codacy]: https://api.codacy.com/project/badge/Grade/3156f40a37cb4026a443082fc1afcaa4?branch=master
-[url-codacy]: https://www.codacy.com/app/ibm-cloud-security/policy-enforcer-mixer-adapter
+[img-codacy]: https://api.codacy.com/project/badge/Grade/2dd243b5b9f64431bf03bf0a9a470833?branch=master
+[url-codacy]: https://app.codacy.com/app/sandmman/policy-enforcer-mixer-adapter?utm_source=github.com&utm_medium=referral&utm_content=ibm-cloud-security/policy-enforcer-mixer-adapter&utm_campaign=Badge_Grade_Dashboard

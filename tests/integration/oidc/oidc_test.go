@@ -6,7 +6,6 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/utils"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
@@ -16,7 +15,15 @@ import (
 const (
 	oidcConfigTemplatePath = "./templates/oidc_config.yaml"
 	oidcPolicyTemplatePath = "./templates/oidc_policy.yaml"
+	sampleAppNamespace     = "sample-app"
+	sampleAppService       = "svc-sample-app"
 )
+
+// ApplicationResponseHeaders models the sample application response json
+type ApplicationResponseHeaders struct {
+	Authorization string
+	Cookie        string
+}
 
 ///
 // Create a before method to setup a suite before tests execute
@@ -25,10 +32,9 @@ func before(ctx *framework.Context) error {
 	if !utils.Exists("kubectl") {
 		return errors.New("missing required executable kubectl")
 	}
-	if !ctx.OAuthManager.OK() {
+	if !ctx.AppIDManager.OK() {
 		return errors.New("missing oauth / oidc configuration")
 	}
-	ctx.StopHttpRedirects()
 	return nil
 }
 
@@ -56,26 +62,56 @@ func TestAuthorizationRedirect(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			config := buildOIDCConfig(ctx, "oidc-config-1", "sample-app")
-			policy := buildOIDCPolicy(ctx.OAuthManager.ClientID, "oidc-policy-1", "sample-app", []v1.TargetElement{
+			config := buildOIDCConfig(ctx, "oidc-config-1", sampleAppNamespace)
+			policy := buildOIDCPolicy(ctx.AppIDManager.ClientID, "oidc-policy-1", sampleAppNamespace, []v1.TargetElement{
 				{
-					ServiceName: "svc-sample-app",
+					ServiceName: sampleAppService,
 					Paths:       []string{"/web/home/1"},
 				},
 			},
 			)
-			err := ctx.CRDManager.AddCRD(oidcConfigTemplatePath, &config)
-			require.NoError(t, err)
-			err = ctx.CRDManager.AddCRD(oidcPolicyTemplatePath, &policy)
-			require.NoError(t, err)
+			err1 := ctx.CRDManager.AddCRD(oidcConfigTemplatePath, &config)
+			err2 := ctx.CRDManager.AddCRD(oidcPolicyTemplatePath, &policy)
+			require.NoError(t, err1)
+			require.NoError(t, err2)
 
+			ctx.StopHttpRedirects()
 			res, err := ctx.SendRequest("GET", "/web/home/1", nil)
-			body, _ := ioutil.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, http.StatusFound, res.StatusCode, string(body))
-			if !strings.HasPrefix(res.Header.Get("location"), ctx.OAuthManager.OAuthServerURL) {
+			require.Equal(t, http.StatusFound, res.StatusCode)
+			if !strings.HasPrefix(res.Header.Get("location"), ctx.AppIDManager.OAuthServerURL) {
 				t.FailNow()
 			}
+		})
+}
+
+func TestE2E(t *testing.T) {
+	framework.
+		NewTest(t).
+		Run(func(ctx *framework.Context) {
+			ctx.EnableRedirects()
+			config := buildOIDCConfig(ctx, "oidc-config-2", sampleAppNamespace)
+			policy := buildOIDCPolicy(ctx.AppIDManager.ClientID, "oidc-policy-2", sampleAppNamespace, []v1.TargetElement{
+				{
+					ServiceName: sampleAppService,
+					Paths:       []string{"/web/home/2"},
+				},
+			},
+			)
+			// Apply policies
+			err1 := ctx.CRDManager.AddCRD(oidcConfigTemplatePath, &config)
+			err2 := ctx.CRDManager.AddCRD(oidcPolicyTemplatePath, &policy)
+			require.NoError(t, err1)
+			require.NoError(t, err2)
+
+			var output ApplicationResponseHeaders
+			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, "/web/home/2", &output)
+			require.NoError(t, err)
+
+			require.NotNil(t, output)
+			split := strings.Split(output.Authorization, " ")
+			require.Equal(t, 3, len(split))
+			require.Equal(t, split[0], "Bearer")
 		})
 }
 
@@ -86,10 +122,10 @@ func buildOIDCConfig(ctx *framework.Context, name string, namespace string) v1.O
 			Namespace: namespace,
 		},
 		Spec: v1.OidcClientSpec{
-			ClientName:   ctx.OAuthManager.ClientID,
-			ClientID:     ctx.OAuthManager.ClientID,
-			DiscoveryURL: ctx.OAuthManager.DiscoveryURL(),
-			ClientSecret: ctx.OAuthManager.ClientSecret,
+			ClientName:   ctx.AppIDManager.ClientID,
+			ClientID:     ctx.AppIDManager.ClientID,
+			DiscoveryURL: ctx.AppIDManager.DiscoveryURL(),
+			ClientSecret: ctx.AppIDManager.ClientSecret,
 		},
 	}
 }

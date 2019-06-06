@@ -2,9 +2,13 @@ package framework
 
 import (
 	"fmt"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"net/http"
 	"os"
+)
+
+const (
+	clusterRoot = "CLUSTER_ROOT"
+	kubeConfig  = "KUBECONFIG"
 )
 
 // Env models the kubernetes environment
@@ -13,31 +17,31 @@ type Env struct {
 	KubeConfig  string
 }
 
+// NewEnv returns a new ENV instance
+func NewEnv() *Env {
+	return &Env{
+		os.Getenv(clusterRoot),
+		os.Getenv(kubeConfig),
+	}
+}
+
 // Context models the test environment
 type Context struct {
-	testID       string
-	CRDManager   *CRDManager
-	OAuthManager *OAuthManager
-	Env          *Env
-	client       *http.Client
+	testID        string
+	CRDManager    *CRDManager
+	AppIDManager  *AppIDManager
+	Env           *Env
+	SessionCookie *http.Cookie
+	client        *http.Client
 }
 
 // NewContext creates a new test suite context
 func NewContext(testID string) *Context {
 	ctx := &Context{
-		testID: testID,
-		Env: &Env{
-			os.Getenv("CLUSTER_ROOT"),
-			os.Getenv("KUBECONFIG"),
-		},
-		OAuthManager: &OAuthManager{
-			os.Getenv("APPID_CLIENT_ID"),
-			os.Getenv("APPID_CLIENT_SECRET"),
-			os.Getenv("APPID_OAUTH_SERVER_URL"),
-			nil,
-			networking.New(),
-		},
-		client: &http.Client{},
+		testID:       testID,
+		Env:          NewEnv(),
+		AppIDManager: NewAppIDManager(),
+		client:       &http.Client{},
 	}
 	mgr := &CRDManager{context: ctx}
 	ctx.CRDManager = mgr
@@ -58,8 +62,16 @@ func (c *Context) SendRequest(method string, path string, headers map[string]str
 	return c.client.Do(req)
 }
 
+// StopHttpRedirects configures the default client to ignore HTTP redirects
 func (c *Context) StopHttpRedirects() {
 	c.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
+	}
+}
+
+// EnableRedirects configures the default client to follow HTTP redirects
+func (c *Context) EnableRedirects() {
+	c.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return nil
 	}
 }
