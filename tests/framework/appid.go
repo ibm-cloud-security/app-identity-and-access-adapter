@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultUsername = "testuser"
+	defaultUsername = "username@ibm.com"
 	defaultPassword = "password"
 	clientID        = "APPID_CLIENT_ID"
 	clientSecret    = "APPID_CLIENT_SECRET"
@@ -32,7 +32,7 @@ const (
 	applicationFormEncoded = "application/x-www-form-urlencoded"
 	contentType            = "Content-Type"
 	setCookie              = "set-cookie"
-	appIDStateID           = "#SAML_State"
+	appIDStateID           = "#facebook_state"
 	widgetURLID            = "#widgetUrl"
 )
 

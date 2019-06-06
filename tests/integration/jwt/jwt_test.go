@@ -28,7 +28,7 @@ func before(ctx *framework.Context) error {
 	if !ctx.AppIDManager.OK() {
 		return errors.New("missing oauth / oidc configuration")
 	}
-	if err := ctx.AppIDManager.ROP("testuser", "password"); err != nil {
+	if err := ctx.AppIDManager.ROP("username@ibm.com", "password"); err != nil {
 		return err
 	}
 	return nil
