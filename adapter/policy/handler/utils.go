@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"strings"
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint {
@@ -12,6 +13,9 @@ func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint 
 			service := items.ServiceName
 			if items.Paths != nil && len(items.Paths) > 0 {
 				for _, path := range items.Paths {
+					if path != "/" {
+						path = strings.TrimRight(path, "/")
+					}
 					endpoints = append(endpoints, policy.Endpoint{Namespace: namespace, Service: service, Path: path, Method: "*"})
 				}
 			} else {
