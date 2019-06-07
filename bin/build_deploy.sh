@@ -52,7 +52,7 @@ function buildAndTag() {
     reportError $? "job has failed, please check the log for details"
 
     echo "Building and deploying docker image"
-    source ${sourceDir}/docker_build_tag_push.sh
+    source ${sourceDir}/docker_build_tag_push.sh $1
 }
 
 function deleteAndWait() {
@@ -79,7 +79,7 @@ function installDemoApplication() {
 
 ### Execute
 checkEnv
-buildAndTag
+buildAndTag $1
 deleteAndWait
 installAdapter "${IMAGE_TEST_TAG}"
 installDemoApplication

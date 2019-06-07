@@ -23,6 +23,11 @@ spec:
             - clientId
             - discoveryUrl
           properties:
+            authMethod:
+              type: string
+              enum:
+                - client_secret_basic
+                - client_secret_post
             oidcClientName:
               type: string
               minLength: 1

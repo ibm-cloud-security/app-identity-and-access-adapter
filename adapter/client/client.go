@@ -42,7 +42,7 @@ func (c *remoteClient) ExchangeGrantCode(code string, redirectURI string) (*auth
 		zap.L().Error("invalid configuration :: missing authorization server", zap.String("client_name", c.ClientName))
 		return nil, errors.New("invalid client configuration :: missing authorization server")
 	}
-	return c.authServer.GetTokens(c.ClientID, c.ClientSecret, code, redirectURI)
+	return c.authServer.GetTokens(c.AuthMethod, c.ClientID, c.ClientSecret, code, redirectURI)
 }
 
 // New creates a new client

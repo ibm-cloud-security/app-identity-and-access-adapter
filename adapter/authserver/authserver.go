@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	clientPostSecret = "client_post_secret"
+	//clientPostBasic  = "client_post_basic"
+)
+
 // DiscoveryConfig encapsulates the discovery endpoint configuration
 type DiscoveryConfig struct {
 	DiscoveryURL string
@@ -41,7 +46,7 @@ type AuthorizationServer interface {
 	AuthorizationEndpoint() string
 	KeySet() keyset.KeySet
 	SetKeySet(keyset.KeySet)
-	GetTokens(clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error)
+	GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error)
 }
 
 // RemoteServer represents a remote authentication server
@@ -105,21 +110,31 @@ func (s *RemoteServer) AuthorizationEndpoint() string {
 }
 
 // GetTokens performs a request to the token endpoint
-func (s *RemoteServer) GetTokens(clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error) {
+func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error) {
 	_ = s.initialize()
-	form := url.Values{}
-	form.Add("client_id", clientID)
-	form.Add("grant_type", "authorization_code")
-	form.Add("code", authorizationCode)
-	form.Add("redirect_uri", redirectURI)
+	form := url.Values{
+		"client_id":    {clientID},
+		"grant_type":   {"authorization_code"},
+		"code":         {authorizationCode},
+		"redirect_uri": {redirectURI},
+	}
+	if authnMethod == clientPostSecret {
+		form.Add("client_id", clientID)
+		form.Add("client_secret", clientSecret)
+	}
 
+	// Create request
 	req, err := http.NewRequest("POST", s.TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
 		return nil, err
 	}
 
-	req.SetBasicAuth(clientID, clientSecret)
+	// All other methods will default to client_post_basic
+	if authnMethod != clientPostSecret {
+		req.SetBasicAuth(clientID, clientSecret)
+	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var tokenResponse TokenResponse

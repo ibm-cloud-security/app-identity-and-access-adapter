@@ -26,8 +26,8 @@ function checkTools() {
 }
 
 function buildTag() {
-    if [[ ! -z ${TAG+x} ]]; then
-        echo $TAG
+    if [[ ! -z $1 ]]; then
+        echo $1
         return
     fi
     if [[ -z ${TRAVIS+x} ]]; then
@@ -60,7 +60,7 @@ function buildAndDeploy() {
 
 IMAGE_REGISTRY_NAMESPACE=aliberat1
 APP_NAME=istio-adapter-ibmcloudappid
-TAG=$(buildTag)
+TAG=$(buildTag $1)
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${TAG}
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"
 

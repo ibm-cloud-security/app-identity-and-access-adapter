@@ -235,13 +235,13 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	validationErr := w.tokenUtil.Validate(response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("OIDC callback: access token failed validation", zap.Error(validationErr))
-		return w.handleErrorCallback(err)
+		return w.handleErrorCallback(validationErr)
 	}
 
 	validationErr = w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("OIDC callback: ID token failed validation", zap.Error(validationErr))
-		return w.handleErrorCallback(err)
+		return w.handleErrorCallback(validationErr)
 	}
 
 	cookie := w.generateSessionIdCookie(action.Client)

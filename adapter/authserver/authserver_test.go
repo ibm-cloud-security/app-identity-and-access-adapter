@@ -153,7 +153,7 @@ func TestGetTokens(t *testing.T) {
 			})
 			s := httptest.NewServer(h)
 			server := &RemoteServer{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
-			_, err := server.GetTokens("clientID", "secret", "authcode", "redirect")
+			_, err := server.GetTokens("client_post_basic", "clientID", "secret", "authcode", "redirect")
 			if test.statusCode != 200 {
 				if err == nil {
 					t2.FailNow()
