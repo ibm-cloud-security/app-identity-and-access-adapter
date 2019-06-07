@@ -46,6 +46,8 @@ func (c *HTTPClient) Do(req *http.Request, status int, v OK) error {
 		return err
 	}
 
+	defer res.Body.Close()
+
 	// Check status code
 	if res.StatusCode != status {
 		body, _ := ioutil.ReadAll(res.Body)

@@ -25,11 +25,11 @@ type DiscoveryConfig struct {
 // TokenResponse models an OAuth 2.0 /Token endpoint response
 type TokenResponse struct {
 	// The OAuth 2.0 Access Token
-	AccessToken *string `json:"access_token"`
+	AccessToken string `json:"access_token"`
 	// The OIDC ID Token
-	IdentityToken *string `json:"id_token"`
+	IdentityToken string `json:"id_token"`
 	// The OAuth 2.0 Refresh Token
-	RefreshToken *string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token"`
 	// The token expiration time
 	ExpiresIn int `json:"expires_in"`
 }
@@ -201,7 +201,7 @@ func (c *DiscoveryConfig) OK() error {
 
 // OK validates a TokenResponse
 func (r *TokenResponse) OK() error {
-	if r.AccessToken == nil {
+	if r.AccessToken == "" {
 		return errors.New("invalid token endpoint response: access_token does not exist")
 	}
 	return nil

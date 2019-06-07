@@ -15,8 +15,19 @@
 
 The IBM Cloud App ID Istio Mixer adapter facilitates authentication and access management across an Istio service mesh. The adapter can be configured with an OIDC / OAuth 2.0 compliant identity provider enabling it to seamlessly control authorization and access management in heterogeneous environments. 
 
+The adapter supports OIDC / OAuth 2.0 and JWT OAuth 2.0 Bearer Token workflows.
+
 ### Architecture
 
+The Istio service mesh uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh.
+
+This deployment allows Istio to extract a wealth of signals about traffic behavior as attributes, which can inturn be sent to Mixer to enforce policy decisions.
+
+Situated behind Mixer, the IBM Cloud App ID adapter processes these attributes against custom defined policies to control identity and access management into and throughout the service mesh.
+
+![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
+
+> See the section on [Policy Configuration](#policy-configuration) for information on configuring OIDC / OAuth 2.0 policies
 
 ### Adapter Installation
 

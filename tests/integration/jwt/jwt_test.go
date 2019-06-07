@@ -122,7 +122,7 @@ func TestInvalidHeader(t *testing.T) {
 				},
 				{
 					err:           "invalid access token",
-					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken + "123",
+					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken + "123",
 				},
 			}
 
@@ -142,8 +142,6 @@ func TestInvalidHeader(t *testing.T) {
 		})
 }
 
-/*
-TODO: Uncomment when deletion is fixed
 func TestDeletePolicy(t *testing.T) {
 	framework.
 		NewTest(t).
@@ -151,42 +149,30 @@ func TestDeletePolicy(t *testing.T) {
 			policy := buildJWTPolicy("jwt-name-5", "sample-app", ctx.AppIDManager.PublicKeysURL(), []v1.TargetElement{
 				{
 					ServiceName: "svc-sample-app",
-					Paths:       []string{"/api/headers/header1"},
+					Paths:       []string{"/api/headers"},
 				},
 			},
 			)
 
 			err := ctx.CRDManager.AddCRD(jwtTemplatePath, &policy)
-			if err != nil {
-				t.Fail()
-				return
-			}
+			require.NoError(t, err)
 
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 
-			res, err := ctx.SendAuthRequest("GET", "/api/headers/header1", "")
-			if err != nil {
-				t.Fail()
-				return
-			}
+			res, err := sendAuthRequest(ctx, "GET", "/api/headers", "")
+			require.NoError(t, err)
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 
 			err = ctx.CRDManager.DeleteCRD(&policy)
-			if err != nil {
-				t.Fail()
-				return
-			}
+			require.NoError(t, err)
 
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 
-			res, err = ctx.SendAuthRequest("GET", "/api/headers/header1", "")
-			if err != nil {
-				t.Fail()
-				return
-			}
+			res, err = sendAuthRequest(ctx, "GET", "/api/headers", "")
+			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
-}*/
+}
 
 func TestValidHeader(t *testing.T) {
 	framework.
@@ -206,10 +192,10 @@ func TestValidHeader(t *testing.T) {
 				authorization string
 			}{
 				{
-					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken,
+					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 				},
 				{
-					authorization: "Bearer " + *ctx.AppIDManager.Tokens.AccessToken + " " + *ctx.AppIDManager.Tokens.IdentityToken,
+					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken + " " + ctx.AppIDManager.Tokens.IdentityToken,
 				},
 			}
 

@@ -47,7 +47,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Body:    "",
-				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=oidc"},
+				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=openid"},
 			},
 			"Redirecting to identity provider",
 			int32(16),

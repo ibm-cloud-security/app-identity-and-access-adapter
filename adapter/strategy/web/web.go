@@ -136,16 +136,16 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
-	validationErr := w.tokenUtil.Validate(*response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
+		zap.L().Debug("Session access token failed validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
 		return nil, nil
 	}
 
-	validationErr = w.tokenUtil.Validate(*response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr = w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
+		zap.L().Debug("Session ID token failed validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
 		return nil, nil
 	}
@@ -156,7 +156,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{Status: status.OK},
 		Output: &authnz.OutputMsg{
-			Authorization: strings.Join([]string{bearer, *response.(*authserver.TokenResponse).AccessToken, *response.(*authserver.TokenResponse).IdentityToken}, " "),
+			Authorization: strings.Join([]string{bearer, response.(*authserver.TokenResponse).AccessToken, response.(*authserver.TokenResponse).IdentityToken}, " "),
 		},
 	}, nil
 }
@@ -229,16 +229,18 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return w.handleErrorCallback(err)
 	}
 
+	zap.S().Infof("DELETE ME: access: %s\nid: %s\nrefresh: %s\nexpire %v\n", response.AccessToken, response.IdentityToken, response.RefreshToken, response.ExpiresIn)
+
 	// Validate Tokens
-	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
+		zap.L().Debug("OIDC callback: access token failed validation", zap.Error(validationErr))
 		return w.handleErrorCallback(err)
 	}
 
-	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr = w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
+		zap.L().Debug("OIDC callback: ID token failed validation", zap.Error(validationErr))
 		return w.handleErrorCallback(err)
 	}
 

@@ -119,11 +119,15 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 		zap.L().Warn("Expected to receive CrdKey from Kubernetes informer")
 		return
 	}
+	// TODO: Temporary fix for policy deletion. Needs support for OIDC clients. This should come from the controller `policy.CrdKey` not constructed blindly here
 	zap.S().Debugf("crdKey : %s", crdKey.Id)
-	mapping := c.store.GetPolicyMapping(crdKey.Id)
+	mapping := c.store.GetPolicyMapping(policy.JWT.String() + "/" + crdKey.Id)
 	if mapping == nil {
-		zap.L().Warn("CRD was not found") // happens with OIDC policies at the moment
-		return
+		mapping = c.store.GetPolicyMapping(policy.OIDC.String() + "/" + crdKey.Id)
+		if mapping == nil {
+			zap.L().Warn("CRD was not found")
+			return
+		}
 	}
 
 	switch mapping.Type {
@@ -134,6 +138,13 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 		}
 		c.store.DeletePolicyMapping(crdKey.Id)
 		zap.L().Info("Successfully deleted JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
+	case policy.OIDC:
+		zap.L().Debug("Deleting OIDC Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
+		for _, ep := range mapping.Endpoints {
+			c.store.DeleteWebPolicy(ep, mapping.Spec)
+		}
+		c.store.DeletePolicyMapping(crdKey.Id)
+		zap.L().Info("Successfully deleted OIDC Policy", zap.String("type", "OIDC"), zap.String("id", crdKey.Id))
 	default:
 		zap.L().Warn("Unknown policy type")
 	}

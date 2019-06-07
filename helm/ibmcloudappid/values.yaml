@@ -18,8 +18,8 @@ image:
   ## The image version to pull. Tag "latest" always contains
   ## the most up-to-date image. To avoid breaking changes during
   ## installs, it is recommended to use a tag.
-  tag: latest
-  ## The pullPolicy defines when the adapter image needs to be repulled
+  tag: AaronLiberatore
+  ## The pullPolicy defines when the adapter image needs to be re-pulled
   ## from the source repository. Set to Always when using "latest."
   pullPolicy: Always
 
@@ -56,4 +56,4 @@ logging:
   ## voluminous using DEBUG (-1). Logging can be configured
   ## from -1 to 7
   ## See zapcore: https://godoc.org/go.uber.org/zap/zapcore#Level
-  level: 0  
+  level: -1
