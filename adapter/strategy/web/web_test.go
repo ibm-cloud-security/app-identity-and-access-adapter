@@ -2,15 +2,16 @@ package webstrategy
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/gogo/protobuf/types"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
-	"testing"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
 )
@@ -47,7 +48,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Body:    "",
-				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=openid"},
+				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=openid+profile+email"},
 			},
 			"Redirecting to identity provider",
 			int32(16),
