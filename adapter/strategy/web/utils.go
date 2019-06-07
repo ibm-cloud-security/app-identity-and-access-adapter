@@ -51,7 +51,7 @@ func generateAuthorizationURL(c client.Client, redirectURI string) string {
 	params.Add("client_id", c.ID())
 	params.Add("response_type", "code")
 	params.Add("redirect_uri", redirectURI)
-	params.Add("scope", "openid")
+	params.Add("scope", "openid profile email")
 
 	// Add Query Parameters to the URL
 	baseUrl.RawQuery = params.Encode() // Escape Query Parameters
