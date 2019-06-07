@@ -89,7 +89,7 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
 4. Test OIDC Request
     
     ```bash     
-    $GOPATH/out/darwin_amd64/release/mixc check --stringmap_attributes "request.query_params=code:asdf,request.headers=authorization:bearer" --string_attributes request.url_path=/api/user/data,request.method=GET,destination.namespace=multi-cloud-tech-preview,destination.service.name=svc-hello-world-backend,destination.service.namespace=multi-cloud-tech-preview
+    $GOPATH/out/darwin_amd64/release/mixc check --stringmap_attributes "request.query_params=code:v2JBluCMLnz3IsMiobEnHAp2LldIf6" --string_attributes request.url_path=/web/home/oidc/callback,request.method=GET,destination.namespace=sample-app,destination.service.name=svc-sample-app,destination.service.namespace=sample-app
     ```
 
 ### Testing within a cluster

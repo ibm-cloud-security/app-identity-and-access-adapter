@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	clientPostSecret = "client_post_secret"
-	//clientPostBasic  = "client_post_basic"
+	clientPostSecret = "client_secret_post"
+	//clientPostBasic  = "client_basic_post"
 )
 
 // DiscoveryConfig encapsulates the discovery endpoint configuration

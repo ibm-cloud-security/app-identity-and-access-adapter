@@ -136,14 +136,8 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
-	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		zap.L().Debug("Session access token failed validation: %v", zap.Error(validationErr))
-		w.tokenCache.Delete(sessionCookie.Value)
-		return nil, nil
-	}
-
-	validationErr = w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
+	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("Session ID token failed validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
@@ -223,22 +217,14 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
+	response, err := action.Client.ExchangeGrantCode(code.(string), "http://localhost:3000/callback")
 	if err != nil {
 		zap.L().Info("Could not retrieve tokens", zap.Error(err))
 		return w.handleErrorCallback(err)
 	}
 
-	zap.S().Infof("DELETE ME: access: %s\nid: %s\nrefresh: %s\nexpire %v\n", response.AccessToken, response.IdentityToken, response.RefreshToken, response.ExpiresIn)
-
-	// Validate Tokens
-	validationErr := w.tokenUtil.Validate(response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		zap.L().Debug("OIDC callback: access token failed validation", zap.Error(validationErr))
-		return w.handleErrorCallback(validationErr)
-	}
-
-	validationErr = w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
+	validationErr := w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("OIDC callback: ID token failed validation", zap.Error(validationErr))
 		return w.handleErrorCallback(validationErr)

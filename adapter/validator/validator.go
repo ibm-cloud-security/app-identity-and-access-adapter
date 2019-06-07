@@ -43,6 +43,11 @@ func New() TokenValidator {
 // If any policy fails, the entire request should be rejected
 func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
 
+	if tokenStr == "" {
+		zap.L().Debug("Unauthorized - Token does not exist")
+		return &errors.OAuthError{Msg: errors.InvalidToken}
+	}
+
 	if jwks == nil {
 		zap.L().Debug("Unauthorized - JWKS not provided")
 		return &errors.OAuthError{
