@@ -217,7 +217,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Get Tokens
-	response, err := action.Client.ExchangeGrantCode(code.(string), "http://localhost:3000/callback")
+	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
 	if err != nil {
 		zap.L().Info("Could not retrieve tokens", zap.Error(err))
 		return w.handleErrorCallback(err)

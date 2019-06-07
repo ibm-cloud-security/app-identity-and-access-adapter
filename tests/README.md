@@ -88,10 +88,11 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
         
 4. Test OIDC Request
     
-    ```bash     
-    $GOPATH/out/darwin_amd64/release/mixc check --stringmap_attributes "request.query_params=code:v2JBluCMLnz3IsMiobEnHAp2LldIf6" --string_attributes request.url_path=/web/home/oidc/callback,request.method=GET,destination.namespace=sample-app,destination.service.name=svc-sample-app,destination.service.namespace=sample-app
+    ```bash 
+    // Callback    
+    $GOPATH/out/darwin_amd64/release/mixc check --string_attributes request.url_path=/web/home/oidc/callback,request.method=GET,destination.service.name=svc-sample-app,destination.service.namespace=sample-app --stringmap_attributes "request.query_params=code:OKVBoNZcnzbeYXOOY399xuKd61xFqc"    ```
     ```
-
+    
 ### Testing within a cluster
 
 1. Deploy a Sample app to an Istio enabled cluster
