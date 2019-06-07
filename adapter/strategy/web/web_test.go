@@ -5,18 +5,19 @@ import (
 	"errors"
 	"github.com/gogo/protobuf/types"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	"k8s.io/client-go/kubernetes/fake"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
+	"k8s.io/client-go/kubernetes/fake"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -80,6 +81,61 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 				assert.Equal(t, test.directResponse.Headers, response.Headers)
 				assert.Equal(t, test.directResponse.Body, response.Body)
 			}
+		}
+	}
+}
+
+func TestRefreshTokenFlow(t *testing.T) {
+	var tests = []struct {
+		req            *authnz.HandleAuthnZRequest
+		action         *policy.Action
+		directResponse *v1beta1.DirectHttpResponse
+		message        string
+		code           int32
+		err            error
+	}{
+		{
+			generateAuthnzRequest(createCookie(), "", "", ""),
+			&policy.Action{
+				Client: &mockClient{
+					server: &mockAuthServer{keys: &mockKeySet{}},
+				},
+			},
+			nil,
+			"Token is expired",
+			int32(16),
+			nil,
+		},
+	}
+
+	for _, test := range tests {
+		// 1. Mock the validator
+		// 2. Add a client object to the action --> clientID=id
+		// 3. Mock the token cache ---> sessionID-id: TokenResponse
+		m := new(sync.Map)
+		m.Store("session", &TokenResponse{
+			AccessToken: "",
+			IdentityToken: "",
+			RefreshToken: "",
+			ExpiresIn: 10,
+		})
+		// 4. Mock input req -- add a token sessionID-id={}
+		api := WebStrategy{
+			tokenCache: m,
+			tokenUtil: MockValidator{
+				err: &err.OAuthError{
+					Msg: "token is expired",
+				},
+			},
+		}
+
+
+		r, err := api.HandleAuthnZRequest(test.req, test.action)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error())
+		} else {
+			assert.Equal(t, test.code, r.Result.Status.Code)
+			assert.Equal(t, test.message, r.Result.Status.Message)
 		}
 	}
 }
@@ -195,6 +251,45 @@ func TestCodeCallback(t *testing.T) {
 	}
 }
 
+func TestLogout(t *testing.T) {
+	var tests = []struct {
+		req            *authnz.HandleAuthnZRequest
+		action         *policy.Action
+		directResponse *v1beta1.DirectHttpResponse
+		message        string
+		code           int32
+		err            error
+	}{
+		{ // New Authentication
+			generateAuthnzRequest("", "", "", "/oidc/logout"),
+			&policy.Action{
+				Client: &mockClient{
+					server: &mockAuthServer{keys: &mockKeySet{}},
+				},
+			},
+			nil,
+			"Successfully authenticated : redirecting to original URL",
+			int32(16),
+			nil,
+		},
+	}
+
+	for _, test := range tests {
+		api := WebStrategy{
+			tokenUtil: MockValidator{
+				err: nil,
+			},
+		}
+		r, err := api.HandleAuthnZRequest(test.req, test.action)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error())
+		} else {
+			assert.Equal(t, test.code, r.Result.Status.Code)
+			assert.Equal(t, test.message, r.Result.Status.Message)
+		}
+	}
+}
+
 func generateAuthnzRequest(cookies string, code string, err string, path string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
@@ -253,3 +348,15 @@ func (m *mockAuthServer) TokenEndpoint() string         { return m.url }
 func (m *mockAuthServer) AuthorizationEndpoint() string { return m.url }
 func (m *mockAuthServer) KeySet() keyset.KeySet         { return m.keys }
 func (m *mockAuthServer) SetKeySet(keyset.KeySet)       {}
+
+func createCookie() string {
+	c := &http.Cookie{
+		Name:     "oidc-cookie-id",
+		Value:    "session",
+		Path:     "/",
+		Secure:   false, // TODO: replace on release
+		HttpOnly: false,
+		Expires:  time.Now().Add(time.Hour * time.Duration(2160)),
+	}
+	return c.String()
+}
