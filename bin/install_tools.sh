@@ -16,8 +16,8 @@
 #
 
 function installHelm() {
-    wget https://storage.googleapis.com/kubernetes-helm/helm-v2.14.0-linux-amd64.tar.gz
-    tar -xvzf helm-v2.14.0-linux-amd64.tar.gz
+    wget https://storage.googleapis.com/kubernetes-helm/helm-v2.13.0-linux-amd64.tar.gz
+    tar -xvzf helm-v2.13.0-linux-amd64.tar.gz
     sudo mv linux-amd64/helm /usr/local/bin/helm
 }
 
@@ -25,5 +25,17 @@ function installIBMCloudCLI() {
     curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
 }
 
+function installIBMCloudPlugins() {
+    ibmcloud plugin install container-service
+}
+
+function installKubectl() {
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    chmod +x ./kubectl
+    sudo mv ./kubectl /usr/local/bin/kubectl
+}
+
 installHelm
+installKubectl
 installIBMCloudCLI
+installIBMCloudPlugins

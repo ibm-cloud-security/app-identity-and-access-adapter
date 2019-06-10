@@ -30,20 +30,26 @@ git:
 
 install: true
 
-script:
-  - bash ./bin/unit_test_coverage.sh || travis_terminate 1;
-  # After unit tests, run integration tests
-  - bash ./bin/install_tools.sh || travis_terminate 1;
-  - source ./bin/ibmcloud_login.sh || travis_terminate 1;
-  - bash ./bin/build_deploy.sh || travis_terminate 1;
-  - go test -v -race ./tests/e2e/...  # Run all e2e tests
+before_script:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
 
-# Send to codecov.io afterwards
-# after_success:
-#  - bash <(curl -s https://codecov.io/bash)
+script:
+  # Install all tooling
+  - bash ./bin/install_tools.sh || travis_terminate 1;
+  # Login to IBMCloud and export KUBECONFIG env variable.
+  - source ./bin/ibmcloud_login.sh || travis_terminate 1;
+  # Build executable, build docker image, and deploy to cluster
+  - bash ./bin/build_deploy.sh || travis_terminate 1;
+  # Run coverage on unit tests
+  - go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
+  # Run all integration tests
+  - go test -v -race ./tests/integration/...
+
+after_success:
+  - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.out
 
 notifications:
   email:
     on_success: always
     on_failure: always
-

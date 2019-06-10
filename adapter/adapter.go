@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
@@ -151,6 +152,10 @@ func validateAuthnzRequest(r *authnz.HandleAuthnZRequest) error {
 	if r.Instance.Request.Params == nil || r.Instance.Request.Headers == nil {
 		zap.L().Error("Invalid instance format. Please check that the instance.yaml is sending telemetry according to the template.")
 		return errors.New("invalid *authnz.HandleAuthnZRequest instance format")
+	}
+	// Trim trailing slash for any route except the root. Empty roots are already routed to "/".
+	if r.Instance.Target.Path != "/" && strings.HasSuffix(r.Instance.Target.Path, "/") {
+		r.Instance.Target.Path = strings.TrimRight(r.Instance.Target.Path, "/")
 	}
 	return nil
 }

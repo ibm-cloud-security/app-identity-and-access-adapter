@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -45,10 +46,16 @@ func (c *HTTPClient) Do(req *http.Request, status int, v OK) error {
 		return err
 	}
 
+	defer res.Body.Close()
+
 	// Check status code
 	if res.StatusCode != status {
-		zap.L().Info("Unexpected response for request.", zap.String("url", req.URL.Path), zap.Int("status", res.StatusCode))
-		return fmt.Errorf("unexpected response for request to %s | status code: %d", req.URL.Path, res.StatusCode)
+		body, _ := ioutil.ReadAll(res.Body)
+		zap.L().Info("Unexpected response for request.",
+			zap.String("url", req.URL.Path),
+			zap.Int("status", res.StatusCode),
+			zap.String("response_body", string(body)))
+		return fmt.Errorf("unexpected response for request to %s | status code: %d | body %s", req.URL.String(), res.StatusCode, string(body))
 	}
 
 	// Decode response

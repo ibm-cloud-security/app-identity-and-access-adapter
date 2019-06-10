@@ -114,6 +114,9 @@ func (m *mockClient) Name() string                                        { retu
 func (m *mockClient) ID() string                                          { return "" }
 func (m *mockClient) Secret() string                                      { return "" }
 func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
+func (m *mockClient) ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error) {
+	return nil, nil
+}
 
 type mockKeySet struct{}
 

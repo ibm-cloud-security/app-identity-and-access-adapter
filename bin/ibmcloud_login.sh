@@ -15,14 +15,10 @@
 # limitations under the License.
 #
 
-## Account Information
-accountID="bb525b5d9d27128460eaaa9e4a2ca718"
-USER="AaronLiberatore"
-
 ## Cluster Information
 region="us-south"
-dataCenter="hou02"
-clusterName="istio-travis-test-cluster"
+dataCenter="dal10"
+clusterName="appid-istio-dev-dal10"
 
 # Adapter information
 adapterName="ibmcloudappid"
@@ -43,13 +39,18 @@ function checkEnv() {
 
 function configureCluster() {
     echo "Logging into IBM Cloud."
-    #ibmcloud login -a https://cloud.ibm.com -r ${region} -c ${accountID} -g default -u ${PRODUCTION_JENKINSBOT_USR} -p ${PRODUCTION_JENKINSBOT_PSW}
-    ibmcloud login -a https://cloud.ibm.com -r ${region} -c ${accountID} -g default --apikey ${IBM_CLOUD_API_KEY}
+    ibmcloud login -r ${region} --apikey ${IBM_CLOUD_API_KEY}
 
 
     ibmcloud ks cluster-config --cluster ${clusterName}
 
-    export KUBECONFIG=/Users/${USER}/.bluemix/plugins/container-service/clusters/${clusterName}/kube-config-${dataCenter}-${clusterName}.yml
+    local homeDir="home"
+    if [[ -z ${TRAVIS+x} ]]; then
+        homeDir="Users"
+    fi
+
+    echo "Exporting KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${clusterName}/kube-config-${dataCenter}-${clusterName}.yml"
+    export KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${clusterName}/kube-config-${dataCenter}-${clusterName}.yml
 }
 
 # Execute

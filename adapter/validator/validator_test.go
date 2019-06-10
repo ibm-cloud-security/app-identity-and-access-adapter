@@ -58,24 +58,29 @@ func TestTokenValidation(t *testing.T) {
 		{expiredToken, errors.New("Token is expired"), testKeySet, emptyRule},
 		{validAudArrToken + "other", errors.New("crypto/rsa: verification error"), testKeySet, emptyRule},
 		{noKidToken, errors.New("token validation error - kid is missing"), testKeySet, emptyRule},
-		{diffKidToken, errors.New("token validation error - key not found for kid: other"), testKeySet, emptyRule},
+		{diffKidToken, errors.New("token validation error - key not found :: other"), testKeySet, emptyRule},
 		{"p1.p2", errors.New("token contains an invalid number of segments"), testKeySet, emptyRule},
 	}
 	v := New()
 
-	for _, e := range tests {
-		err := v.Validate(e.token, e.jwks, e.rules)
-		if e.err != nil {
-			assert.EqualError(t, err, e.err.Error())
-		} else {
-			assert.Nil(t, err)
-		}
+	for _, test := range tests {
+		e := test
+		t.Run("Validate", func(st *testing.T) {
+			st.Parallel()
+			err := v.Validate(e.token, e.jwks, e.rules)
+			if e.err != nil {
+				assert.EqualError(st, err, e.err.Error())
+			} else {
+				assert.Nil(st, err)
+			}
+		})
 	}
 }
 
 /////// Claim Validation //////
 
 func TestClaimValidation(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		claimName   string
 		expectErr   bool
@@ -91,12 +96,14 @@ func TestClaimValidation(t *testing.T) {
 	claimMap["tenant"] = "1234"
 
 	for _, e := range tests {
-		err := validateClaim(e.claimName, e.expectedVal, claimMap)
-		if e.expectErr {
-			assert.Equal(t, err.Error(), e.expectedMsg)
-		} else {
-			assert.Nil(t, err)
-		}
+		t.Run("Validate", func(st *testing.T) {
+			err := validateClaim(e.claimName, e.expectedVal, claimMap)
+			if e.expectErr {
+				assert.Equal(st, err.Error(), e.expectedMsg)
+			} else {
+				assert.Nil(st, err)
+			}
+		})
 	}
 }
 

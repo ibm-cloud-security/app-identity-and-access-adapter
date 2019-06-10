@@ -123,7 +123,7 @@ func TestUpdateKeysGrouped(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	if !(count > 1 && count < 100) {
+	if !(count >= 1 && count < 100) {
 		assert.Fail(t, "Expected count to be less than 100")
 	}
 

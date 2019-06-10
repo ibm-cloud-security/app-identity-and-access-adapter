@@ -37,6 +37,6 @@ type PolicyMapping struct {
 
 var typeNames = [...]string{"JWT", "OIDC", "NONE"}
 
-func (Type Type) String() string {
-	return typeNames[Type]
+func (t Type) String() string {
+	return typeNames[t]
 }
