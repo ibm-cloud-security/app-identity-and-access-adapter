@@ -27,13 +27,13 @@ type DiscoveryConfig struct {
 	UserInfoURL  string `json:"userinfo_endpoint"`
 }
 
-// TokenResponse models an OAuth 2.0 /Token endpoint response
+// TokenResponse models an OAuth 2.0 /Value endpoint response
 type TokenResponse struct {
-	// The OAuth 2.0 Access Token
+	// The OAuth 2.0 Access Value
 	AccessToken string `json:"access_token"`
-	// The OIDC ID Token
+	// The OIDC ID Value
 	IdentityToken string `json:"id_token"`
-	// The OAuth 2.0 Refresh Token
+	// The OAuth 2.0 Refresh Value
 	RefreshToken string `json:"refresh_token"`
 	// The token expiration time
 	ExpiresIn int `json:"expires_in"`

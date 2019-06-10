@@ -40,8 +40,10 @@ message QueryParams {
     string error = 1;
     // The code matches an OAuth 2.0 callback authorization code grant
     string code = 2;
+    // The state matches an OAuth 2.0 callback authorization state parameter
+    string state = 3;
     // Additional data about the query parameters for use in policy.
-    map<string, istio.policy.v1beta1.Value> properties = 3;
+    map<string, istio.policy.v1beta1.Value> properties = 4;
 }
 
 // The Request captures information about the incoming HTTP request

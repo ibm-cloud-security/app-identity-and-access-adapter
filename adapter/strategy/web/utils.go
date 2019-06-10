@@ -5,6 +5,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"go.uber.org/zap"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"time"
 	"unsafe"
@@ -39,7 +40,7 @@ func randString(n int) string {
 }
 
 // generateAuthorizationURL builds the /authorization request that begins an OAuth 2.0 / OIDC flow
-func generateAuthorizationURL(c client.Client, redirectURI string) string {
+func generateAuthorizationURL(c client.Client, redirectURI string, state string) string {
 	baseUrl, err := url.Parse(c.AuthorizationServer().AuthorizationEndpoint())
 	if err != nil {
 		zap.L().Warn("Malformed Authorization URL", zap.Error(err))
@@ -52,7 +53,7 @@ func generateAuthorizationURL(c client.Client, redirectURI string) string {
 	params.Add("response_type", "code")
 	params.Add("redirect_uri", redirectURI)
 	params.Add("scope", "openid profile email")
-	params.Add("state", "randomly_generated_state")
+	params.Add("state", state)
 
 	// Add Query Parameters to the URL
 	baseUrl.RawQuery = params.Encode() // Escape Query Parameters
@@ -68,4 +69,15 @@ func buildRequestURL(action *authnz.RequestMsg) string {
 // buildTokenCookieName constructs the cookie name
 func buildTokenCookieName(base string, c client.Client) string {
 	return base + "-" + c.ID()
+}
+
+func generateSessionIdCookie(c client.Client) *http.Cookie {
+	return &http.Cookie{
+		Name:     buildTokenCookieName(sessionCookie, c),
+		Value:    randString(15),
+		Path:     "/",
+		Secure:   false, // TODO: replace on release
+		HttpOnly: false,
+		Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
+	}
 }
