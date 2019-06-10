@@ -22,4 +22,5 @@ spec:
       params:
         code: request.query_params["code"] | ""
         error: request.query_params["error"] | ""
+        state: request.query_params["state"] | ""
 

@@ -112,6 +112,9 @@ type QueryParams struct {
 	// The code matches an OAuth 2.0 callback authorization code grant
 	Code string
 
+	// The state matches an OAuth 2.0 callback authorization state parameter
+	State string
+
 	// Additional data about the query parameters for use in policy.
 	Properties map[string]interface{}
 }

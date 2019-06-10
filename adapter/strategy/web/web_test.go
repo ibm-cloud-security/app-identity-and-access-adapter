@@ -2,6 +2,8 @@ package webstrategy
 
 import (
 	"errors"
+	"github.com/gorilla/securecookie"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/types"
@@ -48,7 +50,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Body:    "",
-				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=openid"},
+				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=openid+profile+email"},
 			},
 			"Redirecting to identity provider",
 			int32(16),
@@ -58,6 +60,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 
 	for _, test := range tests {
 		api := WebStrategy{
+			secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
 			tokenUtil: MockValidator{
 				err: nil,
 			},
@@ -74,7 +77,12 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 					continue
 				}
 				assert.Equal(t, test.directResponse.Code, response.Code)
-				assert.Equal(t, test.directResponse.Headers, response.Headers)
+				if !strings.HasPrefix(response.Headers["location"], test.directResponse.Headers["location"]) {
+					println(test.directResponse.Headers["location"])
+					println(response.Headers["location"])
+					assert.Fail(t, "invalid redirect uri")
+				}
+				assert.NotNil(t, test.directResponse.Headers["Set-Cookie"])
 				assert.Equal(t, test.directResponse.Body, response.Body)
 			}
 		}
@@ -199,11 +207,11 @@ func TestCodeCallback(t *testing.T) {
 		{ // code callback without cookies
 			generateAuthnzRequest("", "mycode", "", callbackEndpoint),
 			nil,
-			"could not retrieve tokens",
+			"http: named cookie not present",
 			int32(16),
 			nil,
 			&fake.TokenResponse{
-				Err: errors.New("could not retrieve tokens"),
+				Err: errors.New("http: named cookie not present"),
 			},
 		},
 	}
