@@ -46,7 +46,7 @@ type AuthorizationServer interface {
 	AuthorizationEndpoint() string
 	KeySet() keyset.KeySet
 	SetKeySet(keyset.KeySet)
-	GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error)
+	GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error)
 }
 
 // RemoteServer represents a remote authentication server
@@ -110,14 +110,20 @@ func (s *RemoteServer) AuthorizationEndpoint() string {
 }
 
 // GetTokens performs a request to the token endpoint
-func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*TokenResponse, error) {
+func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error) {
 	_ = s.initialize()
 	form := url.Values{
 		"client_id":    {clientID},
-		"grant_type":   {"authorization_code"},
-		"code":         {authorizationCode},
-		"redirect_uri": {redirectURI},
 	}
+	if refreshToken != "" {
+		form.Add("grant_type", "refresh_token")
+		form.Add("refresh_token", refreshToken)
+	} else {
+		form.Add("grant_type", "authorization_code")
+		form.Add("code", authorizationCode)
+		form.Add("redirect_uri", redirectURI)
+	}
+
 	if authnMethod == clientPostSecret {
 		form.Add("client_id", clientID)
 		form.Add("client_secret", clientSecret)

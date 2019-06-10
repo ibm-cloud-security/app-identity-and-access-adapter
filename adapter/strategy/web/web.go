@@ -142,14 +142,17 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 			zap.L().Info("Access token is expired")
 			res, err := action.Client.ExchangeGrantCode("", "", response.(*authserver.TokenResponse).RefreshToken)
 			if err != nil {
+				if strings.Contains(err.Error(), "invalid refresh token") {
+					zap.L().Info("Invalid refresh token")
+					return w.handleErrorCallback(err)
+				}
+				zap.L().Info(err.Error())
 				zap.L().Info("Could not retrieve tokens using refresh token", zap.Error(err))
 				return w.handleErrorCallback(err)
 			}
 
 			validationErr := w.tokenUtil.Validate(res.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 			if validationErr != nil {
-				zap.L().Info("Validation Error:")
-				zap.L().Info(validationErr.Msg)
 				zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
 				return w.handleErrorCallback(err)
 			}
