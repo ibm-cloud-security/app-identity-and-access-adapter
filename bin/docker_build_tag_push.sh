@@ -26,15 +26,15 @@ function checkTools() {
 }
 
 function buildTag() {
-    if [[ ! -z ${TAG+x} ]]; then
-        echo $TAG
+    if [[ ! -z $1 ]]; then
+        echo $1
         return
     fi
     if [[ -z ${TRAVIS+x} ]]; then
-        echo $USER
+        echo $USER | cut -f1 -d"@"
         return
     fi
-    if [[ $TRAVIS_PULL_REQUEST ]]; then
+    if [[ $TRAVIS_PULL_REQUEST != "false" ]]; then
         echo pr-${TRAVIS_PULL_REQUEST_BRANCH}
         return
     else
@@ -51,7 +51,7 @@ function buildAndDeploy() {
     fi
 
     echo "Building Docker image: ${IMAGE_TAG}"
-    docker build --quiet -t ${IMAGE_TAG} ${sourceDir}/../.
+    docker build -t ${IMAGE_TAG} ${sourceDir}/../.
 
     echo "Pushing Docker image to container registry"
     docker push ${IMAGE_TAG}
@@ -60,7 +60,7 @@ function buildAndDeploy() {
 
 IMAGE_REGISTRY_NAMESPACE=aliberat1
 APP_NAME=istio-adapter-ibmcloudappid
-TAG=$(buildTag)
+TAG=$(buildTag $1)
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${TAG}
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"
 

@@ -1,14 +1,12 @@
 package engine
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	"github.com/prometheus/common/log"
 	"testing"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -63,7 +61,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			action: &policy.Action{
 				Type:   policy.JWT,
-				KeySet: &mockKeySet{},
+				KeySet: &fake.KeySet{},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
@@ -77,7 +75,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "GET"),
 			action: &policy.Action{
 				Type:   policy.JWT,
-				KeySet: &mockKeySet{},
+				KeySet: &fake.KeySet{},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
@@ -91,7 +89,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "OTHER"),
 			action: &policy.Action{
 				Type:   policy.JWT,
-				KeySet: &mockKeySet{},
+				KeySet: &fake.KeySet{},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "*"),
@@ -105,7 +103,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "GET"),
 			action: &policy.Action{
 				Type:   policy.JWT,
-				KeySet: &mockKeySet{},
+				KeySet: &fake.KeySet{},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "*", "*"),
@@ -119,8 +117,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 	for i, test := range tests {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
-		store.AddAuthServer("serverurl", &mockAuthServer{})
-		store.AddKeySet("serverurl", &mockKeySet{})
+		store.AddAuthServer("serverurl", &fake.AuthServer{})
+		store.AddKeySet("serverurl", &fake.KeySet{})
 		for _, ep := range test.endpoints {
 			log.Info(ep) //so it wont throw an error
 			if test.action != nil {
@@ -155,7 +153,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			action: &policy.Action{
 				Type:       policy.OIDC,
-				Client:     &mockClient{},
+				Client:     &fake.Client{},
 				ClientName: "name",
 			},
 			endpoints:         []policy.Endpoint{},
@@ -168,7 +166,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			action: &policy.Action{
 				Type:       policy.OIDC,
-				Client:     &mockClient{},
+				Client:     &fake.Client{},
 				ClientName: "name",
 			},
 			endpoints: []policy.Endpoint{
@@ -183,7 +181,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 	for i, test := range tests {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
-		store.AddClient("client", &mockClient{server: &mockAuthServer{}})
+		store.AddClient("client", &fake.Client{Server: &fake.AuthServer{}})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			log.Info(ep) //so it wont throw an error
@@ -217,7 +215,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
 			action: &policy.Action{
 				Type:       policy.OIDC,
-				Client:     &mockClient{},
+				Client:     &fake.Client{},
 				ClientName: "name",
 			},
 			endpoints: []policy.Endpoint{
@@ -232,8 +230,8 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 	for i, test := range tests {
 		/// Create new engine
 		store := store.New().(*store.LocalStore)
-		store.AddAuthServer("serverurl", &mockAuthServer{})
-		store.AddClient("client", &mockClient{server: store.GetAuthServer("serverurl")})
+		store.AddAuthServer("serverurl", &fake.AuthServer{})
+		store.AddClient("client", &fake.Client{Server: store.GetAuthServer("serverurl")})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
 			log.Info(ep) //so it wont throw an error
@@ -269,25 +267,3 @@ func generateActionMessage(ns string, svc string, path string, method string) *a
 		Method:    method,
 	}
 }
-
-type mockKeySet struct{}
-
-func (m *mockKeySet) PublicKeyURL() string                  { return "" }
-func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }
-
-type mockClient struct {
-	server authserver.AuthorizationServer
-}
-
-func (m *mockClient) Name() string                                        { return "" }
-func (m *mockClient) ID() string                                          { return "" }
-func (m *mockClient) Secret() string                                      { return "" }
-func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
-
-type mockAuthServer struct{}
-
-func (m *mockAuthServer) JwksEndpoint() string          { return "" }
-func (m *mockAuthServer) TokenEndpoint() string         { return "" }
-func (m *mockAuthServer) AuthorizationEndpoint() string { return "" }
-func (m *mockAuthServer) KeySet() keyset.KeySet         { return nil }
-func (m *mockAuthServer) SetKeySet(keyset.KeySet)       {}

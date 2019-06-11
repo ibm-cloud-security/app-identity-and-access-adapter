@@ -47,18 +47,20 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 		return buildErrorResponse(err), nil
 	}
 
-	// Validate Access Token
+	// Validate Access Value
 	err = s.tokenUtil.Validate(tokens.Access, action.KeySet, action.Rules)
 	if err != nil {
 		zap.L().Debug("Invalid access token", zap.Error(err))
+		err.Msg = "invalid access token"
 		return buildErrorResponse(err), nil
 	}
 
-	// Validate ID Token
+	// Validate ID Value
 	if tokens.ID != "" {
 		err = s.tokenUtil.Validate(tokens.ID, action.KeySet, action.Rules)
 		if err != nil {
 			zap.L().Debug("Invalid ID token", zap.Error(err))
+			err.Msg = "invalid ID token"
 			return buildErrorResponse(err), nil
 		}
 	}

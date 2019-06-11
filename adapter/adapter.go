@@ -8,8 +8,11 @@ package adapter
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/initializer"
@@ -102,9 +105,10 @@ func (s *AppidAdapter) Close() error {
 ////////////////// constructor //////////////////////////
 
 // NewAppIDAdapter creates a new App ID Adapter listening on the provided port.
-func NewAppIDAdapter(addr string) (Server, error) {
+func NewAppIDAdapter(cfg *config.Config) (Server, error) {
 
 	// Begin listening for requests
+	addr := fmt.Sprintf(":%d", cfg.AdapterPort)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		zap.L().Fatal("Unable to listen on socket", zap.Error(err))
@@ -129,7 +133,7 @@ func NewAppIDAdapter(addr string) (Server, error) {
 	s := &AppidAdapter{
 		listener:    listener,
 		apistrategy: apistrategy.New(),
-		webstrategy: webstrategy.New(init.GetKubeClient()),
+		webstrategy: webstrategy.New(cfg, init.GetKubeClient()),
 		server:      grpc.NewServer(),
 		engine:      eng,
 	}
@@ -151,6 +155,10 @@ func validateAuthnzRequest(r *authnz.HandleAuthnZRequest) error {
 	if r.Instance.Request.Params == nil || r.Instance.Request.Headers == nil {
 		zap.L().Error("Invalid instance format. Please check that the instance.yaml is sending telemetry according to the template.")
 		return errors.New("invalid *authnz.HandleAuthnZRequest instance format")
+	}
+	// Trim trailing slash for any route except the root. Empty roots are already routed to "/".
+	if r.Instance.Target.Path != "/" && strings.HasSuffix(r.Instance.Target.Path, "/") {
+		r.Instance.Target.Path = strings.TrimRight(r.Instance.Target.Path, "/")
 	}
 	return nil
 }

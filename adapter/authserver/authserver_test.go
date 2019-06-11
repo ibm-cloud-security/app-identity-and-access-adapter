@@ -4,11 +4,11 @@ import (
 	"errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -57,26 +57,113 @@ func TestInitialize(t *testing.T) {
 		{
 			400,
 			"{}",
-			errors.New("unexpected response for request to  | status code: 400"),
+			errors.New("status code: 400"),
+		},
+		{
+			200,
+			"{\n  \"issuer\": \"https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"authorization_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/authorization\",\n  \"token_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/token\",\n  \"jwks_uri\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/publickeys\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"userinfo_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/userinfo\",\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			nil,
+		},
+		{
+			200,
+			"{\n \"authorization_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/authorization\",\n  \"token_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/token\",\n  \"jwks_uri\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/publickeys\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"userinfo_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/userinfo\",\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			errors.New("invalid discovery config: missing `issuer`"),
+		},
+		{
+			200,
+			"{\n  \"issuer\": \"https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\"token_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/token\",\n  \"jwks_uri\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/publickeys\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"userinfo_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/userinfo\",\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			errors.New("invalid discovery config: missing `authorization_endpoint`"),
+		},
+		{
+			200,
+			"{\n  \"issuer\": \"https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"authorization_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/authorization\",\n \"jwks_uri\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/publickeys\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"userinfo_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/userinfo\",\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			errors.New("invalid discovery config: missing `token_endpoint`"),
+		},
+		{
+			200,
+			"{\n  \"issuer\": \"https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"authorization_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/authorization\",\n  \"token_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/token\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"userinfo_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/userinfo\",\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			errors.New("invalid discovery config: missing `jwks_uri`"),
 		},
 		{
 			200,
 			"",
 			errors.New("EOF"),
 		},
+		{
+			200,
+			"{\n  \"issuer\": \"https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"authorization_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/authorization\",\n  \"token_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/token\",\n  \"jwks_uri\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584/publickeys\",\n  \"subject_types_supported\": [\n    \"public\"\n  ],\n  \"id_token_signing_alg_values_supported\": [\n    \"RS256\"\n  ],\n  \"scopes_supported\": [\n    \"openid\"\n  ],\n  \"response_types_supported\": [\n    \"code\"\n  ],\n  \"claims_supported\": [\n    \"iss\",\n    \"aud\",\n    \"exp\",\n    \"tenant\",\n    \"iat\",\n    \"sub\",\n    \"nonce\",\n    \"amr\",\n    \"oauth_client\"\n  ],\n  \"grant_types_supported\": [\n    \"authorization_code\",\n    \"password\",\n    \"refresh_token\",\n    \"client_credentials\",\n    \"urn:ietf:params:oauth:grant-type:jwt-bearer\"\n  ],\n  \"profiles_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net\",\n  \"management_endpoint\": \"https://appid-oauth.stage1.eu-gb.bluemix.net/management/v4/6ed0032a-ac04-4a9f-9d36-7637a16d4584\",\n  \"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"\n}",
+			errors.New("invalid discovery config: missing `userinfo_endpoint`"),
+		},
 	}
-	for _, test := range tests {
-		// Start a local HTTP server
-		h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			w.WriteHeader(test.statusCode)
-			w.Write([]byte(test.response))
+	for _, ts := range tests {
+		test := ts // When using parallel sub tests we need a local scope
+		t.Run("initialize", func(t2 *testing.T) {
+			t2.Parallel()
+			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(test.statusCode)
+				w.Write([]byte(test.response))
+			})
+			s := httptest.NewServer(h)
+			server := &RemoteServer{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			err := server.initialize()
+			if test.statusCode != 200 {
+				if err == nil {
+					t2.FailNow()
+				}
+			} else if test.err != nil {
+				require.EqualError(t2, err, test.err.Error())
+			} else if err != nil {
+				t2.FailNow()
+			}
+			s.Close()
 		})
-		s := httptest.NewServer(h)
-		server := &RemoteServer{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
-		err := server.initialize()
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
-		}
-		s.Close()
+	}
+}
+
+func TestGetTokens(t *testing.T) {
+
+	tests := []struct {
+		statusCode int
+		response   string
+		err        error
+	}{
+		{
+			400,
+			"{}",
+			errors.New("status code: 400"),
+		},
+		{
+			200,
+			"{\n  \"access_token\" : \"2YotnFZFEjr1zCsicMWpAA\",\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
+			nil,
+		},
+		{
+			200,
+			"{\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
+			errors.New("invalid token endpoint response: access_token does not exist"),
+		},
+	}
+	for _, ts := range tests {
+		test := ts // When using parallel sub tests we need a local scope
+		t.Run("TokenResponse", func(t2 *testing.T) {
+			t2.Parallel()
+			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(test.statusCode)
+				w.Write([]byte(test.response))
+			})
+			s := httptest.NewServer(h)
+			server := &RemoteServer{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			_, err := server.GetTokens("client_post_basic", "clientID", "secret", "authcode", "redirect")
+			if test.statusCode != 200 {
+				if err == nil {
+					t2.FailNow()
+				}
+			} else if test.err != nil {
+				require.EqualError(t2, err, test.err.Error())
+			} else if err != nil {
+				t2.FailNow()
+			}
+			s.Close()
+		})
 	}
 }

@@ -138,8 +138,11 @@ message QueryParamsMsg {
     // The code matches an OAuth 2.0 callback authorization code grant
     string code = 2;
     
+    // The state matches an OAuth 2.0 callback authorization state parameter
+    string state = 3;
+    
     // Additional data about the query parameters for use in policy.
-    map<string, istio.policy.v1beta1.Value> properties = 3;
+    map<string, istio.policy.v1beta1.Value> properties = 4;
     
 }
 
@@ -198,7 +201,7 @@ message HeadersType {
 message QueryParamsType {
     
     // Additional data about the query parameters for use in policy.
-    map<string, istio.policy.v1beta1.ValueType> properties = 3;
+    map<string, istio.policy.v1beta1.ValueType> properties = 4;
     
 }
 
@@ -273,8 +276,11 @@ message QueryParamsInstanceParam {
     // The code matches an OAuth 2.0 callback authorization code grant
     string code = 2;
     
+    // The state matches an OAuth 2.0 callback authorization state parameter
+    string state = 3;
+    
     // Additional data about the query parameters for use in policy.
-    map<string, string> properties = 3;
+    map<string, string> properties = 4;
     
 }
 

@@ -17,6 +17,7 @@ type OidcClient struct {
 
 // OidcClientSpec is the spec for a OidcClient resource
 type OidcClientSpec struct {
+	AuthMethod       string `json:"authMethod"`
 	ClientName       string `json:"oidcClientName"`
 	ClientID         string `json:"clientId"`
 	DiscoveryURL     string `json:"discoveryUrl"`

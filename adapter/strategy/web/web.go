@@ -5,7 +5,6 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -13,7 +12,9 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
@@ -47,8 +48,8 @@ const (
 
 // WebStrategy handles OAuth 2.0 / OIDC flows
 type WebStrategy struct {
+	ctx        *config.Config
 	tokenUtil  validator.TokenValidator
-	httpClient *networking.HTTPClient
 	kubeClient kubernetes.Interface
 
 	// mutex protects all fields below
@@ -57,29 +58,17 @@ type WebStrategy struct {
 	tokenCache   *sync.Map
 }
 
-// TokenResponse models an OAuth 2.0 /Token endpoint response
-type TokenResponse struct {
-	// The OAuth 2.0 Access Token
-	AccessToken *string `json:"access_token"`
-	// The OIDC ID Token
-	IdentityToken *string `json:"id_token"`
-	// The OAuth 2.0 Refresh Token
-	RefreshToken *string `json:"refresh_token"`
-	// The token expiration time
-	ExpiresIn int `json:"expires_in"`
-}
-
 // OidcCookie represents a token stored in browser
 type OidcCookie struct {
-	Token      string
+	Value      string
 	Expiration time.Time
 }
 
 // New creates an instance of an OIDC protection agent.
-func New(kubeClient kubernetes.Interface) strategy.Strategy {
+func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy {
 	w := &WebStrategy{
+		ctx:        ctx,
 		tokenUtil:  validator.New(),
-		httpClient: networking.New(),
 		kubeClient: kubeClient,
 		mutex:      &sync.Mutex{},
 		tokenCache: new(sync.Map),
@@ -150,16 +139,10 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
-	validationErr := w.tokenUtil.Validate(*response.(*TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
+	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
-		w.tokenCache.Delete(sessionCookie.Value)
-		return nil, nil
-	}
-
-	validationErr = w.tokenUtil.Validate(*response.(*TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation: %v", zap.Error(validationErr))
+		zap.L().Debug("Session ID token failed validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
 		return nil, nil
 	}
@@ -170,7 +153,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{Status: status.OK},
 		Output: &authnz.OutputMsg{
-			Authorization: strings.Join([]string{bearer, *response.(*TokenResponse).AccessToken, *response.(*TokenResponse).IdentityToken}, " "),
+			Authorization: strings.Join([]string{bearer, response.(*authserver.TokenResponse).AccessToken, response.(*authserver.TokenResponse).IdentityToken}, " "),
 		},
 	}, nil
 }
@@ -234,50 +217,45 @@ func (w *WebStrategy) handleLogout(path string, action *engine.Action) (*authnz.
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
 func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
 
+	err := w.validateState(request, action.Client)
+	if err != nil {
+		zap.L().Info("OIDC callback: could not validate state parameter", zap.Error(err), zap.String("client_name", action.Client.Name()))
+		return w.handleErrorCallback(err)
+	}
+
 	redirectURI := buildRequestURL(request)
 
-	// Get Tokens
-	response, err := w.getTokens(code.(string), redirectURI, action.Client)
+	// Exchange authorization grant code for tokens
+	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
 	if err != nil {
-		zap.L().Info("Could not retrieve tokens", zap.Error(err))
+		zap.L().Info("OIDC callback: Could not retrieve tokens", zap.Error(err), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(err)
 	}
 
-	// Validate Tokens
-	validationErr := w.tokenUtil.Validate(*response.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
+	validationErr := w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
-		return w.handleErrorCallback(err)
+		zap.L().Info("OIDC callback: ID token failed validation", zap.Error(validationErr), zap.String("client_name", action.Client.Name()))
+		return w.handleErrorCallback(validationErr)
 	}
 
-	validationErr = w.tokenUtil.Validate(*response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
-		return w.handleErrorCallback(err)
-	}
-
-	cookie := w.generateSessionIdCookie(action.Client)
+	cookie := generateSessionIdCookie(action.Client)
 	w.tokenCache.Store(cookie.Value, response)
 
-	zap.L().Debug("Created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))
+	zap.L().Debug("OIDC callback: created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))
 
 	return buildSuccessRedirectResponse(redirectURI, []*http.Cookie{cookie}), nil
-}
-
-func (w *WebStrategy) generateSessionIdCookie(c client.Client) *http.Cookie {
-	return &http.Cookie{
-		Name:     buildTokenCookieName(sessionCookie, c),
-		Value:    randString(15),
-		Path:     "/",
-		Secure:   false, // TODO: replace on release
-		HttpOnly: false,
-		Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
-	}
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
+	/// Build and store session state
+	state, stateCookie, err := w.buildStateParam(action.Client)
+	if err != nil {
+		zap.L().Info("Could not generate state parameter", zap.Error(err), zap.String("client_name", action.Client.Name()))
+		return nil, err
+	}
 	zap.S().Debugf("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{
@@ -285,39 +263,15 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
 				Message: "Redirecting to identity provider",
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
-					Code:    policy.Found, // Response Mixer remaps on request
-					Headers: map[string]string{location: generateAuthorizationURL(action.Client, redirectURI)},
+					Code: policy.Found, // Response Mixer remaps on request
+					Headers: map[string]string{
+						location:  generateAuthorizationURL(action.Client, redirectURI, state),
+						setCookie: stateCookie.String(),
+					},
 				})},
 			},
 		},
 	}, nil
-}
-
-// getTokens retrieves tokens from the authorization server using the authorization grant code
-func (w *WebStrategy) getTokens(code string, redirectURI string, client client.Client) (*TokenResponse, error) {
-
-	form := url.Values{}
-	form.Add("client_id", client.ID())
-	form.Add("grant_type", "authorization_code")
-	form.Add("code", code)
-	form.Add("redirect_uri", redirectURI)
-
-	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
-	if err != nil {
-		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
-		return nil, err
-	}
-
-	req.SetBasicAuth(client.ID(), client.Secret())
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var tokenResponse TokenResponse
-	if err := w.httpClient.Do(req, http.StatusOK, &tokenResponse); err != nil {
-		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
-		return nil, err
-	}
-
-	return &tokenResponse, nil
 }
 
 // getSecureCookie retrieves the SecureCookie encryption struct in a
@@ -350,7 +304,7 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 
 	if err != nil {
 		zap.S().Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
-		secret, err = w.generateKeySecret(32, 16)
+		secret, err = w.generateKeySecret(w.ctx.HashKeySize.Value, w.ctx.BlockKeySize.Value)
 		if err != nil {
 			zap.L().Info("Failed to retrieve tokens", zap.Error(err))
 			return nil, err
@@ -387,8 +341,8 @@ func (w *WebStrategy) generateKeySecret(hashKeySize int, blockKeySize int) (inte
 	})
 }
 
-// generateTokenCookie creates an encodes and encrypts cookieData into an http.Cookie
-func (w *WebStrategy) generateTokenCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
+// generateEncryptedCookie creates an encodes and encrypts cookieData into an http.Cookie
+func (w *WebStrategy) generateEncryptedCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
 	// encode the struct
 	data, err := bson.Marshal(&cookieData)
 	if err != nil {
@@ -440,7 +394,7 @@ func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 		zap.L().Debug("Could not unmarshal cookie:", zap.Error(err))
 		return nil
 	}
-	if cookieObj.Token == "" {
+	if cookieObj.Value == "" {
 		zap.L().Debug("Cookie does not have a token value")
 		return nil
 	}
@@ -449,14 +403,6 @@ func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
 		return nil
 	}
 	return &cookieObj
-}
-
-// OK validates a TokenResponse
-func (r *TokenResponse) OK() error {
-	if r.AccessToken == nil {
-		return errors.New("invalid token endpoint response: access_token does not exist")
-	}
-	return nil
 }
 
 // buildSuccessRedirectResponse constructs a HandleAuthnZResponse containing a 302 redirect
@@ -481,4 +427,56 @@ func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *a
 			},
 		},
 	}
+}
+
+func (w *WebStrategy) buildStateParam(c client.Client) (string, *http.Cookie, error) {
+	state := randString(10)
+	cookieName := buildTokenCookieName(sessionCookie, c)
+	cookie, err := w.generateEncryptedCookie(cookieName, &OidcCookie{
+		Value:      state,
+		Expiration: time.Now().Add(time.Hour),
+	})
+	return state, cookie, err
+}
+
+// validateState ensures the callback request state parameter matches the state stored in an encrypted session cookie
+// Follows from OAuth 2.0 specification https://tools.ietf.org/html/rfc6749#section-4.1.1
+func (w *WebStrategy) validateState(request *authnz.RequestMsg, c client.Client) error {
+	// Get state cookie from header
+	header := http.Header{
+		"Cookie": {request.Headers.Cookies},
+	}
+	r := http.Request{Header: header}
+	oidcStateCookie, err := r.Cookie(buildTokenCookieName(sessionCookie, c))
+	if err != nil {
+		return err
+	}
+
+	// Parse encrypted state cookie
+	storedHttpCookie := w.parseAndValidateCookie(oidcStateCookie)
+
+	// Ensure state cookie is returned
+	if storedHttpCookie == nil {
+		stateError := errors.New("missing state parameter")
+		zap.L().Info("OIDC callback: missing stored state parameter", zap.Error(err))
+		return stateError
+	}
+
+	// Ensure state is returned on request from identity provider
+	if request.Params.State == "" {
+		stateError := errors.New("missing state parameter from callback")
+		zap.L().Info("OIDC callback: missing state parameter from identity provider", zap.Error(err))
+		return stateError
+	}
+
+	// Validate cookie state with stored state
+	if request.Params.State != storedHttpCookie.Value {
+		stateError := errors.New("invalid state parameter")
+		zap.L().Info("OIDC callback: missing or invalid state parameter", zap.Error(err))
+		return stateError
+	}
+
+	zap.L().Debug("OIDC callback: validated state parameter")
+
+	return nil
 }

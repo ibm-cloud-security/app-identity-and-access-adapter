@@ -6,5 +6,5 @@ vendor
 main
 node_modules
 .DS_Store
-coverage.txt
+coverage.out
 profile.out

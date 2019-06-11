@@ -1,17 +1,17 @@
 package webstrategy
 
 import (
-	"crypto"
 	"errors"
-	"github.com/gogo/protobuf/types"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	"k8s.io/client-go/kubernetes/fake"
-	"net/http"
-	"net/http/httptest"
+	"github.com/gorilla/securecookie"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"strings"
 	"testing"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/gogo/protobuf/types"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -20,8 +20,9 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	strategy := New(fake.NewSimpleClientset())
+	strategy := New(&config.Config{}, k8sfake.NewSimpleClientset())
 	assert.NotNil(t, strategy)
+	assert.NotNil(t, strategy.(*WebStrategy).secureCookie)
 }
 
 func TestHandleNewAuthorizationRequest(t *testing.T) {
@@ -34,7 +35,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 		err            error
 	}{
 		{ // Invalid Action Configuration
-			generateAuthnzRequest("", "", "", ""),
+			generateAuthnzRequest("", "", "", "", ""),
 			&policy.Action{},
 			nil,
 			"invalid OIDC configuration",
@@ -42,16 +43,14 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 			errors.New("invalid OIDC configuration"),
 		},
 		{ // New Authentication
-			generateAuthnzRequest("", "", "", ""),
+			generateAuthnzRequest("", "", "", "", ""),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
-				},
+				Client: fake.NewClient(),
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Body:    "",
-				Headers: map[string]string{"location": "?client_id=id&redirect_uri=https%3A%2F%2Ftests.io%2Fapi%2Foidc%2Fcallback&response_type=code&scope=oidc"},
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
 			int32(16),
@@ -60,27 +59,31 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		api := WebStrategy{
-			tokenUtil: MockValidator{
-				err: nil,
-			},
-		}
-		r, err := api.HandleAuthnZRequest(test.req, test.action)
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
-		} else {
-			assert.Equal(t, test.code, r.Result.Status.Code)
-			assert.Equal(t, test.message, r.Result.Status.Message)
-			response := &v1beta1.DirectHttpResponse{}
-			for _, detail := range r.Result.Status.Details {
-				if types.UnmarshalAny(detail, response) != nil {
-					continue
-				}
-				assert.Equal(t, test.directResponse.Code, response.Code)
-				assert.Equal(t, test.directResponse.Headers, response.Headers)
-				assert.Equal(t, test.directResponse.Body, response.Body)
+		t.Run("redirect uri test", func(t *testing.T) {
+			api := WebStrategy{
+				secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
+				tokenUtil:    MockValidator{},
 			}
-		}
+			r, err := api.HandleAuthnZRequest(test.req, test.action)
+			if test.err != nil {
+				assert.EqualError(t, err, test.err.Error())
+			} else {
+				assert.Equal(t, test.code, r.Result.Status.Code)
+				assert.Equal(t, test.message, r.Result.Status.Message)
+				response := &v1beta1.DirectHttpResponse{}
+				for _, detail := range r.Result.Status.Details {
+					if types.UnmarshalAny(detail, response) != nil {
+						continue
+					}
+					assert.Equal(t, test.directResponse.Code, response.Code)
+					if !strings.HasPrefix(response.Headers["location"], test.directResponse.Headers["location"]) {
+						assert.Fail(t, "incorrect location header")
+					}
+					assert.NotNil(t, test.directResponse.Headers["Set-Cookie"])
+					assert.Equal(t, test.directResponse.Body, response.Body)
+				}
+			}
+		})
 	}
 }
 
@@ -94,10 +97,10 @@ func TestErrCallback(t *testing.T) {
 		err            error
 	}{
 		{ // Err callback with cookies
-			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint),
+			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
+				Client: &fake.Client{
+					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
 			},
 			nil,
@@ -106,10 +109,10 @@ func TestErrCallback(t *testing.T) {
 			nil,
 		},
 		{ // Err callback
-			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint),
+			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
 			&policy.Action{
-				Client: &mockClient{
-					server: &mockAuthServer{keys: &mockKeySet{}},
+				Client: &fake.Client{
+					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
 			},
 			nil,
@@ -121,9 +124,7 @@ func TestErrCallback(t *testing.T) {
 
 	for _, test := range tests {
 		api := WebStrategy{
-			tokenUtil: MockValidator{
-				err: nil,
-			},
+			tokenUtil: MockValidator{},
 		}
 		r, err := api.HandleAuthnZRequest(test.req, test.action)
 		if test.err != nil {
@@ -142,44 +143,44 @@ func TestCodeCallback(t *testing.T) {
 		message        string
 		code           int32
 		err            error
-		statusCode     int
-		response       string
+		tokenResponse  *fake.TokenResponse
 	}{
-		{ // code callback without cookies
-			generateAuthnzRequest("", "mycode", "", callbackEndpoint),
+		{ // missing state
+			generateAuthnzRequest("", "mycode", "", callbackEndpoint, ""),
 			nil,
-			"invalid token endpoint response: access_token does not exist",
+			"http: named cookie not present",
 			int32(16),
 			nil,
-			200,
-			"{}",
+			&fake.TokenResponse{
+				Err: errors.New("http: named cookie not present"),
+			},
+		},
+		{ // missing state
+			generateAuthnzRequest("", "mycode", "", callbackEndpoint, "hello"),
+			nil,
+			"http: named cookie not present",
+			int32(16),
+			nil,
+			&fake.TokenResponse{
+				Err: errors.New("http: named cookie not present"),
+			},
 		},
 	}
 
 	for _, test := range tests {
-		// start server
-		h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			w.WriteHeader(test.statusCode)
-			w.Write([]byte(test.response))
-		})
-		s := httptest.NewServer(h)
-
 		// Test action
 		action := &policy.Action{
-			Client: &mockClient{
-				server: &mockAuthServer{
-					keys: &mockKeySet{},
-					url:  s.URL,
+			Client: &fake.Client{
+				TokenResponse: test.tokenResponse,
+				Server: &fake.AuthServer{
+					Keys: &fake.KeySet{},
 				},
 			},
 		}
 
 		// Test strategy
 		api := WebStrategy{
-			tokenUtil: MockValidator{
-				err: nil,
-			},
-			httpClient: &networking.HTTPClient{Client: s.Client()},
+			tokenUtil: MockValidator{},
 		}
 
 		// Test
@@ -190,12 +191,10 @@ func TestCodeCallback(t *testing.T) {
 			assert.Equal(t, test.code, r.Result.Status.Code)
 			assert.Equal(t, test.message, r.Result.Status.Message)
 		}
-
-		s.Close()
 	}
 }
 
-func generateAuthnzRequest(cookies string, code string, err string, path string) *authnz.HandleAuthnZRequest {
+func generateAuthnzRequest(cookies string, code string, err string, path string, state string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
 			Request: &authnz.RequestMsg{
@@ -208,6 +207,7 @@ func generateAuthnzRequest(cookies string, code string, err string, path string)
 				Params: &authnz.QueryParamsMsg{
 					Code:  code,
 					Error: err,
+					State: state,
 				},
 			},
 			Target: &authnz.TargetMsg{
@@ -227,29 +227,3 @@ type MockValidator struct {
 func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
 	return v.err
 }
-
-type mockKeySet struct{}
-
-func (m *mockKeySet) PublicKeyURL() string                  { return "" }
-func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }
-
-type mockClient struct {
-	server authserver.AuthorizationServer
-}
-
-func (m *mockClient) Name() string                                        { return "name" }
-func (m *mockClient) ID() string                                          { return "id" }
-func (m *mockClient) Secret() string                                      { return "secret" }
-func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
-
-type mockAuthServer struct {
-	keys keyset.KeySet
-	s    *http.Client
-	url  string
-}
-
-func (m *mockAuthServer) JwksEndpoint() string          { return m.url }
-func (m *mockAuthServer) TokenEndpoint() string         { return m.url }
-func (m *mockAuthServer) AuthorizationEndpoint() string { return m.url }
-func (m *mockAuthServer) KeySet() keyset.KeySet         { return m.keys }
-func (m *mockAuthServer) SetKeySet(keyset.KeySet)       {}

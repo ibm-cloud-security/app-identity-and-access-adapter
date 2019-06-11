@@ -18,6 +18,9 @@
 # Adapter information
 adapterName="ibmcloudappid"
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"
+sampleAppNamespace="sample-app"
+sampleAppDeploymentName="dpl-sample-app"
+sampleAppYaml=${sourceDir}/../samples/app/sample-app.yaml
 
 function checkEnv() {
     if [[ -z "$(command -v docker)" ]]; then
@@ -27,6 +30,11 @@ function checkEnv() {
 
     if [[ -z "$(command -v helm)" ]]; then
         echo "Could not find 'helm' in path"
+        exit 1
+    fi
+
+    if [[ -z "$(command -v kubectl)" ]]; then
+        echo "Could not find 'kubectl' in path"
         exit 1
     fi
 }
@@ -44,18 +52,34 @@ function buildAndTag() {
     reportError $? "job has failed, please check the log for details"
 
     echo "Building and deploying docker image"
-    source ${sourceDir}/docker_build_tag_push.sh
+    source ${sourceDir}/docker_build_tag_push.sh $1
 }
 
-function installAdapter() {
+function deleteAndWait() {
     echo "Cleaning up cluster"
     helm delete --purge ${adapterName}
 
+}
+
+function installAdapter() {
     echo "Installing adapter"
     helm install --wait helm/${adapterName} --name ${adapterName} --set image.tag=$1
 }
 
+function installDemoApplication() {
+    if (kubectl wait --for=condition=available --timeout=600s deployment/${sampleAppDeploymentName} -n ${sampleAppNamespace}); then
+        echo "Sample app has already been deployed"
+    else
+        echo "Deploying sample app"
+        # TODO: Inject Pods
+        #kubectl apply -f ${sampleAppYaml}
+        #kubectl wait --for=condition=available --timeout=600s deployment/${sampleAppDeploymentName} -n ${sampleAppNamespace}
+    fi
+}
+
 ### Execute
 checkEnv
-buildAndTag
+buildAndTag $1
+deleteAndWait
 installAdapter "${IMAGE_TEST_TAG}"
+installDemoApplication

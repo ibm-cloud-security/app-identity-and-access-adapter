@@ -6,6 +6,7 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"strings"
 )
 
 func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint {
@@ -15,6 +16,9 @@ func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint 
 			service := items.ServiceName
 			if items.Paths != nil && len(items.Paths) > 0 {
 				for _, path := range items.Paths {
+					if path != "/" {
+						path = strings.TrimRight(path, "/")
+					}
 					endpoints = append(endpoints, policy.Endpoint{Namespace: namespace, Service: service, Path: path, Method: "*"})
 				}
 			} else {

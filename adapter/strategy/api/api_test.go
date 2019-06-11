@@ -23,6 +23,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		action        *policy.Action
 		message       string
 		code          int32
+		invalidToken  string
 		validationErr *errors.OAuthError
 	}{
 		{
@@ -30,6 +31,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 			&policy.Action{},
 			"authorization header not provided",
 			int32(16),
+			"",
 			nil,
 		},
 		{
@@ -37,41 +39,50 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 			&policy.Action{},
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
+			"",
 			nil,
 		},
 		{
-			generateAuthRequest("Bearer invalid"),
+			generateAuthRequest("Bearer access"),
 			&policy.Action{},
-			"invalid token",
+			"invalid access token",
 			int32(16),
-			errors.UnauthorizedHTTPException("invalid token", nil),
+			"access",
+			errors.UnauthorizedHTTPException("invalid access token", nil),
 		},
 		{
 			generateAuthRequest("Bearer access"),
 			&policy.Action{},
 			"",
 			int32(0),
+			"",
 			nil,
 		},
 		{
 			generateAuthRequest("Bearer access id"),
 			&policy.Action{},
-			"",
-			int32(0),
-			nil,
+			"invalid ID token",
+			int32(16),
+			"id",
+			errors.UnauthorizedHTTPException("invalid id token", nil),
 		},
 	}
 
-	for _, test := range tests {
-		api := APIStrategy{
-			tokenUtil: MockValidator{
-				err: test.validationErr,
-			},
-		}
-		checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
-		assert.Nil(t, err)
-		assert.Equal(t, test.message, checkresult.Result.Status.Message)
-		assert.Equal(t, test.code, checkresult.Result.Status.Code)
+	for _, t_ := range tests {
+		test := t_
+		t.Run("Validation Test", func(st *testing.T) {
+			st.Parallel()
+			api := APIStrategy{
+				tokenUtil: MockValidator{
+					invalidToken: test.invalidToken,
+					err:          test.validationErr,
+				},
+			}
+			checkresult, err := api.HandleAuthnZRequest(test.req, test.action)
+			assert.Nil(st, err)
+			assert.Equal(st, test.message, checkresult.Result.Status.Message)
+			assert.Equal(st, test.code, checkresult.Result.Status.Code)
+		})
 	}
 }
 
@@ -120,14 +131,15 @@ func TestParseRequest(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		tokens, err := getAuthTokensFromRequest(e.r)
-		if !e.expectErr && tokens != nil {
-			assert.Equal(t, "access", tokens.Access)
-			assert.Equal(t, "id", tokens.ID)
-		} else {
-			assert.EqualError(t, err, e.expectedMsg)
-		}
-
+		t.Run("Parsing Test", func(st *testing.T) {
+			tokens, err := getAuthTokensFromRequest(e.r)
+			if !e.expectErr && tokens != nil {
+				assert.Equal(st, "access", tokens.Access)
+				assert.Equal(st, "id", tokens.ID)
+			} else {
+				assert.EqualError(st, err, e.expectedMsg)
+			}
+		})
 	}
 }
 
@@ -152,10 +164,12 @@ func TestErrorResponse(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		checkresult := buildErrorResponse(test.err)
-		assert.Equal(t, checkresult.Result.Status.Code, int32(rpc.UNAUTHENTICATED))
-		assert.Equal(t, checkresult.Result.Status.Message, test.Message)
-		assert.NotNil(t, checkresult.Result.Status.Details)
+		t.Run("Error Parse", func(st *testing.T) {
+			checkresult := buildErrorResponse(test.err)
+			assert.Equal(st, checkresult.Result.Status.Code, int32(rpc.UNAUTHENTICATED))
+			assert.Equal(st, checkresult.Result.Status.Message, test.Message)
+			assert.NotNil(st, checkresult.Result.Status.Details)
+		})
 	}
 }
 
@@ -172,9 +186,13 @@ func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 }
 
 type MockValidator struct {
-	err *errors.OAuthError
+	invalidToken string
+	err          *errors.OAuthError
 }
 
 func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
-	return v.err
+	if tkn == v.invalidToken {
+		return v.err
+	}
+	return nil
 }
