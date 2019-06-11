@@ -22,11 +22,22 @@ const (
 	InsufficientScope = "insufficient_scope"
 )
 
+const (
+	ExpiredToken = "Token is expired"
+)
+
 // OAuthError - oauth error
 type OAuthError struct {
 	Msg    string
 	Code   string
 	Scopes []string
+}
+
+// ExpiredTokenError creates a new expired token error
+func ExpiredTokenError() *OAuthError {
+	return &OAuthError{
+		Msg: ExpiredToken,
+	}
 }
 
 // UnauthorizedHTTPException creates a new invalid token error

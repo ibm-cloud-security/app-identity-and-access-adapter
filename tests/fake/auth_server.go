@@ -41,6 +41,6 @@ func (m *AuthServer) SetKeySet(k keyset.KeySet) {
 	m.Keys = k
 }
 
-func (m *AuthServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*authserver.TokenResponse, error) {
+func (m *AuthServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*authserver.TokenResponse, error) {
 	return nil, nil
 }

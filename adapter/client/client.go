@@ -14,6 +14,7 @@ type Client interface {
 	Secret() string
 	AuthorizationServer() authserver.AuthorizationServer
 	ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error)
+	RefreshToken(refreshToken string) (*authserver.TokenResponse, error)
 }
 
 type remoteClient struct {
@@ -42,7 +43,15 @@ func (c *remoteClient) ExchangeGrantCode(code string, redirectURI string) (*auth
 		zap.L().Error("invalid configuration :: missing authorization server", zap.String("client_name", c.ClientName))
 		return nil, errors.New("invalid client configuration :: missing authorization server")
 	}
-	return c.authServer.GetTokens(c.AuthMethod, c.ClientID, c.ClientSecret, code, redirectURI)
+	return c.authServer.GetTokens(c.AuthMethod, c.ClientID, c.ClientSecret, code, redirectURI, "")
+}
+
+func (c *remoteClient) RefreshToken(refreshToken string) (*authserver.TokenResponse, error) {
+	if c.authServer == nil {
+		zap.L().Error("invalid configuration :: missing authorization server", zap.String("client_name", c.ClientName))
+		return nil, errors.New("invalid client configuration :: missing authorization server")
+	}
+	return c.authServer.GetTokens(c.AuthMethod, c.ClientID, c.ClientSecret, "", "", refreshToken)
 }
 
 // New creates a new client

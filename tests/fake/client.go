@@ -6,6 +6,7 @@ type TokenResponse struct {
 	Res *authserver.TokenResponse
 	Err error
 }
+
 type Client struct {
 	Server        authserver.AuthorizationServer
 	TokenResponse *TokenResponse
@@ -40,5 +41,9 @@ func (m *Client) AuthorizationServer() authserver.AuthorizationServer {
 }
 
 func (m *Client) ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error) {
+	return m.TokenResponse.Res, m.TokenResponse.Err
+}
+
+func (m *Client) RefreshToken(refreshToken string) (*authserver.TokenResponse, error) {
 	return m.TokenResponse.Res, m.TokenResponse.Err
 }

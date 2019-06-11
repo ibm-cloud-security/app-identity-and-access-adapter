@@ -2,14 +2,17 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/gorilla/securecookie"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"strings"
-	"testing"
-
 	"github.com/gogo/protobuf/types"
+	"github.com/gorilla/securecookie"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"net/http"
+	"strings"
+	"sync"
+	"testing"
+	"time"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
@@ -84,6 +87,70 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRefreshTokenFlow(t *testing.T) {
+	var tests = []struct {
+		req            *authnz.HandleAuthnZRequest
+		action         *policy.Action
+		directResponse *v1beta1.DirectHttpResponse
+		message        string
+		code           int32
+		err            error
+	}{
+		{
+			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			&policy.Action{
+				Client: &fake.Client{
+					ClientID: "id",
+					Server:   &fake.AuthServer{},
+					TokenResponse: &fake.TokenResponse{
+						Res: &authserver.TokenResponse{
+							AccessToken:   "expired",
+							IdentityToken: "expired",
+							RefreshToken:  "refresh",
+							ExpiresIn:     10,
+						},
+					},
+				},
+			},
+			nil,
+			"User is authenticated",
+			int32(0),
+			nil,
+		},
+	}
+
+	for _, test := range tests {
+		api := WebStrategy{
+			tokenCache:   new(sync.Map),
+			secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
+			tokenUtil: MockValidator{
+				validate: func(tkn string) *err.OAuthError {
+					if tkn == "access" {
+						return &err.OAuthError{
+							Msg: "Token is expired",
+						}
+					}
+					return nil
+				},
+			},
+		}
+
+		api.tokenCache.Store("session", &authserver.TokenResponse{
+			AccessToken:   "access",
+			IdentityToken: "identity",
+			RefreshToken:  "refresh",
+			ExpiresIn:     10,
+		})
+		r, err := api.HandleAuthnZRequest(test.req, test.action)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error())
+		} else {
+			assert.Equal(t, test.code, r.Result.Status.Code)
+			assert.Equal(t, test.message, r.Result.Status.Message)
+		}
 	}
 }
 
@@ -194,6 +261,49 @@ func TestCodeCallback(t *testing.T) {
 	}
 }
 
+func TestLogout(t *testing.T) {
+	var tests = []struct {
+		req            *authnz.HandleAuthnZRequest
+		directResponse *v1beta1.DirectHttpResponse
+		message        string
+		code           int32
+		err            error
+		tokenResponse  *fake.TokenResponse
+	}{
+		{
+			generateAuthnzRequest("", "", "", "/oidc/logout", ""),
+			nil,
+			"Successfully authenticated : redirecting to original URL",
+			int32(16),
+			nil,
+			&fake.TokenResponse{},
+		},
+	}
+
+	for _, test := range tests {
+		action := &policy.Action{
+			Client: &fake.Client{
+				TokenResponse: test.tokenResponse,
+				Server: &fake.AuthServer{
+					Keys: &fake.KeySet{},
+				},
+			},
+		}
+
+		api := WebStrategy{
+			tokenUtil: MockValidator{},
+		}
+
+		r, err := api.HandleAuthnZRequest(test.req, action)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error())
+		} else {
+			assert.Equal(t, test.code, r.Result.Status.Code)
+			assert.Equal(t, test.message, r.Result.Status.Message)
+		}
+	}
+}
+
 func generateAuthnzRequest(cookies string, code string, err string, path string, state string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
@@ -221,9 +331,24 @@ func generateAuthnzRequest(cookies string, code string, err string, path string,
 }
 
 type MockValidator struct {
-	err *err.OAuthError
+	validate func(string) *err.OAuthError
 }
 
 func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
-	return v.err
+	if v.validate == nil {
+		return nil
+	}
+	return v.validate(tkn)
+}
+
+func createCookie() string {
+	c := &http.Cookie{
+		Name:     "oidc-cookie-id",
+		Value:    "session",
+		Path:     "/",
+		Secure:   false, // TODO: replace on release
+		HttpOnly: false,
+		Expires:  time.Now().Add(time.Hour * time.Duration(2160)),
+	}
+	return c.String()
 }

@@ -27,4 +27,8 @@ func TestAuthServerNew(t *testing.T) {
 	res2, err2 := c.ExchangeGrantCode("", "") // MockServer returns nil, nil
 	assert.Nil(t, res2)
 	assert.Nil(t, err2)
+
+	res3, err3 := c.RefreshToken("")
+	assert.Nil(t, res3)
+	assert.Nil(t, err3)
 }

@@ -1,12 +1,13 @@
 package store
 
 import (
-	"crypto"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 )
 
 const (
@@ -36,11 +37,11 @@ func TargetGenerator(service []string, paths []string) []v1.TargetElement {
 }
 
 func GetJwtPolicySpec(jwks string, target []v1.TargetElement) policy.Action {
-	return policy.Action{KeySet: &mockKeySet{}, Type: policy.JWT}
+	return policy.Action{KeySet: &fake.KeySet{}, Type: policy.JWT}
 }
 
 func GetOidcPolicySpec(name string, target []v1.TargetElement) policy.Action {
-	return policy.Action{Client: &mockClient{}, Type: policy.JWT}
+	return policy.Action{Client: &fake.Client{}, Type: policy.JWT}
 }
 
 func GetDefaultEndpoint() policy.Endpoint {
@@ -55,7 +56,7 @@ func TestLocalStore_KeySet(t *testing.T) {
 	store := New()
 	assert.Nil(t, (&LocalStore{}).GetKeySet(jwksurl))
 	assert.Nil(t, store.GetKeySet(jwksurl))
-	store.AddKeySet(jwksurl, &mockKeySet{})
+	store.AddKeySet(jwksurl, &fake.KeySet{})
 	assert.NotNil(t, store.GetKeySet(jwksurl))
 }
 
@@ -63,7 +64,7 @@ func TestLocalStore_Client(t *testing.T) {
 	store := New()
 	assert.Nil(t, (&LocalStore{}).GetClient(clientname))
 	assert.Nil(t, store.GetClient(clientname))
-	store.AddClient(clientname, &mockClient{})
+	store.AddClient(clientname, &fake.Client{})
 	assert.NotNil(t, store.GetClient(clientname))
 }
 
@@ -105,20 +106,3 @@ func TestLocalStore_PolicyMapping(t *testing.T) {
 	store.DeletePolicyMapping(samplePolicy)
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))
 }
-
-type mockClient struct {
-	server authserver.AuthorizationServer
-}
-
-func (m *mockClient) Name() string                                        { return "" }
-func (m *mockClient) ID() string                                          { return "" }
-func (m *mockClient) Secret() string                                      { return "" }
-func (m *mockClient) AuthorizationServer() authserver.AuthorizationServer { return m.server }
-func (m *mockClient) ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error) {
-	return nil, nil
-}
-
-type mockKeySet struct{}
-
-func (m *mockKeySet) PublicKeyURL() string                  { return "" }
-func (m *mockKeySet) PublicKey(kid string) crypto.PublicKey { return nil }

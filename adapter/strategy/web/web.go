@@ -15,6 +15,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
+	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
@@ -139,8 +140,29 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
+	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	if validationErr != nil {
+		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg && response.(*authserver.TokenResponse).RefreshToken != "" {
+			zap.L().Info("Access token is expired", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
+			res, err := action.Client.RefreshToken(response.(*authserver.TokenResponse).RefreshToken)
+			if err != nil {
+				zap.L().Info("Could not retrieve tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(err))
+				return nil, nil
+			}
+			response.(*authserver.TokenResponse).AccessToken = res.AccessToken
+			response.(*authserver.TokenResponse).IdentityToken = res.IdentityToken
+			response.(*authserver.TokenResponse).RefreshToken = res.RefreshToken
+			zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
+		} else {
+			zap.L().Debug("Cookies failed token validation: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
+			w.tokenCache.Delete(sessionCookie.Value)
+			return nil, nil
+		}
+
+	}
+
 	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr = w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Debug("Session ID token failed validation: %v", zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
@@ -151,7 +173,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	// Pass request through to service
 	return &authnz.HandleAuthnZResponse{
-		Result: &v1beta1.CheckResult{Status: status.OK},
+		Result: &v1beta1.CheckResult{Status: status.WithMessage(rpc.OK, "User is authenticated")},
 		Output: &authnz.OutputMsg{
 			Authorization: strings.Join([]string{bearer, response.(*authserver.TokenResponse).AccessToken, response.(*authserver.TokenResponse).IdentityToken}, " "),
 		},
