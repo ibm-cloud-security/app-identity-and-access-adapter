@@ -17,6 +17,6 @@ func (m *MockAuthServer) KeySet() keyset.KeySet {
 	return m.Keys
 }
 func (m *MockAuthServer) SetKeySet(keyset.KeySet) {}
-func (m *MockAuthServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string) (*authserver.TokenResponse, error) {
+func (m *MockAuthServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*authserver.TokenResponse, error) {
 	return nil, nil
 }

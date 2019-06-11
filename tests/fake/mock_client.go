@@ -18,3 +18,6 @@ func (m *MockClient) AuthorizationServer() authserver.AuthorizationServer { retu
 func (m *MockClient) ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error) {
 	return m.TokenResponse.Res, m.TokenResponse.Err
 }
+func (m *MockClient) RefreshToken(refreshToken string) (*authserver.TokenResponse, error) {
+	return m.TokenResponse.Res, m.TokenResponse.Err
+}

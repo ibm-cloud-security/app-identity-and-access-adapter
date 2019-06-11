@@ -140,22 +140,12 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	if validationErr != nil {
 		if validationErr.Msg == "Token is expired" && response.(*authserver.TokenResponse).RefreshToken != "" {
 			zap.L().Info("Access token is expired")
-			res, err := action.Client.ExchangeGrantCode("", "", response.(*authserver.TokenResponse).RefreshToken)
+			res, err := action.Client.RefreshToken(response.(*authserver.TokenResponse).RefreshToken)
 			if err != nil {
-				if strings.Contains(err.Error(), "invalid refresh token") {
-					zap.L().Info("Invalid refresh token")
-					return w.handleErrorCallback(err)
-				}
-				zap.L().Info(err.Error())
 				zap.L().Info("Could not retrieve tokens using refresh token", zap.Error(err))
-				return w.handleErrorCallback(err)
+				return nil, nil
 			}
 
-			validationErr := w.tokenUtil.Validate(res.AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-			if validationErr != nil {
-				zap.L().Debug("Cookies failed token validation", zap.Error(validationErr))
-				return w.handleErrorCallback(err)
-			}
 			response.(*authserver.TokenResponse).AccessToken = res.AccessToken
 			response.(*authserver.TokenResponse).IdentityToken = res.IdentityToken
 			response.(*authserver.TokenResponse).RefreshToken = res.RefreshToken
@@ -179,7 +169,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	// Pass request through to service
 	return &authnz.HandleAuthnZResponse{
-		Result: &v1beta1.CheckResult{Status: status.OK},
+		Result: &v1beta1.CheckResult{Status: status.WithMessage(rpc.OK, "User is authenticated")},
 		Output: &authnz.OutputMsg{
 			Authorization: strings.Join([]string{bearer, response.(*authserver.TokenResponse).AccessToken, response.(*authserver.TokenResponse).IdentityToken}, " "),
 		},
@@ -254,7 +244,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Exchange authorization grant code for tokens
-	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI, "")
+	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
 	if err != nil {
 		zap.L().Info("OIDC callback: Could not retrieve tokens", zap.Error(err), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(err)
