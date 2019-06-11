@@ -15,6 +15,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
+	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
@@ -141,7 +142,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 
 	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
-		if validationErr.Msg == "Token is expired" && response.(*authserver.TokenResponse).RefreshToken != "" {
+		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg && response.(*authserver.TokenResponse).RefreshToken != "" {
 			zap.L().Info("Access token is expired")
 			res, err := action.Client.RefreshToken(response.(*authserver.TokenResponse).RefreshToken)
 			if err != nil {
