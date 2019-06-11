@@ -143,18 +143,18 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg && response.(*authserver.TokenResponse).RefreshToken != "" {
-			zap.L().Info("Access token is expired")
+			zap.L().Info("Access token is expired", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 			res, err := action.Client.RefreshToken(response.(*authserver.TokenResponse).RefreshToken)
 			if err != nil {
-				zap.L().Info("Could not retrieve tokens using refresh token", zap.Error(err))
+				zap.L().Info("Could not retrieve tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(err))
 				return nil, nil
 			}
-
 			response.(*authserver.TokenResponse).AccessToken = res.AccessToken
 			response.(*authserver.TokenResponse).IdentityToken = res.IdentityToken
 			response.(*authserver.TokenResponse).RefreshToken = res.RefreshToken
+			zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 		} else {
-			zap.L().Debug("Cookies failed token validation: ", zap.Error(validationErr))
+			zap.L().Debug("Cookies failed token validation: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
 			w.tokenCache.Delete(sessionCookie.Value)
 			return nil, nil
 		}
