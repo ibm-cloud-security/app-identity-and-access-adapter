@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
@@ -47,6 +48,7 @@ const (
 
 // WebStrategy handles OAuth 2.0 / OIDC flows
 type WebStrategy struct {
+	ctx        *config.Config
 	tokenUtil  validator.TokenValidator
 	kubeClient kubernetes.Interface
 
@@ -63,8 +65,9 @@ type OidcCookie struct {
 }
 
 // New creates an instance of an OIDC protection agent.
-func New(kubeClient kubernetes.Interface) strategy.Strategy {
+func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy {
 	w := &WebStrategy{
+		ctx:        ctx,
 		tokenUtil:  validator.New(),
 		kubeClient: kubeClient,
 		mutex:      &sync.Mutex{},
@@ -322,7 +325,7 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 
 	if err != nil {
 		zap.S().Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
-		secret, err = w.generateKeySecret(32, 16)
+		secret, err = w.generateKeySecret(w.ctx.HashKeySize.Value, w.ctx.BlockKeySize.Value)
 		if err != nil {
 			zap.L().Info("Failed to retrieve tokens", zap.Error(err))
 			return nil, err

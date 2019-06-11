@@ -5,35 +5,18 @@ import (
 	"os"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-// args represents args consumed by IBMCloudAppID OOP adapter.
-type args struct {
-	// port to start the grpc adapter on
-	adapterPort uint16
-	// JSON style logs
-	json bool
-	// Log level - models zapcore.Level
-	level int8
-}
-
-func defaultArgs() *args {
-	return &args{
-		adapterPort: uint16(47304),
-		json:        false,
-		level:       0,
-	}
-}
-
 // GetCmd returns the cobra command-tree.
 func getCmd() *cobra.Command {
-	sa := defaultArgs()
+	sa := config.NewConfig()
 	cmd := &cobra.Command{
-		Use:   "ibmcloudappid",
-		Short: "IBM Cloud App ID out of process adapter.",
+		Use:   "Starts the IBM Cloud App ID out-of-process Mixer adapter",
+		Short: "Starts the IBM Cloud App ID out-of-process Mixer adapter",
 		Run: func(cmd *cobra.Command, args []string) {
 			runServer(sa)
 		},
@@ -46,31 +29,32 @@ func getCmd() *cobra.Command {
 	}
 
 	f := cmd.PersistentFlags()
-	f.Uint16VarP(&sa.adapterPort, "port", "p", sa.adapterPort, "TCP port to use for gRPC Adapter API")
-	f.BoolVarP(&sa.json, "json", "j", sa.json, "Use JSON style logging")
-	f.Int8VarP(&sa.level, "level", "l", sa.level, "Set output log level")
+	f.Uint16VarP(&sa.AdapterPort, "port", "p", sa.AdapterPort, "TCP port to use for gRPC Adapter API.")
+	f.BoolVarP(&sa.Json, "json", "j", sa.Json, "Use JSON style logging.")
+	f.Int8VarP(&sa.Level, "level", "l", sa.Level, "Set output log level. Range [-1, 7].")
+	f.VarP(&sa.HashKeySize, "hash-key", "", "The size of the HMAC signature key. It is recommended to use a key with 32 or 64 bytes.")
+	f.VarP(&sa.BlockKeySize, "block-key", "", "The size of the AES blockKey size used to encrypt the cookie value. Valid lengths are 16, 24, or 32.")
 
 	return cmd
 }
 
-func configureLogger(args *args) {
+func configureLogger(args *config.Config) {
 	config := zap.NewProductionConfig()
-	config.Level = zap.NewAtomicLevelAt(zapcore.Level(args.level))
+	config.Level = zap.NewAtomicLevelAt(zapcore.Level(args.Level))
 	config.InitialFields = map[string]interface{}{"source": "ibmcloudappid-adapter"}
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	if !args.json {
+	if !args.Json {
 		config.Encoding = "console"
 	}
 	logger, _ := config.Build()
 	zap.ReplaceGlobals(logger)
 }
 
-func runServer(args *args) {
+func runServer(args *config.Config) {
 	configureLogger(args)
 
 	// Configure Adapter
-	addr := fmt.Sprintf(":%d", args.adapterPort)
-	s, err := adapter.NewAppIDAdapter(addr)
+	s, err := adapter.NewAppIDAdapter(args)
 	if err != nil {
 		zap.L().Fatal("Failed to create ibmcloudappid.NewAppIDAdapter: %s", zap.Error(err))
 	}

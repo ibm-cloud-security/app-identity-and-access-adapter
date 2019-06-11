@@ -37,11 +37,11 @@ func TargetGenerator(service []string, paths []string) []v1.TargetElement {
 }
 
 func GetJwtPolicySpec(jwks string, target []v1.TargetElement) policy.Action {
-	return policy.Action{KeySet: &fake.MockKeySet{}, Type: policy.JWT}
+	return policy.Action{KeySet: &fake.KeySet{}, Type: policy.JWT}
 }
 
 func GetOidcPolicySpec(name string, target []v1.TargetElement) policy.Action {
-	return policy.Action{Client: &fake.MockClient{}, Type: policy.JWT}
+	return policy.Action{Client: &fake.Client{}, Type: policy.JWT}
 }
 
 func GetDefaultEndpoint() policy.Endpoint {
@@ -56,7 +56,7 @@ func TestLocalStore_KeySet(t *testing.T) {
 	store := New()
 	assert.Nil(t, (&LocalStore{}).GetKeySet(jwksurl))
 	assert.Nil(t, store.GetKeySet(jwksurl))
-	store.AddKeySet(jwksurl, &fake.MockKeySet{})
+	store.AddKeySet(jwksurl, &fake.KeySet{})
 	assert.NotNil(t, store.GetKeySet(jwksurl))
 }
 
@@ -64,7 +64,7 @@ func TestLocalStore_Client(t *testing.T) {
 	store := New()
 	assert.Nil(t, (&LocalStore{}).GetClient(clientname))
 	assert.Nil(t, store.GetClient(clientname))
-	store.AddClient(clientname, &fake.MockClient{})
+	store.AddClient(clientname, &fake.Client{})
 	assert.NotNil(t, store.GetClient(clientname))
 }
 

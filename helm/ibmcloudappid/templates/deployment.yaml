@@ -18,11 +18,16 @@ spec:
       containers:
         - name: {{ .Values.appName }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          {{ if .Values.logging.json }}
-          args: ["--json", "-p", "{{ .Values.service.port }}", "--level", "{{ .Values.logging.level }}"]
-          {{ else }}
-          args: ["-p", "{{ .Values.service.port }}", "--level", "{{ .Values.logging.level }}"]
-          {{ end }}
+
+          args:
+            {{ if .Values.logging.json }}
+            - "--json"
+            {{ end }}
+            - "--port={{ .Values.service.port }}"
+            - "--level={{ .Values.logging.level }}"
+            - "--hash-key={{ .Values.keys.hashKeySize }}"
+            - "--block-key={{ .Values.keys.blockKeySize }}"
+
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           ports:
             - containerPort: {{ .Values.service.port }}

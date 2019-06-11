@@ -23,7 +23,7 @@ func TestAuthServerNew(t *testing.T) {
 	assert.EqualError(t, err, "invalid client configuration :: missing authorization server")
 
 	c := n.(*remoteClient)
-	c.authServer = &fake.MockAuthServer{}
+	c.authServer = &fake.AuthServer{}
 	res2, err2 := c.ExchangeGrantCode("", "") // MockServer returns nil, nil
 	assert.Nil(t, res2)
 	assert.Nil(t, err2)
