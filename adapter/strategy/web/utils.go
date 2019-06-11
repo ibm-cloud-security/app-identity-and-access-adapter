@@ -1,6 +1,7 @@
 package webstrategy
 
 import (
+	"errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"go.uber.org/zap"
@@ -41,19 +42,25 @@ func randString(n int) string {
 
 // generateAuthorizationURL builds the /authorization request that begins an OAuth 2.0 / OIDC flow
 func generateAuthorizationURL(c client.Client, redirectURI string, state string) string {
-	baseUrl, err := url.Parse(c.AuthorizationServer().AuthorizationEndpoint())
+	server := c.AuthorizationServer()
+	if server == nil {
+		zap.L().Warn("Authorization server has not been configured for client", zap.Error(errors.New("authorization server has not been configured")), zap.String("client_name", c.Name()))
+		return ""
+	}
+	baseUrl, err := url.Parse(server.AuthorizationEndpoint())
 	if err != nil {
 		zap.L().Warn("Malformed Authorization URL", zap.Error(err))
 		return ""
 	}
 
 	// Prepare Query Parameters
-	params := url.Values{}
-	params.Add("client_id", c.ID())
-	params.Add("response_type", "code")
-	params.Add("redirect_uri", redirectURI)
-	params.Add("scope", "openid profile email")
-	params.Add("state", state)
+	params := url.Values{
+		"client_id":     {c.ID()},
+		"response_type": {"code"},
+		"redirect_uri":  {redirectURI},
+		"scope":         {"openid profile email"},
+		"state":         {state},
+	}
 
 	// Add Query Parameters to the URL
 	baseUrl.RawQuery = params.Encode() // Escape Query Parameters
