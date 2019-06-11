@@ -292,33 +292,6 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 	}, nil
 }
 
-//// getTokens retrieves tokens from the authorization server using the authorization grant code
-//func (w *WebStrategy) getTokens(client client.Client, refreshToken string) (*authserver.TokenResponse, error) {
-//
-//	form := url.Values{}
-//	form.Add("client_id", client.ID())
-//	form.Add("grant_type", "refresh_token")
-//	form.Add("refresh_token", refreshToken)
-//
-//	req, err := http.NewRequest("POST", client.AuthorizationServer().TokenEndpoint(), strings.NewReader(form.Encode()))
-//	if err != nil {
-//		zap.L().Warn("Could not serialize HTTP request", zap.Error(err))
-//		return nil, err
-//	}
-//
-//	req.SetBasicAuth(client.ID(), client.Secret())
-//	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-//
-//	var tokenResponse *authserver.TokenResponse
-//	test := http.Client{}
-//	if err := w.httpClient.Do(req, http.StatusOK, &tokenResponse); err != nil {
-//		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
-//		return nil, err
-//	}
-//
-//	return tokenResponse, nil
-//}
-
 // getSecureCookie retrieves the SecureCookie encryption struct in a
 // thread safe manner.
 func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
