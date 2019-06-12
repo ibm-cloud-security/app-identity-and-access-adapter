@@ -78,10 +78,16 @@ func buildTokenCookieName(base string, c client.Client) string {
 	return base + "-" + c.ID()
 }
 
-func generateSessionIdCookie(c client.Client) *http.Cookie {
+// generateSessionIDCookie creates a new sessionId cookie
+// if the provided value is empty and new id is randomly generated
+func generateSessionIDCookie(c client.Client, value *string) *http.Cookie {
+	var v = randString(15)
+	if value != nil {
+		v = *value
+	}
 	return &http.Cookie{
 		Name:     buildTokenCookieName(sessionCookie, c),
-		Value:    randString(15),
+		Value:    v,
 		Path:     "/",
 		Secure:   false, // TODO: replace on release
 		HttpOnly: false,

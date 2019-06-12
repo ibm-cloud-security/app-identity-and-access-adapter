@@ -51,7 +51,8 @@ access / authorization privileges.</p>
 <h2 id="OutputTemplate">OutputTemplate</h2>
 <section>
 <p>The Authn/Z template produces an authorization header of the format
-<code>Bearer &lt;access&gt; &lt;id&gt;</code> which should be replaced on the ongoing request.</p>
+<code>Bearer &lt;access&gt; &lt;id&gt;</code> which should be replaced on the ongoing request.
+as well as optional cookies to be set on the outgoing response</p>
 
 <table class="message-fields">
 <thead>
@@ -67,6 +68,14 @@ access / authorization privileges.</p>
 <td><code>string</code></td>
 <td>
 <p>The authorization header</p>
+
+</td>
+</tr>
+<tr id="OutputTemplate-sessionCookie">
+<td><code>sessionCookie</code></td>
+<td><code>string</code></td>
+<td>
+<p>The session-cookie to append to the response</p>
 
 </td>
 </tr>

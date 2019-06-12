@@ -14,3 +14,7 @@ spec:
     - name: Authorization
       values: [ a1.output.authorization ]
       operation: REPLACE
+  responseHeaderOperations:
+    - name: Set-Cookie
+      values: [ a1.output.sessionCookie ]
+      operation: APPEND

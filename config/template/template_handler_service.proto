@@ -76,6 +76,9 @@ message OutputMsg {
     // The authorization header
     string authorization = 1;
     
+    // The session-cookie to append to the response
+    string sessionCookie = 2;
+    
 }
 
 // Contains instance payload for 'authnz' template. This is passed to infrastructure backends during request-time

@@ -31,7 +31,7 @@ func TestGenerateAuthorizationURL(t *testing.T) {
 		},
 		{
 			expected:    "https://auth.com/authorization?client_id=id&redirect_uri=https%3A%2F%2Fredirect.com&response_type=code&scope=openid+profile+email&state=12345",
-			c:           fake.NewClient(),
+			c:           fake.NewClient(nil),
 			redirectURI: "https://redirect.com",
 			state:       "12345",
 		},
@@ -60,5 +60,5 @@ func TestBuildRequestURL(t *testing.T) {
 }
 
 func TestTokenCookieName(t *testing.T) {
-	assert.Equal(t, "base-string-id", buildTokenCookieName("base-string", fake.NewClient()))
+	assert.Equal(t, "base-string-id", buildTokenCookieName("base-string", fake.NewClient(nil)))
 }
