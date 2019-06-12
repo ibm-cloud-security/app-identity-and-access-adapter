@@ -3,10 +3,11 @@ package keyset
 
 import (
 	"crypto"
-	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"net/http"
 
+	cstmErrs "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"golang.org/x/sync/singleflight"
 )
@@ -85,12 +86,14 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 		return nil, err
 	}
 
-	req.Header.Set("xFilterType", "IstioAdapter")
-
-	var ks keySet
-	if err := s.httpClient.Do(req, http.StatusOK, &ks); err != nil {
+	ks := new(keySet)
+	oa2Err := new(cstmErrs.OAuthError)
+	if res, err := s.httpClient.Do(req, ks, oa2Err); err != nil {
 		zap.L().Info("Failed to retrieve public keys", zap.String("url", s.publicKeyURL), zap.Error(err))
 		return nil, err
+	} else if res.StatusCode != http.StatusOK {
+		zap.L().Info("Failed to retrieve public keys", zap.String("url", s.publicKeyURL), zap.Error(oa2Err))
+		return nil, oa2Err
 	}
 
 	// Convert JSON keys to crypto keys
@@ -119,7 +122,7 @@ func (s *RemoteKeySet) updateKeys() (interface{}, error) {
 // OK validates a KeySet Response
 func (k *keySet) OK() error {
 	if k.Keys == nil {
-		return errors.New("invalid public keys response : missing keys array")
+		return fmt.Errorf("invalid public keys response : missing keys array")
 	}
 	return nil
 }

@@ -101,22 +101,22 @@ func TestParseRequest(t *testing.T) {
 				},
 			},
 			true,
-			"authorization header not provided",
+			"invalid_token: authorization header not provided",
 		},
 		{
 			generateAuthRequest(""),
 			true,
-			"authorization header not provided",
+			"invalid_token: authorization header not provided",
 		},
 		{
 			generateAuthRequest("bearer"),
 			true,
-			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
+			"invalid_token: authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
 			generateAuthRequest("b access id"),
 			true,
-			"unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
+			"invalid_token: unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
 			generateAuthRequest("Bearer access id"),
@@ -130,8 +130,10 @@ func TestParseRequest(t *testing.T) {
 		},
 	}
 
-	for _, e := range tests {
+	for _, test := range tests {
+		e := test
 		t.Run("Parsing Test", func(st *testing.T) {
+			st.Parallel()
 			tokens, err := getAuthTokensFromRequest(e.r)
 			if !e.expectErr && tokens != nil {
 				assert.Equal(st, "access", tokens.Access)

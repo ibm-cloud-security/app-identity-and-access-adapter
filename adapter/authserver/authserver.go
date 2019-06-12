@@ -3,13 +3,15 @@ package authserver
 
 import (
 	"errors"
-	"github.com/golang/groupcache/singleflight"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/golang/groupcache/singleflight"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	cstmErrs "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
+	"go.uber.org/zap"
 )
 
 const (
@@ -113,7 +115,7 @@ func (s *RemoteServer) AuthorizationEndpoint() string {
 func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error) {
 	_ = s.initialize()
 	form := url.Values{
-		"client_id":    {clientID},
+		"client_id": {clientID},
 	}
 	if refreshToken != "" {
 		form.Add("grant_type", "refresh_token")
@@ -143,13 +145,17 @@ func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecr
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	var tokenResponse TokenResponse
-	if err := s.httpclient.Do(req, http.StatusOK, &tokenResponse); err != nil {
+	tokenResponse := new(TokenResponse)
+	oa2Err := new(cstmErrs.OAuthError)
+	if res, err := s.httpclient.Do(req, tokenResponse, oa2Err); err != nil {
 		zap.L().Info("Failed to retrieve tokens", zap.Error(err))
 		return nil, err
+	} else if res.StatusCode != http.StatusOK {
+		zap.L().Info("Failed to retrieve tokens", zap.Error(oa2Err))
+		return nil, oa2Err
 	}
 
-	return &tokenResponse, nil
+	return tokenResponse, nil
 }
 
 // initialize attempts to load the Client configuration from the discovery endpoint
@@ -185,17 +191,19 @@ func (s *RemoteServer) loadDiscoveryEndpoint() (interface{}, error) {
 		return nil, err
 	}
 
-	config := DiscoveryConfig{
-		DiscoveryURL: s.discoveryURL,
-	}
-
-	if err := s.httpclient.Do(req, http.StatusOK, &config); err != nil {
+	config := new(DiscoveryConfig)
+	config.DiscoveryURL = s.discoveryURL
+	oa2Err := new(cstmErrs.OAuthError)
+	if res, err := s.httpclient.Do(req, config, oa2Err); err != nil {
 		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))
 		return nil, err
+	} else if res.StatusCode != http.StatusOK {
+		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(oa2Err))
+		return nil, oa2Err
 	}
 
 	s.initialized = true
-	s.DiscoveryConfig = config
+	s.DiscoveryConfig = *config
 
 	return http.StatusOK, nil
 }
