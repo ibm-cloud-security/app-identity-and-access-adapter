@@ -48,12 +48,12 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 		{ // New Authentication
 			generateAuthnzRequest("", "", "", "", ""),
 			&policy.Action{
-				Client: fake.NewClient(),
+				Client: fake.NewClient(nil),
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Body:    "",
-				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(), "https://tests.io/api/oidc/callback", "")},
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
 			int32(16),
@@ -94,30 +94,97 @@ func TestRefreshTokenFlow(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
 		action         *policy.Action
+		sessionId      string
+		session        *authserver.TokenResponse
 		directResponse *v1beta1.DirectHttpResponse
 		message        string
 		code           int32
 		err            error
 	}{
-		{
+		{ // successful refresh flow
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
 			&policy.Action{
-				Client: &fake.Client{
-					ClientID: "id",
-					Server:   &fake.AuthServer{},
-					TokenResponse: &fake.TokenResponse{
-						Res: &authserver.TokenResponse{
-							AccessToken:   "expired",
-							IdentityToken: "expired",
-							RefreshToken:  "refresh",
-							ExpiresIn:     10,
-						},
+				Client: fake.NewClient(&fake.TokenResponse{
+					Res: &authserver.TokenResponse{
+						IdentityToken: "identity",
+						RefreshToken:  "refresh",
+						ExpiresIn:     10,
 					},
-				},
+				}),
+			},
+			"session",
+			&authserver.TokenResponse{
+				IdentityToken: "Token is expired",
+				RefreshToken:  "refresh",
+				ExpiresIn:     10,
 			},
 			nil,
 			"User is authenticated",
 			int32(0),
+			nil,
+		},
+		{ // Refresh token request fails
+			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			&policy.Action{
+				Client: fake.NewClient(&fake.TokenResponse{
+					Err: errors.New("could not retrieve tokens"),
+				}),
+			},
+			"session",
+			&authserver.TokenResponse{
+				IdentityToken: "Token is expired",
+				RefreshToken:  "refresh",
+				ExpiresIn:     10,
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Body:    "",
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
+			nil,
+		},
+		{ // Refresh token is empty
+			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			&policy.Action{
+				Client: fake.NewClient(nil),
+			},
+			"session",
+			&authserver.TokenResponse{
+				IdentityToken: "Token is expired",
+				RefreshToken:  "",
+				ExpiresIn:     10,
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Body:    "",
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
+			nil,
+		},
+		{ // Refresh token request fails
+			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			&policy.Action{
+				Client: fake.NewClient(&fake.TokenResponse{
+					Err: errors.New("could not retrieve tokens"),
+				}),
+			},
+			"session",
+			&authserver.TokenResponse{
+				IdentityToken: "Token is expired",
+				RefreshToken:  "refresh",
+				ExpiresIn:     10,
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Body:    "",
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
 			nil,
 		},
 	}
@@ -128,9 +195,9 @@ func TestRefreshTokenFlow(t *testing.T) {
 			secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
 			tokenUtil: MockValidator{
 				validate: func(tkn string) *err.OAuthError {
-					if tkn == "access" {
+					if !(tkn == "access" || tkn == "identity") {
 						return &err.OAuthError{
-							Msg: "Token is expired",
+							Msg: tkn,
 						}
 					}
 					return nil
@@ -138,18 +205,27 @@ func TestRefreshTokenFlow(t *testing.T) {
 			},
 		}
 
-		api.tokenCache.Store("session", &authserver.TokenResponse{
-			AccessToken:   "access",
-			IdentityToken: "identity",
-			RefreshToken:  "refresh",
-			ExpiresIn:     10,
-		})
+		api.tokenCache.Store(test.sessionId, test.session)
 		r, err := api.HandleAuthnZRequest(test.req, test.action)
 		if test.err != nil {
 			assert.EqualError(t, err, test.err.Error())
 		} else {
 			assert.Equal(t, test.code, r.Result.Status.Code)
 			assert.Equal(t, test.message, r.Result.Status.Message)
+			if test.directResponse != nil {
+				response := &v1beta1.DirectHttpResponse{}
+				for _, detail := range r.Result.Status.Details {
+					if types.UnmarshalAny(detail, response) != nil {
+						continue
+					}
+					assert.Equal(t, test.directResponse.Code, response.Code)
+					if !strings.HasPrefix(response.Headers["location"], test.directResponse.Headers["location"]) {
+						assert.Fail(t, "incorrect location header")
+					}
+					assert.NotNil(t, test.directResponse.Headers["Set-Cookie"])
+					assert.Equal(t, test.directResponse.Body, response.Body)
+				}
+			}
 		}
 	}
 }

@@ -15,12 +15,13 @@ type Client struct {
 	ClientSecret  string
 }
 
-func NewClient() *Client {
+func NewClient(tokenResponse *TokenResponse) *Client {
 	return &Client{
-		Server:       NewAuthServer(),
-		ClientName:   "name",
-		ClientID:     "id",
-		ClientSecret: "secret",
+		Server:        NewAuthServer(),
+		ClientName:    "name",
+		ClientID:      "id",
+		ClientSecret:  "secret",
+		TokenResponse: tokenResponse,
 	}
 }
 

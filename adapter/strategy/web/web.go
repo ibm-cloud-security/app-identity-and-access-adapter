@@ -122,6 +122,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 		return nil, errors.New("invalid OIDC configuration")
 	}
 
+	// Parse Cookies
 	header := http.Header{}
 	header.Add("Cookie", cookies)
 	request := http.Request{Header: header}
@@ -132,41 +133,29 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 		return nil, nil
 	}
 
-	response, ok := w.tokenCache.Load(sessionCookie.Value)
-	if !ok {
+	// Load session information
+	var session *authserver.TokenResponse
+	if storedSession, ok := w.tokenCache.Load(sessionCookie.Value); !ok {
+		zap.L().Debug("Tokens not found in cache.", zap.String("client_name", action.Client.Name()))
+		return nil, nil
+	} else if session, ok = storedSession.(*authserver.TokenResponse); !ok {
 		zap.L().Debug("Tokens not found in cache.", zap.String("client_name", action.Client.Name()))
 		return nil, nil
 	}
 
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
-	validationErr := w.tokenUtil.Validate(response.(*authserver.TokenResponse).AccessToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg && response.(*authserver.TokenResponse).RefreshToken != "" {
-			zap.L().Info("Access token is expired", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
-			res, err := action.Client.RefreshToken(response.(*authserver.TokenResponse).RefreshToken)
-			if err != nil {
-				zap.L().Info("Could not retrieve tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(err))
-				return nil, nil
-			}
-			response.(*authserver.TokenResponse).AccessToken = res.AccessToken
-			response.(*authserver.TokenResponse).IdentityToken = res.IdentityToken
-			response.(*authserver.TokenResponse).RefreshToken = res.RefreshToken
-			zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
+	// Validate session
+	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
+	if validationErr := w.tokenUtil.Validate(session.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules); validationErr != nil {
+		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
+			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
+			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
 		} else {
-			zap.L().Debug("Cookies failed token validation: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
+			zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
 			w.tokenCache.Delete(sessionCookie.Value)
 			return nil, nil
 		}
-
-	}
-
-	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	validationErr = w.tokenUtil.Validate(response.(*authserver.TokenResponse).IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
-	if validationErr != nil {
-		zap.L().Debug("Session ID token failed validation: %v", zap.Error(validationErr))
-		w.tokenCache.Delete(sessionCookie.Value)
-		return nil, nil
 	}
 
 	zap.L().Debug("User is currently authenticated")
@@ -175,9 +164,35 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{Status: status.WithMessage(rpc.OK, "User is authenticated")},
 		Output: &authnz.OutputMsg{
-			Authorization: strings.Join([]string{bearer, response.(*authserver.TokenResponse).AccessToken, response.(*authserver.TokenResponse).IdentityToken}, " "),
+			Authorization: strings.Join([]string{bearer, session.AccessToken, session.IdentityToken}, " "),
 		},
 	}, nil
+}
+
+// handleRefreshTokens attempts to update an expired session using the refresh token flow
+func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.TokenResponse, c client.Client, rules []policyAction.Rule) (*authnz.HandleAuthnZResponse, error) {
+	if session.RefreshToken == "" {
+		zap.L().Debug("Refresh token not provided", zap.String("client_name", c.Name()))
+		return nil, nil
+	}
+	if tokens, err := c.RefreshToken(session.RefreshToken); err != nil {
+		zap.L().Info("Could not retrieve tokens using the refresh token", zap.String("client_name", c.Name()), zap.Error(err))
+		return nil, nil
+	} else if validationErr := w.tokenUtil.Validate(tokens.IdentityToken, c.AuthorizationServer().KeySet(), rules); validationErr != nil {
+		zap.L().Debug("Could not validate refreshed tokens. Beginning a new session.", zap.String("client_name", c.Name()), zap.String("session_id", sessionID), zap.Error(validationErr))
+		return nil, nil
+	} else {
+		zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", c.Name()), zap.String("session_id", sessionID))
+		cookie := generateSessionIDCookie(c, &sessionID)
+		w.tokenCache.Store(cookie.Value, tokens)
+		return &authnz.HandleAuthnZResponse{
+			Result: &v1beta1.CheckResult{Status: status.WithMessage(rpc.OK, "User is authenticated")},
+			Output: &authnz.OutputMsg{
+				Authorization: strings.Join([]string{bearer, tokens.AccessToken, tokens.IdentityToken}, " "),
+				SessionCookie: cookie.String(),
+			},
+		}, nil
+	}
 }
 
 // handleErrorCallback returns an Unauthenticated CheckResult
@@ -261,7 +276,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return w.handleErrorCallback(validationErr)
 	}
 
-	cookie := generateSessionIdCookie(action.Client)
+	cookie := generateSessionIDCookie(action.Client, nil)
 	w.tokenCache.Store(cookie.Value, response)
 
 	zap.L().Debug("OIDC callback: created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))

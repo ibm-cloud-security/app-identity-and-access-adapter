@@ -75,7 +75,10 @@ message Template {
 
 // The Authn/Z template produces an authorization header of the format
 // `Bearer <access> <id>` which should be replaced on the ongoing request.
+// as well as optional cookies to be set on the outgoing response
 message OutputTemplate {
     // The authorization header
     string authorization = 1;
+    // The session-cookie to append to the response
+    string sessionCookie = 2;
 }

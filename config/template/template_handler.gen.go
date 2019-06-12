@@ -48,11 +48,15 @@ type Instance struct {
 //
 // The Authn/Z template produces an authorization header of the format
 // `Bearer <access> <id>` which should be replaced on the ongoing request.
+// as well as optional cookies to be set on the outgoing response
 type Output struct {
 	fieldsSet map[string]bool
 
 	// The authorization header
 	Authorization string
+
+	// The session-cookie to append to the response
+	SessionCookie string
 }
 
 func NewOutput() *Output {
@@ -62,6 +66,11 @@ func NewOutput() *Output {
 func (o *Output) SetAuthorization(val string) {
 	o.fieldsSet["authorization"] = true
 	o.Authorization = val
+}
+
+func (o *Output) SetSessionCookie(val string) {
+	o.fieldsSet["sessionCookie"] = true
+	o.SessionCookie = val
 }
 
 func (o *Output) WasSet(field string) bool {
