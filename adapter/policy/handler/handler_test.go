@@ -18,8 +18,8 @@ const (
 	OIDCPolicy
 	OIDCClient
 	NONE
-	secretFromRef string = "secretFromRef"
-	secretFromPlainText string = "secretFromPlainText"
+	secretFromRef       string = "secretFromRef"
+	secretFromPlainText string = "secretFromPlainTextssd"
 )
 
 func GetObjctMeta() meta_v1.ObjectMeta {
@@ -73,8 +73,8 @@ func GetOidcClient(spec v1.OidcClientSpec, objMeta meta_v1.ObjectMeta, typeMeta 
 
 func MockKubeSecret() *k8sV1.Secret {
 	// create kube secret
-	data := map[string][]byte { "secretKey": []byte(secretFromRef)}
-	objData := meta_v1.ObjectMeta{Name:"mysecret"}
+	data := map[string][]byte{"secretKey": []byte(secretFromRef)}
+	objData := meta_v1.ObjectMeta{Name: "mysecret"}
 	return &k8sV1.Secret{Data: data, ObjectMeta: objData}
 }
 
@@ -101,10 +101,10 @@ func OidcClientGenerator(name string, id string, url string) v1.OidcClient {
 func OidcClientWithRef(name string, id string, url string, ref v1.ClientSecretRef) v1.OidcClient {
 	return GetOidcClient(
 		v1.OidcClientSpec{
-			ClientName:name,
-			ClientID: id,
-			DiscoveryURL: url,
-			ClientSecret: "",
+			ClientName:      name,
+			ClientID:        id,
+			DiscoveryURL:    url,
+			ClientSecret:    "",
 			ClientSecretRef: ref,
 		}, GetObjctMeta(), GetTypeMeta())
 }
@@ -112,8 +112,8 @@ func OidcClientWithRef(name string, id string, url string, ref v1.ClientSecretRe
 func OidcClientNoSecret(name string, id string, url string) v1.OidcClient {
 	return GetOidcClient(
 		v1.OidcClientSpec{
-			ClientName:name,
-			ClientID: id,
+			ClientName:   name,
+			ClientID:     id,
 			DiscoveryURL: url,
 		}, GetObjctMeta(), GetTypeMeta())
 }
@@ -124,48 +124,59 @@ func TestNew(t *testing.T) {
 
 func TestGetClientSecret(t *testing.T) {
 	testHandler := &CrdHandler{
-		store: store.New(),
+		store:      store.New(),
 		kubeClient: fake.NewSimpleClientset(),
 	}
 	tests := []struct {
-		obj v1.OidcClient
+		name   string
+		obj    v1.OidcClient
 		secret string
 	}{
 		{
-			obj: GetOidcClient(GetOidcClientSpec("name", "id", "url"), GetObjctMeta(), GetTypeMeta()),
+			name:   "Plain text secret",
+			obj:    GetOidcClient(GetOidcClientSpec("name", "id", "url"), GetObjctMeta(), GetTypeMeta()),
 			secret: secretFromPlainText,
 		},
 		{
-			obj: OidcClientNoSecret("name", "id", "url"),
+			name:   "No secret",
+			obj:    OidcClientNoSecret("name", "id", "url"),
 			secret: "",
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"mysecret", Key:"secretKey"}),
+			name:   "secret from ref",
+			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "secretKey"}),
 			secret: secretFromRef,
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"mysecret", Key:"invalidKey"}),
+			name:   "invalid ref name",
+			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "invalidKey"}),
 			secret: "",
 		},
 		{
-			obj: OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name:"invalidName", Key:"secretKey"}),
+			name:   "invalid ref key",
+			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "invalidName", Key: "secretKey"}),
 			secret: "",
 		},
 		{
+			name: "plaintext secret w/ invalid ref",
 			obj: GetOidcClient(
 				v1.OidcClientSpec{
-					ClientName:"name",
-					ClientID: "id",
-					DiscoveryURL: "url",
-					ClientSecret:secretFromPlainText,
-					ClientSecretRef: v1.ClientSecretRef{Name:"mysecret", Key: ""}}, GetObjctMeta(), GetTypeMeta()),
+					ClientName:      "name",
+					ClientID:        "id",
+					DiscoveryURL:    "url",
+					ClientSecret:    secretFromPlainText,
+					ClientSecretRef: v1.ClientSecretRef{Name: "mysecret", Key: ""}}, GetObjctMeta(), GetTypeMeta()),
 			secret: secretFromPlainText,
 		},
 	}
 	_, _ = testHandler.kubeClient.CoreV1().Secrets("sample").Create(MockKubeSecret())
 	for _, test := range tests {
-		res := testHandler.getClientSecret(&test.obj)
-		assert.Equal(t, test.secret, res)
+		test := test
+		t.Run(test.name, func(st *testing.T) {
+			st.Parallel()
+			res := testHandler.getClientSecret(&test.obj)
+			assert.Equal(st, test.secret, res)
+		})
 	}
 }
 

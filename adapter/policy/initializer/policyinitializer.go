@@ -44,8 +44,7 @@ func New(store store.PolicyStore) (Initializer, error) {
 	}
 
 	handler := handler.New(store, client)
-	policyInitializer := &PolicyInitializer{Handler: handler}
-	policyInitializer.KubeClient = client
+	policyInitializer := &PolicyInitializer{Handler: handler, KubeClient: client}
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
 	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Handler)
 	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Handler)

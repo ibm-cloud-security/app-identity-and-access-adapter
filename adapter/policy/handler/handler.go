@@ -20,7 +20,7 @@ type PolicyHandler interface {
 
 // CrdHandler is responsible for storing and managing policy/client data
 type CrdHandler struct {
-	store store.PolicyStore
+	store      store.PolicyStore
 	kubeClient kubernetes.Interface
 }
 
@@ -29,7 +29,7 @@ type CrdHandler struct {
 // New creates a PolicyManager
 func New(store store.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler {
 	return &CrdHandler{
-		store: store,
+		store:      store,
 		kubeClient: kubeClient,
 	}
 }
@@ -124,7 +124,7 @@ func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
 	if crd.Spec.ClientSecretRef.Name != "" && crd.Spec.ClientSecretRef.Key != "" {
 		secret, err := GetKubeSecret(c.kubeClient, crd.ObjectMeta.Namespace, crd.Spec.ClientSecretRef)
 		if err != nil || string(secret.Data[crd.Spec.ClientSecretRef.Key]) == "" {
-			zap.L().Debug("Failed to get kube secret...trying plaintext clientSecret")
+			zap.S().Warn("Failed to get kube secret: ", err)
 			return crd.Spec.ClientSecret
 		} else {
 			return string(secret.Data[crd.Spec.ClientSecretRef.Key])

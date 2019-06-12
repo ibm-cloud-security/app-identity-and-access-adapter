@@ -30,11 +30,7 @@ func parseTarget(target []v1.TargetElement, namespace string) []policy.Endpoint 
 }
 
 func GetKubeSecret(kubeClient kubernetes.Interface, namespace string, ref v1.ClientSecretRef) (*k8sv1.Secret, error) {
-	secret, err := kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return secret, nil
+	return kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
 }
 
 func generatePolicyMappingKey(crdType policy.Type, namespace string, name string) string {
