@@ -115,9 +115,11 @@ kind: JwtConfig
     jwksUrl: <oauth-provider-jwks-endpoint>
 ```
 
-| Field   |     Type      |Required|     Description      |
-|----------|:-------------:|:-------------:|
-| jwksUrl |string|yes|  The endpoint containing a JSON object representing a set of JSON Web Keys (JWKs) required to verify the authenticity of issued ID and access tokens.  |
+
+| Field | Type | Required | Description |
+| --- | :---: | :---: | :---: |
+| jwksUrl | string | yes | The endpoint containing a JSON object representing a set of JSON Web Keys (JWKs) required to verify the authenticity of issued ID and access tokens. |
+
 
 #### Protecting Frontend Applications
 
@@ -146,7 +148,7 @@ kind: OidcConfig
 ```
 
 | Field   | Type |Required|      Description      |
-|----------|:-------------:|:-------------:|
+|----------|:-------------:|:-------------:| :---: |
 | discoveryUrl |string|yes| well-known endpoint containing a JSON document of OIDC/OAuth 2.0 configuration information |
 | clientId |string|yes| identifier for the client used for authentication  |
 | clientSecret | string|*no|  plaintext secret used to authenticate the client. If not provided, a `clientSecretRef` must exist. |
@@ -179,18 +181,18 @@ kind: Policy
 ```
 
 | Service Object   |     Type      |Required|     Description      |
-|----------|:-------------:|:-------------:|
+|----------|:-------------:|:-------------:| :---: |
 | service |string|yes| name of Kubernetes service in the Policy namespace to protect |
 | paths | array |yes| list of path objects defining endpoints to protect. If an empty array, all paths are protected |
 
 | Path Object   |     Type      |Required|     Description      |
-|----------|:-------------:|:-------------:|
+|----------|:-------------:|:-------------:| :---: |
 | exact or prefix |string|yes| path to apply the policies onto. Exact matches endpoints exactly as provided with the last `/` trimmed. Prefix matches endpoints beginning with the route prefix provided |
 | method |enum|no| The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
 | policies |array|no| The OIDC/JWT policies that should be applied.  |
 
 | Policy Object   |     Type     | Required |     Description      |
-|----------|:-------------:|:-------------:|
+|----------|:-------------:|:-------------:| :---: |
 | type |enum|yes| type of OIDC policy: `jwt` or `oidc` |
 | config |string|yes| name of provider config to use |
 
