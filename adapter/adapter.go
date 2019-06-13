@@ -16,7 +16,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/initializer"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/api"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/web"
@@ -115,7 +115,7 @@ func NewAppIDAdapter(cfg *config.Config) (Server, error) {
 		return nil, err
 	}
 
-	localStore := store.New()
+	localStore := policy2.New()
 
 	// Initialize Kubernetes
 	init, err := initializer.New(localStore)

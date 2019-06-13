@@ -3,19 +3,20 @@ package engine
 import (
 	"errors"
 	"fmt"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
-	"github.com/prometheus/common/log"
 	"testing"
 
+	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	"github.com/prometheus/common/log"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		store store.PolicyStore
+		store policy2.PolicyStore
 		err   error
 	}{
 		{
@@ -23,7 +24,7 @@ func TestNew(t *testing.T) {
 			err:   errors.New("could not create policy engine using undefined store"),
 		},
 		{
-			store: store.New(),
+			store: policy2.New(),
 			err:   nil,
 		},
 	}
@@ -116,7 +117,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 
 	for i, test := range tests {
 		/// Create new engine
-		store := store.New().(*store.LocalStore)
+		store := policy2.New().(*policy2.LocalStore)
 		store.AddAuthServer("serverurl", &fake.AuthServer{})
 		store.AddKeySet("serverurl", &fake.KeySet{})
 		for _, ep := range test.endpoints {
@@ -180,7 +181,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 
 	for i, test := range tests {
 		/// Create new engine
-		store := store.New().(*store.LocalStore)
+		store := policy2.New().(*policy2.LocalStore)
 		store.AddClient("client", &fake.Client{Server: &fake.AuthServer{}})
 		eng := &engine{store: store}
 		for _, ep := range test.endpoints {
@@ -229,7 +230,7 @@ func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
 
 	for i, test := range tests {
 		/// Create new engine
-		store := store.New().(*store.LocalStore)
+		store := policy2.New().(*policy2.LocalStore)
 		store.AddAuthServer("serverurl", &fake.AuthServer{})
 		store.AddClient("client", &fake.Client{Server: store.GetAuthServer("serverurl")})
 		eng := &engine{store: store}

@@ -13,3 +13,7 @@ type Action struct {
 	ClientName string
 	Rules      []Rule
 }
+
+type Actions struct {
+	Actions []Action
+}

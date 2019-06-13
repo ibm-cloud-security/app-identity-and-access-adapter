@@ -1,16 +1,17 @@
 package initializer
 
 import (
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	"go.uber.org/zap"
 
 	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
 	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -37,7 +38,7 @@ func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
 	return pi.Handler
 }
 
-func New(store store.PolicyStore) (Initializer, error) {
+func New(store policy.PolicyStore) (Initializer, error) {
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err

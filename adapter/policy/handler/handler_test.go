@@ -1,14 +1,15 @@
 package handler
 
 import (
+	"testing"
+
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/stretchr/testify/assert"
 	k8sV1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"testing"
 )
 
 type Type int
@@ -119,12 +120,12 @@ func OidcClientNoSecret(name string, id string, url string) v1.OidcClient {
 }
 
 func TestNew(t *testing.T) {
-	assert.NotNil(t, New(store.New(), fake.NewSimpleClientset()))
+	assert.NotNil(t, New(policy2.New(), fake.NewSimpleClientset()))
 }
 
 func TestGetClientSecret(t *testing.T) {
 	testHandler := &CrdHandler{
-		store:      store.New(),
+		store:      policy2.New(),
 		kubeClient: fake.NewSimpleClientset(),
 	}
 	tests := []struct {
@@ -182,7 +183,7 @@ func TestGetClientSecret(t *testing.T) {
 
 func TestHandler_HandleAddEvent(t *testing.T) {
 	testHandler := &CrdHandler{
-		store: store.New(),
+		store: policy2.New(),
 	}
 	tests := []struct {
 		objType  Type
@@ -251,7 +252,7 @@ func TestHandler_HandleAddEvent(t *testing.T) {
 
 func TestCrdHandler_HandleDeleteEvent(t *testing.T) {
 	testHandler := &CrdHandler{
-		store: store.New(),
+		store: policy2.New(),
 	}
 	tests := []struct {
 		objType  Type

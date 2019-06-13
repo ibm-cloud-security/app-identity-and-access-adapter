@@ -7,7 +7,7 @@ import (
 	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -20,14 +20,14 @@ type PolicyHandler interface {
 
 // CrdHandler is responsible for storing and managing policy/client data
 type CrdHandler struct {
-	store      store.PolicyStore
+	store      policy2.PolicyStore
 	kubeClient kubernetes.Interface
 }
 
 ////////////////// constructor //////////////////
 
 // New creates a PolicyManager
-func New(store store.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler {
+func New(store policy2.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler {
 	return &CrdHandler{
 		store:      store,
 		kubeClient: kubeClient,

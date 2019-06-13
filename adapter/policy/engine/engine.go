@@ -3,11 +3,12 @@ package engine
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
+	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"go.uber.org/zap"
-	"strings"
 )
 
 const (
@@ -21,11 +22,11 @@ type PolicyEngine interface {
 }
 
 type engine struct {
-	store store.PolicyStore
+	store policy2.PolicyStore
 }
 
 // New creates a PolicyEngine
-func New(store store.PolicyStore) (PolicyEngine, error) {
+func New(store policy2.PolicyStore) (PolicyEngine, error) {
 	if store == nil {
 		zap.L().Error("Trying to create PolicyEngine, but no store provided.")
 		return nil, errors.New("could not create policy engine using undefined store")
