@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ package externalversions
 
 import (
 	"fmt"
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,12 +53,12 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=appid.cloud.ibm.com, Version=v1
-	case v1.SchemeGroupVersion.WithResource("jwtpolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().JwtPolicies().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("oidcclients"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().OidcClients().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("oidcpolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().OidcPolicies().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("jwtconfigs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().JwtConfigs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("oidcconfigs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().OidcConfigs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("policies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().Policies().Informer()}, nil
 
 	}
 

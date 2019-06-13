@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,71 +19,71 @@ limitations under the License.
 package v1
 
 import (
+	time "time"
+
 	policiesv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	versioned "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/listers/policies/v1"
-	time "time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// OidcPolicyInformer provides access to a shared informer and lister for
-// OidcPolicies.
-type OidcPolicyInformer interface {
+// OidcConfigInformer provides access to a shared informer and lister for
+// OidcConfigs.
+type OidcConfigInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.OidcPolicyLister
+	Lister() v1.OidcConfigLister
 }
 
-type oidcPolicyInformer struct {
+type oidcConfigInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewOidcPolicyInformer constructs a new informer for OidcPolicy type.
+// NewOidcConfigInformer constructs a new informer for OidcConfig type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewOidcPolicyInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredOidcPolicyInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewOidcConfigInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredOidcConfigInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredOidcPolicyInformer constructs a new informer for OidcPolicy type.
+// NewFilteredOidcConfigInformer constructs a new informer for OidcConfig type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredOidcPolicyInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredOidcConfigInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppidV1().OidcPolicies(namespace).List(options)
+				return client.AppidV1().OidcConfigs(namespace).List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppidV1().OidcPolicies(namespace).Watch(options)
+				return client.AppidV1().OidcConfigs(namespace).Watch(options)
 			},
 		},
-		&policiesv1.OidcPolicy{},
+		&policiesv1.OidcConfig{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *oidcPolicyInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredOidcPolicyInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *oidcConfigInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredOidcConfigInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *oidcPolicyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&policiesv1.OidcPolicy{}, f.defaultInformer)
+func (f *oidcConfigInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&policiesv1.OidcConfig{}, f.defaultInformer)
 }
 
-func (f *oidcPolicyInformer) Lister() v1.OidcPolicyLister {
-	return v1.NewOidcPolicyLister(f.Informer().GetIndexer())
+func (f *oidcConfigInformer) Lister() v1.OidcConfigLister {
+	return v1.NewOidcConfigLister(f.Informer().GetIndexer())
 }

@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,26 +18,26 @@ limitations under the License.
 
 package v1
 
-// JwtPolicyListerExpansion allows custom methods to be added to
-// JwtPolicyLister.
-type JwtPolicyListerExpansion interface{}
+// JwtConfigListerExpansion allows custom methods to be added to
+// JwtConfigLister.
+type JwtConfigListerExpansion interface{}
 
-// JwtPolicyNamespaceListerExpansion allows custom methods to be added to
-// JwtPolicyNamespaceLister.
-type JwtPolicyNamespaceListerExpansion interface{}
+// JwtConfigNamespaceListerExpansion allows custom methods to be added to
+// JwtConfigNamespaceLister.
+type JwtConfigNamespaceListerExpansion interface{}
 
-// OidcClientListerExpansion allows custom methods to be added to
-// OidcClientLister.
-type OidcClientListerExpansion interface{}
+// OidcConfigListerExpansion allows custom methods to be added to
+// OidcConfigLister.
+type OidcConfigListerExpansion interface{}
 
-// OidcClientNamespaceListerExpansion allows custom methods to be added to
-// OidcClientNamespaceLister.
-type OidcClientNamespaceListerExpansion interface{}
+// OidcConfigNamespaceListerExpansion allows custom methods to be added to
+// OidcConfigNamespaceLister.
+type OidcConfigNamespaceListerExpansion interface{}
 
-// OidcPolicyListerExpansion allows custom methods to be added to
-// OidcPolicyLister.
-type OidcPolicyListerExpansion interface{}
+// PolicyListerExpansion allows custom methods to be added to
+// PolicyLister.
+type PolicyListerExpansion interface{}
 
-// OidcPolicyNamespaceListerExpansion allows custom methods to be added to
-// OidcPolicyNamespaceLister.
-type OidcPolicyNamespaceListerExpansion interface{}
+// PolicyNamespaceListerExpansion allows custom methods to be added to
+// PolicyNamespaceLister.
+type PolicyNamespaceListerExpansion interface{}

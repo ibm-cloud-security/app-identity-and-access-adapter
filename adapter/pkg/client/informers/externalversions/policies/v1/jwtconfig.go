@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,71 +19,71 @@ limitations under the License.
 package v1
 
 import (
+	time "time"
+
 	policiesv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	versioned "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/listers/policies/v1"
-	time "time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// OidcClientInformer provides access to a shared informer and lister for
-// OidcClients.
-type OidcClientInformer interface {
+// JwtConfigInformer provides access to a shared informer and lister for
+// JwtConfigs.
+type JwtConfigInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.OidcClientLister
+	Lister() v1.JwtConfigLister
 }
 
-type oidcClientInformer struct {
+type jwtConfigInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewOidcClientInformer constructs a new informer for OidcClient type.
+// NewJwtConfigInformer constructs a new informer for JwtConfig type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewOidcClientInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredOidcClientInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewJwtConfigInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredJwtConfigInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredOidcClientInformer constructs a new informer for OidcClient type.
+// NewFilteredJwtConfigInformer constructs a new informer for JwtConfig type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredOidcClientInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredJwtConfigInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppidV1().OidcClients(namespace).List(options)
+				return client.AppidV1().JwtConfigs(namespace).List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppidV1().OidcClients(namespace).Watch(options)
+				return client.AppidV1().JwtConfigs(namespace).Watch(options)
 			},
 		},
-		&policiesv1.OidcClient{},
+		&policiesv1.JwtConfig{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *oidcClientInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredOidcClientInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *jwtConfigInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredJwtConfigInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *oidcClientInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&policiesv1.OidcClient{}, f.defaultInformer)
+func (f *jwtConfigInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&policiesv1.JwtConfig{}, f.defaultInformer)
 }
 
-func (f *oidcClientInformer) Lister() v1.OidcClientLister {
-	return v1.NewOidcClientLister(f.Informer().GetIndexer())
+func (f *jwtConfigInformer) Lister() v1.JwtConfigLister {
+	return v1.NewJwtConfigLister(f.Informer().GetIndexer())
 }

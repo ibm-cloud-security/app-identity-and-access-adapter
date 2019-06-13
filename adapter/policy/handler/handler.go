@@ -2,9 +2,9 @@
 package handler
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
@@ -39,9 +39,9 @@ func New(store store.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler
 // HandleAddUpdateEvent updates the store after a CRD has been added
 func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
-	case *v1.JwtPolicy:
+	case *v1.JwtConfig:
 		zap.L().Debug("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
-
+		/*
 		// If we already are tracking this authentication server, skip
 		if c.store.GetKeySet(crd.Spec.JwksURL) == nil {
 			c.store.AddKeySet(crd.Spec.JwksURL, keyset.New(crd.Spec.JwksURL, nil))
@@ -60,9 +60,11 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 			//TODO: once we define how rules are going to be, map rules to actions here
 			c.store.SetApiPolicy(ep, policy.Action{Type: policy.JWT, KeySet: c.store.GetKeySet(crd.Spec.JwksURL), Client: nil, Rules: nil})
 		}
+		 */
 		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
-	case *v1.OidcPolicy:
+	case *v1.Policy:
 		zap.L().Debug("Create/Update OIDCPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		/*
 		mappingKey := generatePolicyMappingKey(policy.OIDC, crd.ObjectMeta.Namespace, crd.ObjectMeta.Name)
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 
@@ -81,10 +83,12 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 				ClientName: crd.Spec.ClientName,
 				Rules:      nil})
 		}
-		zap.L().Info("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
-	case *v1.OidcClient:
-		zap.L().Debug("Create/Update OIDCClient", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 
+		 */
+		zap.L().Info("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
+	case *v1.OidcConfig:
+		zap.L().Debug("Create/Update OIDCClient", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		/*
 		// If we already are tracking this authentication server, skip
 		authorizationServer := c.store.GetAuthServer(crd.Spec.DiscoveryURL)
 		if authorizationServer == nil {
@@ -114,12 +118,14 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		} else {
 			zap.L().Warn("Failed to create object: client secret is invalid")
 		}
+
+		 */
 	default:
 		zap.S().Warn("Could not create object. Unknown type: %f", crd)
 	}
 }
 
-func (c *CrdHandler) getClientSecret(crd *v1.OidcClient) string {
+func (c *CrdHandler) getClientSecret(crd *v1.OidcConfig) string {
 	//Return kube secret from reference if present, else try clientSecret
 	if crd.Spec.ClientSecretRef.Name != "" && crd.Spec.ClientSecretRef.Key != "" {
 		secret, err := GetKubeSecret(c.kubeClient, crd.ObjectMeta.Namespace, crd.Spec.ClientSecretRef)

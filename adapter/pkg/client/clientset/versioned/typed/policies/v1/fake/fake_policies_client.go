@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package fake
 
 import (
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1"
-
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -29,16 +28,16 @@ type FakeAppidV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeAppidV1) JwtPolicies(namespace string) v1.JwtPolicyInterface {
-	return &FakeJwtPolicies{c, namespace}
+func (c *FakeAppidV1) JwtConfigs(namespace string) v1.JwtConfigInterface {
+	return &FakeJwtConfigs{c, namespace}
 }
 
-func (c *FakeAppidV1) OidcClients(namespace string) v1.OidcClientInterface {
-	return &FakeOidcClients{c, namespace}
+func (c *FakeAppidV1) OidcConfigs(namespace string) v1.OidcConfigInterface {
+	return &FakeOidcConfigs{c, namespace}
 }
 
-func (c *FakeAppidV1) OidcPolicies(namespace string) v1.OidcPolicyInterface {
-	return &FakeOidcPolicies{c, namespace}
+func (c *FakeAppidV1) Policies(namespace string) v1.PolicyInterface {
+	return &FakePolicies{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

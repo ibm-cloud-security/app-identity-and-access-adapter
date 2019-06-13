@@ -18,7 +18,7 @@ type Client interface {
 }
 
 type remoteClient struct {
-	v1.OidcClientSpec
+	v1.OidcConfigSpec
 	authServer authserver.AuthorizationServer
 }
 
@@ -55,9 +55,9 @@ func (c *remoteClient) RefreshToken(refreshToken string) (*authserver.TokenRespo
 }
 
 // New creates a new client
-func New(cfg v1.OidcClientSpec, s authserver.AuthorizationServer) Client {
+func New(cfg v1.OidcConfigSpec, s authserver.AuthorizationServer) Client {
 	return &remoteClient{
-		OidcClientSpec: cfg,
+		OidcConfigSpec: cfg,
 		authServer:     s,
 	}
 }
