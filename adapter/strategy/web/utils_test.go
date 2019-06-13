@@ -1,11 +1,12 @@
 package webstrategy
 
 import (
+	"testing"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestRandString(t *testing.T) {
