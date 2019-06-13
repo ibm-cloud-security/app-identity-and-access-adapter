@@ -2,9 +2,9 @@
 package handler
 
 import (
-	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	//"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
