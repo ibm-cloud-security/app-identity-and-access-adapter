@@ -29,6 +29,9 @@ func getActions() policy.Actions {
 	actions.MethodActions[policy.GET] = []policy.Action{
 		{KeySet: &fake.KeySet{}, Type: policy.JWT},
 	}
+	actions.MethodActions[policy.ALL] = []policy.Action{
+		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	}
 	return actions
 }
 
@@ -67,8 +70,9 @@ func policiesTest(t *testing.T, store PolicyStore) {
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []policy.Action{})
 	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), getActions())
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions().MethodActions[policy.GET])
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), []policy.Action{})
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions().MethodActions[policy.GET])
 }
+
 func TestLocalStore_Policies(t *testing.T) {
 	policiesTest(t, &LocalStore{})
 	policiesTest(t, New())
