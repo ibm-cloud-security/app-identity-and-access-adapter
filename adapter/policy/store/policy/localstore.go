@@ -56,9 +56,9 @@ func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
 	l.clients[clientName] = clientObject
 }
 
-func (l *LocalStore) GetPolicies(service policy.Service, endpoint string) policy.Actions {
-	if l.policies != nil && l.policies[service] != nil {
-		result, ok := (l.policies[service].GetActions(endpoint)).(policy.Actions)
+func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) policy.Actions {
+	if l.policies != nil && l.policies[endpoint.Service] != nil {
+		result, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
 		if ok {
 			return result
 		}
@@ -67,14 +67,14 @@ func (l *LocalStore) GetPolicies(service policy.Service, endpoint string) policy
 	return policy.NewActions()
 }
 
-func (l *LocalStore) SetPolicies(service policy.Service, endpoint string, action policy.Actions) {
+func (l *LocalStore) SetPolicies(endpoint policy.Endpoint, action policy.Actions) {
 	if l.policies == nil {
 		l.policies = make(map[policy.Service]pathtrie.Trie)
 	}
-	if l.policies[service] == nil {
-		l.policies[service] = pathtrie.NewPathTrie()
+	if l.policies[endpoint.Service] == nil {
+		l.policies[endpoint.Service] = pathtrie.NewPathTrie()
 	}
-	l.policies[service].Put(endpoint, action)
+	l.policies[endpoint.Service].Put(endpoint.Path, action)
 }
 
 func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {

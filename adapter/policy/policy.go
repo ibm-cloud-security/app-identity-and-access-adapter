@@ -14,7 +14,9 @@ const (
 
 // Endpoint captures a request endpoint
 type Endpoint struct {
-	Namespace, Service, Path, Method string
+	Service Service
+	Path string
+	//Method Method
 }
 
 // CrdKey represents a CustomResourceDefinition ID
