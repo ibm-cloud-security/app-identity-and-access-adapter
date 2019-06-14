@@ -61,13 +61,16 @@ func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
 		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
 		if ok {
 			result := actions.MethodActions[endpoint.Method]
-			if result == nil {
-				return actions.MethodActions[policy.ALL]
+			if result != nil { // found actions for method
+				return result
+			} else {
+				result = actions.MethodActions[policy.ALL]
+				if result != nil { // check if actions are set for ALL
+					return result
+				}
 			}
-			return result
 		}
 	}
-
 	return []policy.Action{}
 }
 
