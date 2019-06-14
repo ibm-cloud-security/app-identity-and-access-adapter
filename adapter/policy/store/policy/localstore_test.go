@@ -23,6 +23,7 @@ func getService() policy.Service{
 		Namespace: "ns",
 	}
 }
+
 func getActions() policy.Actions {
 	actions := policy.NewActions()
 	actions.MethodActions[policy.GET] = []policy.Action{
@@ -31,10 +32,11 @@ func getActions() policy.Actions {
 	return actions
 }
 
-func getEndpoint(service policy.Service, path string) policy.Endpoint{
+func getEndpoint(service policy.Service, path string, method policy.Method) policy.Endpoint{
 	return policy.Endpoint{
 		Service: service,
 		Path: path,
+		Method: method,
 	}
 }
 func TestNew(t *testing.T) {
@@ -62,10 +64,9 @@ func TestLocalStore_Client(t *testing.T) {
 }
 
 func policiesTest(t *testing.T, store PolicyStore) {
-	policies := policy.NewActions()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint)), policies)
-	store.SetPolicies(getEndpoint(getService(), endpoint), getActions())
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint)), getActions())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []policy.Action{})
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), getActions())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions().MethodActions[policy.GET])
 }
 func TestLocalStore_Policies(t *testing.T) {
 	policiesTest(t, &LocalStore{})

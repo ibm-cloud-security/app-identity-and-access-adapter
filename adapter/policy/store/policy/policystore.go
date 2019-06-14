@@ -12,7 +12,7 @@ type PolicyStore interface {
 	AddKeySet(jwksURL string, jwks keyset.KeySet)
 	GetClient(clientName string) client.Client
 	AddClient(clientName string, client client.Client)
-	GetPolicies(endpoint policy.Endpoint) policy.Actions
+	GetPolicies(endpoint policy.Endpoint) []policy.Action
 	SetPolicies(endpoint policy.Endpoint, actions policy.Actions)
 	// DeletePolicies(ep policy.Endpoint, obj interface{})
 	GetPolicyMapping(policy string) *policy.PolicyMapping

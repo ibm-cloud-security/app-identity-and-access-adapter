@@ -16,7 +16,7 @@ const (
 type Endpoint struct {
 	Service Service
 	Path string
-	//Method Method
+	Method Method
 }
 
 // CrdKey represents a CustomResourceDefinition ID

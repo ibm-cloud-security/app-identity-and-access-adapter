@@ -56,15 +56,19 @@ func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
 	l.clients[clientName] = clientObject
 }
 
-func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) policy.Actions {
+func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
 	if l.policies != nil && l.policies[endpoint.Service] != nil {
-		result, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
+		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
 		if ok {
+			result := actions.MethodActions[endpoint.Method]
+			if result == nil {
+				return actions.MethodActions[policy.ALL]
+			}
 			return result
 		}
 	}
 
-	return policy.NewActions()
+	return []policy.Action{}
 }
 
 func (l *LocalStore) SetPolicies(endpoint policy.Endpoint, action policy.Actions) {
