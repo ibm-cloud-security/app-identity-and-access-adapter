@@ -2,24 +2,27 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/gogo/protobuf/types"
-	"github.com/gorilla/securecookie"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/types"
+	"github.com/gorilla/securecookie"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+
+	"github.com/stretchr/testify/assert"
+	"istio.io/api/policy/v1beta1"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"github.com/stretchr/testify/assert"
-	"istio.io/api/policy/v1beta1"
 )
 
 func TestNew(t *testing.T) {

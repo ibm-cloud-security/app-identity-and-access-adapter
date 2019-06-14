@@ -12,7 +12,7 @@ type LocalStore struct {
 	// clients maps client_name -> client_config
 	clients map[string]client.Client // oidc config ClientName:Client
 	// policies maps endpoint -> list of actions
-	policies pathtrie.Trie
+	policies map[policy.Service]pathtrie.Trie
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
 	policyMappings map[string]*policy.PolicyMapping
 	keysets map[string]keyset.KeySet // jwt config ClientName:keyset
@@ -22,7 +22,7 @@ type LocalStore struct {
 func New() PolicyStore {
 	return &LocalStore{
 		clients:        make(map[string]client.Client),
-		policies:       pathtrie.NewPathTrie(),
+		policies:       make(map[policy.Service]pathtrie.Trie),
 		policyMappings: make(map[string]*policy.PolicyMapping),
 		keysets:        make(map[string]keyset.KeySet),
 	}
@@ -36,7 +36,7 @@ func (l *LocalStore) GetKeySet(jwksURL string) keyset.KeySet {
 }
 
 func (l *LocalStore) AddKeySet(jwksURL string, jwks keyset.KeySet) {
-	if l.keysets != nil {
+	if l.keysets == nil {
 		l.keysets = make(map[string]keyset.KeySet)
 	}
 	l.keysets[jwksURL] = jwks
@@ -50,22 +50,31 @@ func (l *LocalStore) GetClient(clientName string) client.Client {
 }
 
 func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
-	if l.clients != nil {
+	if l.clients == nil {
 		l.clients = make(map[string]client.Client)
 	}
 	l.clients[clientName] = clientObject
 }
 
-func (l *LocalStore) GetPolicies(endpoint string) policy.Actions {
-	result, ok := (l.policies.GetActions(endpoint)).(policy.Actions)
-	if ok {
-		return result
+func (l *LocalStore) GetPolicies(service policy.Service, endpoint string) policy.Actions {
+	if l.policies != nil && l.policies[service] != nil {
+		result, ok := (l.policies[service].GetActions(endpoint)).(policy.Actions)
+		if ok {
+			return result
+		}
 	}
-	return policy.Actions{ Actions: []policy.Action{} }
+
+	return policy.NewActions()
 }
 
-func (l *LocalStore) SetPolicies(endpoint string, action policy.Actions) {
-	l.policies.Put(endpoint, action)
+func (l *LocalStore) SetPolicies(service policy.Service, endpoint string, action policy.Actions) {
+	if l.policies == nil {
+		l.policies = make(map[policy.Service]pathtrie.Trie)
+	}
+	if l.policies[service] == nil {
+		l.policies[service] = pathtrie.NewPathTrie()
+	}
+	l.policies[service].Put(endpoint, action)
 }
 
 func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {

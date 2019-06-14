@@ -1,15 +1,17 @@
 package apistrategy
 
 import (
+	"testing"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 )
 
 func TestNew(t *testing.T) {

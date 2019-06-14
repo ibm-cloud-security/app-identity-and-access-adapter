@@ -5,10 +5,11 @@ import (
 	"errors"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"go.uber.org/zap"
 )
 
 const (

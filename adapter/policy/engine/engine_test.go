@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prometheus/common/log"
+
 	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
-	"github.com/prometheus/common/log"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
