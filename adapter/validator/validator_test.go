@@ -55,11 +55,11 @@ func TestTokenValidation(t *testing.T) {
 
 		{validAudStrToken, nil, testKeySet, emptyRule},
 		{validAudArrToken, nil, testKeySet, emptyRule},
-		{expiredToken, errors.New("Token is expired"), testKeySet, emptyRule},
-		{validAudArrToken + "other", errors.New("crypto/rsa: verification error"), testKeySet, emptyRule},
-		{noKidToken, errors.New("token validation error - kid is missing"), testKeySet, emptyRule},
-		{diffKidToken, errors.New("token validation error - key not found :: other"), testKeySet, emptyRule},
-		{"p1.p2", errors.New("token contains an invalid number of segments"), testKeySet, emptyRule},
+		{expiredToken, errors.New("invalid_token: Token is expired"), testKeySet, emptyRule},
+		{validAudArrToken + "other", errors.New("invalid_token: crypto/rsa: verification error"), testKeySet, emptyRule},
+		{noKidToken, errors.New("invalid_token: token validation error - kid is missing"), testKeySet, emptyRule},
+		{diffKidToken, errors.New("invalid_token: token validation error - key not found :: other"), testKeySet, emptyRule},
+		{"p1.p2", errors.New("invalid_token: token contains an invalid number of segments"), testKeySet, emptyRule},
 	}
 	v := New()
 

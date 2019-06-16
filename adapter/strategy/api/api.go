@@ -127,7 +127,7 @@ func buildErrorResponse(err *errors.OAuthError) *authnz.HandleAuthnZResponse {
 		Result: &adapter.CheckResult{
 			Status: rpc.Status{
 				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
-				Message: err.Error(),
+				Message: err.Msg,
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code:    err.HTTPCode(), // Response Mixer remaps on request
 					Body:    err.ShortDescription(),
