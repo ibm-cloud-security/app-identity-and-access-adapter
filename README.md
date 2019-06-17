@@ -13,6 +13,7 @@
 
 
 With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authorization in many heterogeneous environments including both frontend and backend applications.
+{: shortdesc}
 
 
 ## Architecture
@@ -28,7 +29,8 @@ The App ID adapter provides support for two different access control flows that 
 For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#policy-configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
 
 
-![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
+![Istio Mixer Architecture](/docs
+    https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
 
 * The Envoy sidecar "proxy" sits in front of your application and calls the Mixer with telemetry before each request.
 * The Mixer dispatches the telemetry to the App ID authentication/ access management adapter.
@@ -65,7 +67,7 @@ https://myhost/path/oidc/logout
 
 If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
 
->> **WARNING:** Due to a bug within Istio, the adapter currently stores user session information internally and does no persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
+Due to a bug within Istio, the adapter currently stores user session information internally and does no persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
 
 
 
@@ -99,114 +101,96 @@ To install the chart, initialize Helm in your cluster, define the options that y
     $ helm install ./helm/ibmcloudappid --name ibmcloudappid
     ```
 
-## Authorization and Authentication Policies
+## Applying an authorization and authentication policy
 
-To apply authorization and access policies, you must define an identity provider by using an authorization server configuration and a policy that outlines when a particular access control flow should be used.
+An authentication or authorization policy is a set of conditions that must be met before resource access can occur. By defining an identity provider's service configuration and an access policy that outlines when a particular access control flow should be used, you can control access to a protected resource.
 
->> See example CRDs, in the [samples directory](./samples/crds)
-
-### OAuth 2.0 JWT Bearer Policies
-
-The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). With the adapter you can configure OAuth Bearer API protection by:
-
-1. Defining a `JwtConfig` CRD that contains the public key resource.
-
-2. Registering server endpoints within a `Policy` CRD to validate incoming requests.
+>> To see example CRD's, check out the [samples directory](./samples/crds).
 
 
-#### OAuth 2.0 Authorization Bearer Configuration Resource
+### Defining a Configuration
 
-```helmyaml
-kind: JwtConfig
-  metadata:
-    name: jwt-provider-config-1
-    namespace: sample-namespace
-  spec:
-    jwksUrl: <oauth-provider-jwks-endpoint>
-```
+Depending on whether you're protecting frontend or backend applications, create a policy configuration with one of the following options.
 
+* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource.
 
-| Field | Type | Required | Description |
-| --- | :---: | :---: | :---: |
-| `jwksUrl` | string | yes | The endpoint that contains a JSON object that represents a set of JSON Web Keys (JWKs) that are required to verify the authenticity of an issued identity and access token. |
+    ```
+    apiVersion: "appid.cloud.ibm.com/v1"
+    kind: JwtConfig
+    metadata:
+        name: samplejwtpolicy
+        namespace: sample-app
+    spec:
+        jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
+    ```
 
+* For frontend applications: Browser based applications that require user authentication can be configured to use the OIDC / OAuth 2.0 authentication flow. To define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider, use the following example as a guide.
 
-### Protecting Frontend Applications
+    ```helmyaml
+    kind: OidcConfig
+    metadata:
+        name: oidc-provider-config
+        namespace: sample-namespace
+    spec:
+        discoveryUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/oidc-discovery/.well-known
+        clientId: 1234-abcd-efgh-4567
+        clientSecret: randomlyGeneratedClientSecret
+        clientSecretRef:
+            name: <name-of-my-kube-secret>
+            key: <key-in-my-kube-secret>
+    ```
 
-Frontend applications that require user authentication can be configured to use the OIDC / Auth 2.0 authentication flow. To protect frontend applications you must:
-
-1. Define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider.
-
-2. Register server endpoints within a `Policy` CRD to protect incoming requests.
-
-
-
-#### OAuth 2.0 /  OIDC Configuration Resource
-
-```helmyaml
-kind: OidcConfig
-  metadata:
-    name: oidc-provider-config
-    namespace: sample-namespace
-  spec:
-    discoveryUrl: <oidc-provider-well-known-endpoint>
-    clientId: <oauth2-client-id>
-    clientSecret: <oauth2-plain-text-client-secret>
-    clientSecretRef:
-        name: <name-of-my-kube-secret>
-        key: <key-in-my-kube-secret>
-```
-
-| Field   | Type | Required |      Description      |
-|----------|:-------------:|:-------------:| :---: |
-| `discoveryUrl` | string | yes| A well-known endpoint that contains a JSON document of OIDC/OAuth 2.0 configuration information. |
-| `clientId` | string | yes | An identifier for the client that is used for authentication. |
-| `clientSecret` | string | *no|  A plain text secret that is used to authenticate the client. If not provided, a `clientSecretRef` must exist. |
-| `clientSecretRef` | object | no | A reference secret that is used to authenticate the client. This can be used in place of the `clientSecret`. |
-| `clientSecretRef.name` | string |yes | The name of the Kubernetes Secret that contains the `clientSecret`. |
-| `clientSecretRef.key` | string | yes | The field within the Kubernetes Secret that contains the `clientSecret`. |
+    | Field   | Type | Required |      Description      |
+    |----------|:-------------:|:-------------:| :---: |
+    | `discoveryUrl` | string | yes| A well-known endpoint that contains a JSON document of OIDC/OAuth 2.0 configuration information. |
+    | `clientId` | string | yes | An identifier for the client that is used for authentication. |
+    | `clientSecret` | string | *no|  A plain text secret that is used to authenticate the client. If not provided, a `clientSecretRef` must exist. |
+    | `clientSecretRef` | object | no | A reference secret that is used to authenticate the client. This can be used in place of the `clientSecret`. |
+    | `clientSecretRef.name` | string |yes | The name of the Kubernetes Secret that contains the `clientSecret`. |
+    | `clientSecretRef.key` | string | yes | The field within the Kubernetes Secret that contains the `clientSecret`. |
 
 
+### Register application endpoints
 
-##### Policy Resource
+Register application endpoints within a `Policy` CRD to validate incoming requests and enforce authentication rules. Each `Policy` applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods that you want to protect.
 
-Policies can be configured using the Policy CRD. Each Policy applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods that you want to protect.
+    ```helmyaml
+    kind: Policy
+    metadata:
+        name: policy-1
+        namespace: sample-namespace
+    spec:
+        targets:
+        - service: svc-service-name-123
+            paths: 
+            - exact: /web
+             method: GET
+             policies: 
+            - type: oidc
+               config: <name-OidcConfig-resource>
+            - prefix: /api
+            policies:
+            - type: jwt
+               config: <name-JwtConfig-resource>
+    ```
 
-```helmyaml
-kind: Policy
-  metadata:
-    name: policy-1
-    namespace: sample-namespace
-  spec:
-    targets:
-      - service: svc-service-name-123
-        paths: 
-         - exact: /web
-           method: GET
-           policies: 
-           - type: oidc
-             config: <name-OidcConfig-resource>
-        - prefix: /api
-          policies:
-           - type: jwt
-             config: <name-JwtConfig-resource>
-```
+    | Service Object | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
+    | `paths` | array | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
 
-| Service Object | Type | Required | Description   |
-|----------------|:----:|:--------:| :-----------: |
-| `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
-| `paths` | array | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
+    | Path Object    | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `exact or prefix` | string | yes | The path that you want to apply the policies on. Options include `exact` and `prefix`. `exact` matches the provides endpoints exactly with the last `/` trimmed. `prefix` matches the endpoints that begin with the route prefix that you provide. |
+    | `method` | enum | no | The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
+    | `policies` | array | no | The OIDC/JWT policies that you want to apply.  |
 
-| Path Object    | Type | Required | Description   |
-|----------------|:----:|:--------:| :-----------: |
-| `exact or prefix` | string | yes | The path that you want to apply the policies on. Options include `exact` and `prefix`. `exact` matches the provides endpoints exactly with the last `/` trimmed. `prefix` matches the endpoints that begin with the route prefix that you provide. |
-| `method` | enum | no | The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
-| `policies` | array | no | The OIDC/JWT policies that you want to apply.  |
+    | Policy Object  | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `type` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
+    | `config` | string | yes | The name of the provider config that you want to use. |
 
-| Policy Object  | Type | Required | Description   |
-|----------------|:----:|:--------:| :-----------: |
-| `type` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
-| `config` | string | yes | The name of the provider config that you want to use. |
+
 
 ## Cleanup
 
