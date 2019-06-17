@@ -17,7 +17,6 @@ type Policy struct {
 
 // PolicySpec is the spec for a Policy resource
 type PolicySpec struct {
-	ClientName string          `json:"oidcClientName"`
 	Target     []TargetElement `json:"target"`
 }
 

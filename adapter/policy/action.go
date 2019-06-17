@@ -1,8 +1,7 @@
 package policy
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 )
 
 type Method int
@@ -35,22 +34,36 @@ func NewMethod(method string) Method {
 	case "PATCH":
 		return PATCH
 	default:
-		return GET
+		return ALL
 	}
 }
 
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
 	Type       Type
-	KeySet     keyset.KeySet
-	Client     client.Client
-	ClientName string
+	//KeySet     keyset.KeySet
+	//Client     client.Client
+	Config string
+	RedirectUri string
 	Rules      []Rule
 }
 
-type Actions = map[Method][]Action
+type Actions = map[Method][]v1.PathPolicy
 
 // New creates a new Actions
 func NewActions() Actions {
-	return make(map[Method][]Action)
+	return make(map[Method][]v1.PathPolicy)
+}
+
+type ParsedPolicies struct {
+	Actions []v1.PathPolicy
+	Endpoint Endpoint
+}
+
+// New creates a new ParsedPolicies
+func NewParsedPolicies(service Endpoint, actions []v1.PathPolicy) ParsedPolicies {
+	return ParsedPolicies{
+		Endpoint: service,
+		Actions: actions,
+	}
 }

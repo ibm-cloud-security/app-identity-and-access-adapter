@@ -3,6 +3,7 @@ package policy
 import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/pathtrie"
 )
@@ -56,7 +57,7 @@ func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
 	l.clients[clientName] = clientObject
 }
 
-func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
+func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []v1.PathPolicy {
 	if l.policies != nil && l.policies[endpoint.Service] != nil {
 		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
 		if ok {
@@ -70,10 +71,10 @@ func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
 			}
 		}
 	}
-	return []policy.Action{}
+	return []v1.PathPolicy{}
 }
 
-func (s *LocalStore) SetPolicies(endpoint policy.Endpoint, actions []policy.Action) {
+func (s *LocalStore) SetPolicies(endpoint policy.Endpoint, actions []v1.PathPolicy) {
 	if s.policies == nil {
 		s.policies = make(map[policy.Service]pathtrie.Trie)
 	}

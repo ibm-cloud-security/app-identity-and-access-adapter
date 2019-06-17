@@ -17,8 +17,8 @@ spec:
               config: sampleoidcconfig
               redirectUri: https://myapp.com/home
         -
-          prefix: /api
-          method: GET
+          prefix: /
+          method: ALL
           policies:
             -
               policyType: jwt

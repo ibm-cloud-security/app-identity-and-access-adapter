@@ -2,6 +2,10 @@
 package handler
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+
 	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	// "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
@@ -40,30 +44,19 @@ func New(store policy2.PolicyStore, kubeClient kubernetes.Interface) PolicyHandl
 func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtConfig:
-		zap.L().Debug("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
-		/*
-		// If we already are tracking this authentication server, skip
-		if c.store.GetKeySet(crd.Spec.JwksURL) == nil {
-			c.store.AddKeySet(crd.Spec.JwksURL, keyset.New(crd.Spec.JwksURL, nil))
+		zap.L().Info("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "." + crd.ObjectMeta.Name
+		if c.store.GetKeySet(crd.Spec.JwksURL) != nil {
+			zap.L().Info("Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		}
-
-		mappingKey := generatePolicyMappingKey(policy.JWT, crd.ObjectMeta.Namespace, crd.ObjectMeta.Name)
-		zap.S().Debug("crdKey : %s", "mappingKey", mappingKey)
-		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
-		if c.store.GetPolicyMapping(mappingKey) != nil {
-			// for update delete the old object mappings
-			zap.L().Debug("Update event for Policy. Calling Delete to remove the old mappings")
-			c.HandleDeleteEvent(policy.CrdKey{Id: mappingKey})
-		}
-		c.store.AddPolicyMapping(mappingKey, &policy.PolicyMapping{Type: policy.JWT, Endpoints: policyEndpoints, Spec: crd.Spec})
-		for _, ep := range policyEndpoints {
-			//TODO: once we define how rules are going to be, map rules to actions here
-			c.store.SetApiPolicy(ep, policy.Action{Type: policy.JWT, KeySet: c.store.GetKeySet(crd.Spec.JwksURL), Client: nil, Rules: nil})
-		}
-		 */
-		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		c.store.AddKeySet(crd.Spec.ClientName, keyset.New(crd.Spec.JwksURL, nil))
+		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
 	case *v1.Policy:
-		zap.L().Debug("Create/Update OIDCPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+		zap.L().Debug("Create/Update Policy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
+		parsedPolicies := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
+		for _, policies := range parsedPolicies {
+			c.store.SetPolicies(policies.Endpoint, policies.Actions)
+		}
 		/*
 		mappingKey := generatePolicyMappingKey(policy.OIDC, crd.ObjectMeta.Namespace, crd.ObjectMeta.Name)
 		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
@@ -85,41 +78,22 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		}
 
 		 */
-		zap.L().Info("OIDCPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
+		zap.L().Info("Policy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcConfig:
-		zap.L().Debug("Create/Update OIDCClient", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
-		/*
-		// If we already are tracking this authentication server, skip
-		authorizationServer := c.store.GetAuthServer(crd.Spec.DiscoveryURL)
-		if authorizationServer == nil {
-			authorizationServer = authserver.New(crd.Spec.DiscoveryURL)
-			c.store.AddAuthServer(crd.Spec.DiscoveryURL, authorizationServer)
-		}
-
-		// If the server synced successfully, we can configure the JWKs instance
-		// Otherwise, it will be configured lazily
-		if jwksURL := authorizationServer.JwksEndpoint(); jwksURL != "" {
-			// If we already track the JWKs for this OAuth 2.0 server, we can share the original instance
-			if jwks := c.store.GetKeySet(jwksURL); jwks != nil {
-				authorizationServer.SetKeySet(jwks)
-			} else {
-				jwks = keyset.New(jwksURL, nil)
-				authorizationServer.SetKeySet(jwks)
-				c.store.AddKeySet(jwksURL, jwks)
-			}
-		}
+		zap.L().Debug("Create/Update OidcConfig", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
+		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "." + crd.ObjectMeta.Name
+		authorizationServer := authserver.New(crd.Spec.DiscoveryURL)
+		keySets := keyset.New(authorizationServer.JwksEndpoint(), nil)
+		authorizationServer.SetKeySet(keySets)
 		if secret := c.getClientSecret(crd); secret != "" {
 			crd.Spec.ClientSecret = secret
 			// Create and store OIDC Client
 			oidcClient := client.New(crd.Spec, authorizationServer)
 			c.store.AddClient(oidcClient.Name(), oidcClient)
-
-			zap.L().Info("OIDCClient created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
+			zap.L().Info("OidcConfig created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		} else {
 			zap.L().Warn("Failed to create object: client secret is invalid")
 		}
-
-		 */
 	default:
 		zap.S().Warn("Could not create object. Unknown type: %f", crd)
 	}
@@ -158,7 +132,7 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 			return
 		}
 	}
-
+	/*
 	switch mapping.Type {
 	case policy.JWT:
 		zap.L().Debug("Deleting JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
@@ -177,4 +151,6 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 	default:
 		zap.L().Warn("Unknown policy type")
 	}
+
+	*/
 }

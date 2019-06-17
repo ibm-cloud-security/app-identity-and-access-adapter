@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
@@ -26,11 +27,11 @@ func getService() policy.Service {
 
 func getActions() policy.Actions {
 	actions := policy.NewActions()
-	actions[policy.GET] = []policy.Action{
-		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	actions[policy.GET] = []v1.PathPolicy{
+		{PolicyType: "jwt", Config:"samplejwt"},
 	}
-	actions[policy.ALL] = []policy.Action{
-		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	actions[policy.ALL] = []v1.PathPolicy{
+		{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
 	}
 	return actions
 }
@@ -42,6 +43,7 @@ func getEndpoint(service policy.Service, path string, method policy.Method) poli
 		Method:  method,
 	}
 }
+
 func TestNew(t *testing.T) {
 	assert.NotNil(t, New())
 }
@@ -67,12 +69,12 @@ func TestLocalStore_Client(t *testing.T) {
 }
 
 func policiesTest(t *testing.T, store PolicyStore) {
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []policy.Action{})
-	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL), []policy.Action{
-		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []v1.PathPolicy{})
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL), []v1.PathPolicy{
+		{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
 	})
-	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), []policy.Action{
-		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), []v1.PathPolicy{
+		{PolicyType: "jwt", Config:"samplejwt"},
 	})
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions()[policy.GET])
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions()[policy.ALL])
