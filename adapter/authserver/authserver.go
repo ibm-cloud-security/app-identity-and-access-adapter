@@ -41,8 +41,8 @@ type TokenResponse struct {
 	ExpiresIn int `json:"expires_in"`
 }
 
-// AuthorizationServer represents an authorization server instance
-type AuthorizationServer interface {
+// AuthorizationServerService represents an authorization server instance
+type AuthorizationServerService interface {
 	JwksEndpoint() string
 	TokenEndpoint() string
 	AuthorizationEndpoint() string
@@ -51,9 +51,9 @@ type AuthorizationServer interface {
 	GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error)
 }
 
-// RemoteServer represents a remote authentication server
+// RemoteService represents a remote authentication server
 // Configuration is loaded asynchronously from the discovery endpoint
-type RemoteServer struct {
+type RemoteService struct {
 	DiscoveryConfig
 	discoveryURL string
 	jwks         keyset.KeySet
@@ -62,9 +62,9 @@ type RemoteServer struct {
 	initialized  bool
 }
 
-// New creates a RemoteServer returning a AuthorizationServer interface
-func New(discoveryEndpoint string) AuthorizationServer {
-	s := &RemoteServer{
+// New creates a RemoteService returning a AuthorizationServerService interface
+func New(discoveryEndpoint string) AuthorizationServerService {
+	s := &RemoteService{
 		httpclient:   networking.New(),
 		discoveryURL: discoveryEndpoint,
 		jwks:         nil,
@@ -80,7 +80,7 @@ func New(discoveryEndpoint string) AuthorizationServer {
 }
 
 // KeySet returns the instance's keyset
-func (s *RemoteServer) KeySet() keyset.KeySet {
+func (s *RemoteService) KeySet() keyset.KeySet {
 	_ = s.initialize()
 	if s.jwks == nil && s.JwksURL != "" {
 		s.jwks = keyset.New(s.JwksURL, s.httpclient)
@@ -89,30 +89,30 @@ func (s *RemoteServer) KeySet() keyset.KeySet {
 }
 
 // SetKeySet stores a JWKs in the OAuth server
-func (s *RemoteServer) SetKeySet(jwks keyset.KeySet) {
+func (s *RemoteService) SetKeySet(jwks keyset.KeySet) {
 	s.jwks = jwks
 }
 
 // JwksEndpoint returns the /publicKeys endpoint of the OAuth server
-func (s *RemoteServer) JwksEndpoint() string {
+func (s *RemoteService) JwksEndpoint() string {
 	_ = s.initialize()
 	return s.JwksURL
 }
 
 // TokenEndpoint returns the /token endpoint of the OAuth server
-func (s *RemoteServer) TokenEndpoint() string {
+func (s *RemoteService) TokenEndpoint() string {
 	_ = s.initialize()
 	return s.TokenURL
 }
 
 // AuthorizationEndpoint returns the /authorization endpoint of the OAuth server
-func (s *RemoteServer) AuthorizationEndpoint() string {
+func (s *RemoteService) AuthorizationEndpoint() string {
 	_ = s.initialize()
 	return s.AuthURL
 }
 
 // GetTokens performs a request to the token endpoint
-func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error) {
+func (s *RemoteService) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error) {
 	_ = s.initialize()
 	form := url.Values{
 		"client_id": {clientID},
@@ -159,7 +159,7 @@ func (s *RemoteServer) GetTokens(authnMethod string, clientID string, clientSecr
 }
 
 // initialize attempts to load the Client configuration from the discovery endpoint
-func (s *RemoteServer) initialize() error {
+func (s *RemoteService) initialize() error {
 	if s.initialized {
 		return nil
 	}
@@ -184,7 +184,7 @@ func (s *RemoteServer) initialize() error {
 }
 
 // loadDiscoveryEndpoint loads the configuration from the discovery endpoint
-func (s *RemoteServer) loadDiscoveryEndpoint() (interface{}, error) {
+func (s *RemoteService) loadDiscoveryEndpoint() (interface{}, error) {
 	req, err := http.NewRequest("GET", s.discoveryURL, nil)
 	if err != nil {
 		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))

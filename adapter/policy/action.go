@@ -13,10 +13,30 @@ const (
 	PUT
 	POST
 	DELETE
+	PATCH
 )
 
 func (m Method) String() string {
-	return [...]string{"ALL", "GET", "PUT", "POST", "DELETE"}[m]
+	return [...]string{"ALL", "GET", "PUT", "POST", "DELETE", "PATCH"}[m]
+}
+
+func NewMethod(method string) Method {
+	switch method {
+	case "ALL":
+		return ALL
+	case "GET":
+		return GET
+	case "PUT":
+		return PUT
+	case "POST":
+		return POST
+	case "DELETE":
+		return DELETE
+	case "PATCH":
+		return PATCH
+	default:
+		return GET
+	}
 }
 
 // Action encapsulates information needed to begin executing a policy
@@ -28,13 +48,9 @@ type Action struct {
 	Rules      []Rule
 }
 
-type Actions struct {
-	MethodActions map[Method][]Action
-}
+type Actions = map[Method][]Action
 
 // New creates a new Actions
 func NewActions() Actions {
-	return Actions{
-		MethodActions: make(map[Method][]Action),
-	}
+	return make(map[Method][]Action)
 }

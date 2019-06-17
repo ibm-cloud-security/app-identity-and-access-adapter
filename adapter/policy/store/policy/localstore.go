@@ -15,7 +15,7 @@ type LocalStore struct {
 	policies map[policy.Service]pathtrie.Trie
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
 	policyMappings map[string]*policy.PolicyMapping
-	keysets map[string]keyset.KeySet // jwt config ClientName:keyset
+	keysets        map[string]keyset.KeySet // jwt config ClientName:keyset
 }
 
 // New creates a new local store
@@ -60,11 +60,11 @@ func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
 	if l.policies != nil && l.policies[endpoint.Service] != nil {
 		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
 		if ok {
-			result := actions.MethodActions[endpoint.Method]
+			result := actions[endpoint.Method]
 			if result != nil { // found actions for method
 				return result
 			}
-			result = actions.MethodActions[policy.ALL]
+			result = actions[policy.ALL]
 			if result != nil { // check if actions are set for ALL
 				return result
 			}
@@ -73,14 +73,21 @@ func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []policy.Action {
 	return []policy.Action{}
 }
 
-func (l *LocalStore) SetPolicies(endpoint policy.Endpoint, action policy.Actions) {
-	if l.policies == nil {
-		l.policies = make(map[policy.Service]pathtrie.Trie)
+func (s *LocalStore) SetPolicies(endpoint policy.Endpoint, actions []policy.Action) {
+	if s.policies == nil {
+		s.policies = make(map[policy.Service]pathtrie.Trie)
 	}
-	if l.policies[endpoint.Service] == nil {
-		l.policies[endpoint.Service] = pathtrie.NewPathTrie()
+	if s.policies[endpoint.Service] == nil {
+		s.policies[endpoint.Service] = pathtrie.NewPathTrie()
 	}
-	l.policies[endpoint.Service].Put(endpoint.Path, action)
+
+	if obj, ok := (s.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions); ok {
+		obj[endpoint.Method] = actions
+	} else {
+		obj := policy.Actions{}
+		obj[endpoint.Method] = actions
+		s.policies[endpoint.Service].Put(endpoint.Path, obj)
+	}
 }
 
 func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {

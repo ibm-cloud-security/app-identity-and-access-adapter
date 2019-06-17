@@ -2,10 +2,7 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 	"testing"
-
-	"github.com/prometheus/common/log"
 
 	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
@@ -44,42 +41,58 @@ func TestNew(t *testing.T) {
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		action            *policy.Action
+		actions           []policy.Action
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
 		err               error
 	}{
 		{
-			// 1 - no policies
+			// 0 - no policies
 			input:             generateActionMessage("", "", "", ""),
-			action:            nil,
+			actions:           nil,
 			endpoints:         []policy.Endpoint{},
 			expectedAction:    policy.NONE,
 			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
-			// 2 - 1 policy
-			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			action: &policy.Action{
-				Type:   policy.JWT,
-				KeySet: &fake.KeySet{},
-			},
+			// 1 - 1 policy
+			input:   generateActionMessage("namespace", "svc", "/path", "POST"),
+			actions: genJWTActionArray(),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 0,
+			expectedRuleCount: 1,
 			err:               nil,
 		},
 		{
-			// 3 - Diff method
-			input: generateActionMessage("namespace", "svc", "/path", "GET"),
-			action: &policy.Action{
-				Type:   policy.JWT,
-				KeySet: &fake.KeySet{},
+			// 2 - logout
+			input:   generateActionMessage("namespace", "svc", "/path/oidc/logout", "POST"),
+			actions: genJWTActionArray(),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 1,
+			err:               nil,
+		},
+		{
+			// 3 - callback
+			input:   generateActionMessage("namespace", "svc", "/path/oidc/callback", "POST"),
+			actions: genJWTActionArray(),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 1,
+			err:               nil,
+		},
+		{
+			// 4 - Diff method
+			input:   generateActionMessage("namespace", "svc", "/path", "GET"),
+			actions: genJWTActionArray(),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
@@ -88,64 +101,60 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			err:               nil,
 		},
 		{
-			// 4 - Generic Method
-			input: generateActionMessage("namespace", "svc", "/path", "OTHER"),
-			action: &policy.Action{
-				Type:   policy.JWT,
-				KeySet: &fake.KeySet{},
-			},
+			// 5 - Generic Method
+			input:   generateActionMessage("namespace", "svc", "/path", "OTHER"),
+			actions: genJWTActionArray(),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "*"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 0,
+			expectedRuleCount: 1,
 			err:               nil,
 		},
 		{
-			// 5- Generic Path / Method
-			input: generateActionMessage("namespace", "svc", "/path", "GET"),
-			action: &policy.Action{
-				Type:   policy.JWT,
-				KeySet: &fake.KeySet{},
-			},
+			// 6 - Generic Path / Method
+			input:   generateActionMessage("namespace", "svc", "/path", "GET"),
+			actions: genJWTActionArray(),
 			endpoints: []policy.Endpoint{
-				genEndpoint("namespace", "svc", "*", "*"),
+				genEndpoint("namespace", "svc", "/*", "ALL"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 0,
+			expectedRuleCount: 1,
 			err:               nil,
 		},
 	}
 
-	for i, test := range tests {
+	for _, ts := range tests {
 		/// Create new engine
-		store := policy2.New().(*policy2.LocalStore)
-		store.AddAuthServer("serverurl", &fake.AuthServer{})
-		store.AddKeySet("serverurl", &fake.KeySet{})
-		for _, ep := range test.endpoints {
-			log.Info(ep) //so it wont throw an error
-			if test.action != nil {
-				store.SetApiPolicy(ep, *test.action)
+		test := ts
+		t.Run("Engine", func(t *testing.T) {
+			store := policy2.New().(*policy2.LocalStore)
+			store.AddClient("name", fake.NewClient(nil))
+			store.AddKeySet("serverurl", &fake.KeySet{})
+			for _, ep := range test.endpoints {
+				if test.actions != nil {
+					store.SetPolicies(ep, test.actions)
+				}
+
 			}
+			eng := &engine{store: store}
+			result, err := eng.Evaluate(test.input)
 
-		}
-		eng := &engine{store: store}
-		result, err := eng.Evaluate(test.input)
-
-		// Result
-		if test.err != nil {
-			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
-		} else {
-			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of rules returned for tests case : "+fmt.Sprintf("%v", i))
-			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for tests case : "+fmt.Sprintf("%v", i))
-		}
+			// Result
+			if test.err != nil {
+				assert.Equal(t, test.err, err)
+			} else {
+				assert.Equal(t, test.expectedRuleCount, len(result.Rules))
+				assert.Equal(t, test.expectedAction, result.Type)
+			}
+		})
 	}
 }
 
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		action            *policy.Action
+		actions           []policy.Action
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
@@ -154,10 +163,12 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		{
 			// 0 - No policies
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			action: &policy.Action{
-				Type:       policy.OIDC,
-				Client:     &fake.Client{},
-				ClientName: "name",
+			actions: []policy.Action{
+				{
+					Type:       policy.OIDC,
+					Client:     &fake.Client{},
+					ClientName: "name",
+				},
 			},
 			endpoints:         []policy.Endpoint{},
 			expectedAction:    policy.NONE,
@@ -167,10 +178,12 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		{
 			// 1 - 1 policy
 			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			action: &policy.Action{
-				Type:       policy.OIDC,
-				Client:     &fake.Client{},
-				ClientName: "name",
+			actions: []policy.Action{
+				{
+					Type:       policy.OIDC,
+					Client:     &fake.Client{},
+					ClientName: "name",
+				},
 			},
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
@@ -181,84 +194,38 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
-		/// Create new engine
-		store := policy2.New().(*policy2.LocalStore)
-		store.AddClient("client", &fake.Client{Server: &fake.AuthServer{}})
-		eng := &engine{store: store}
-		for _, ep := range test.endpoints {
-			log.Info(ep) //so it wont throw an error
-			if test.action != nil {
-				store.SetWebPolicy(ep, *test.action)
+	for _, test := range tests {
+		t.Run("oidc test", func(t *testing.T) {
+			/// Create new engine
+			store := policy2.New().(*policy2.LocalStore)
+			store.AddClient("client", &fake.Client{Server: &fake.AuthServer{}})
+			eng := &engine{store: store}
+			for _, ep := range test.endpoints {
+				if test.actions != nil {
+					store.SetPolicies(ep, test.actions)
+				}
+
 			}
-
-		}
-		// Result
-		result, err := eng.Evaluate(test.input)
-		if test.err != nil {
-			assert.Equal(t, test.err, err, "Expected to receive error : "+fmt.Sprintf("%v", i))
-		} else {
-			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of policies returned for tests case : "+fmt.Sprintf("%v", i))
-			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for tests case : "+fmt.Sprintf("%v", i))
-		}
-	}
-}
-
-func TestEvaluateJWTAndOIDCPolicies(t *testing.T) {
-	tests := []struct {
-		input             *authnz.TargetMsg
-		action            *policy.Action
-		endpoints         []policy.Endpoint
-		expectedAction    policy.Type
-		expectedRuleCount int
-		err               error
-	}{
-		{
-			// 1 - 1 policy
-			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			action: &policy.Action{
-				Type:       policy.OIDC,
-				Client:     &fake.Client{},
-				ClientName: "name",
-			},
-			endpoints: []policy.Endpoint{
-				genEndpoint("namespace", "svc", "/path", "POST"),
-			},
-			expectedAction:    policy.NONE,
-			expectedRuleCount: 0,
-			err:               errors.New("conflicting OIDC and JWT policies"),
-		},
-	}
-
-	for i, test := range tests {
-		/// Create new engine
-		store := policy2.New().(*policy2.LocalStore)
-		store.AddAuthServer("serverurl", &fake.AuthServer{})
-		store.AddClient("client", &fake.Client{Server: store.GetAuthServer("serverurl")})
-		eng := &engine{store: store}
-		for _, ep := range test.endpoints {
-			log.Info(ep) //so it wont throw an error
-			// TODO:
-			store.SetApiPolicy(ep, *test.action)
-			store.SetWebPolicy(ep, *test.action)
-		}
-		// Result
-		result, err := eng.Evaluate(test.input)
-		if test.err != nil {
-			assert.Equal(t, test.err.Error(), err.Error(), "Expected to receive error : "+fmt.Sprintf("%v", i))
-		} else {
-			assert.Equal(t, test.expectedRuleCount, len(result.Rules), "Wrong number of policies returned for tests case : "+fmt.Sprintf("%v", i))
-			assert.Equal(t, test.expectedAction, result.Type, "Unexpected action type returned for tests case : "+fmt.Sprintf("%v", i))
-		}
+			// Result
+			result, err := eng.Evaluate(test.input)
+			if test.err != nil {
+				assert.Equal(t, test.err, err)
+			} else {
+				assert.Equal(t, test.expectedRuleCount, len(result.Rules))
+				assert.Equal(t, test.expectedAction, result.Type)
+			}
+		})
 	}
 }
 
 func genEndpoint(ns string, svc string, path string, method string) policy.Endpoint {
 	return policy.Endpoint{
-		Namespace: ns,
-		Service:   svc,
-		Path:      path,
-		Method:    method,
+		Service: policy.Service{
+			Namespace: ns,
+			Name:      svc,
+		},
+		Path:   path,
+		Method: policy.NewMethod(method),
 	}
 }
 
@@ -268,5 +235,14 @@ func generateActionMessage(ns string, svc string, path string, method string) *a
 		Service:   svc,
 		Path:      path,
 		Method:    method,
+	}
+}
+
+func genJWTActionArray() []policy.Action {
+	return []policy.Action{
+		{
+			Type:   policy.JWT,
+			KeySet: &fake.KeySet{},
+		},
 	}
 }

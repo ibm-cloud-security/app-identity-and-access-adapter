@@ -31,7 +31,7 @@ func TestAuthServerNew(t *testing.T) {
 
 	server := New(s.URL)
 	assert.NotNil(t, server)
-	remoteServer := server.(*RemoteServer)
+	remoteServer := server.(*RemoteService)
 	assert.NotNil(t, remoteServer.httpclient)
 	assert.True(t, remoteServer.initialized)
 	assert.Equal(t, publicKeyURL, server.KeySet().PublicKeyURL())
@@ -104,7 +104,7 @@ func TestInitialize(t *testing.T) {
 				w.Write([]byte(test.response))
 			})
 			s := httptest.NewServer(h)
-			server := &RemoteServer{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			server := &RemoteService{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
 			err := server.initialize()
 			if test.statusCode != 200 {
 				if err == nil {
@@ -152,7 +152,7 @@ func TestGetTokens(t *testing.T) {
 				w.Write([]byte(test.response))
 			})
 			s := httptest.NewServer(h)
-			server := &RemoteServer{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			server := &RemoteService{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
 			_, err := server.GetTokens("client_post_basic", "clientID", "secret", "authcode", "redirect", "")
 			if test.statusCode != 200 {
 				if err == nil {

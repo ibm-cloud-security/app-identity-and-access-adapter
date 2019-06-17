@@ -13,7 +13,7 @@ type PolicyStore interface {
 	GetClient(clientName string) client.Client
 	AddClient(clientName string, client client.Client)
 	GetPolicies(endpoint policy.Endpoint) []policy.Action
-	SetPolicies(endpoint policy.Endpoint, actions policy.Actions)
+	SetPolicies(endpoint policy.Endpoint, actions []policy.Action)
 	// DeletePolicies(ep policy.Endpoint, obj interface{})
 	GetPolicyMapping(policy string) *policy.PolicyMapping
 	AddPolicyMapping(policy string, mapping *policy.PolicyMapping)

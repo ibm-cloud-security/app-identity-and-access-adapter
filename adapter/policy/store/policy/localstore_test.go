@@ -13,33 +13,33 @@ import (
 const (
 	clientname   = "clientname"
 	jwksurl      = "http://mockserver"
-	endpoint      = "service/path"
+	endpoint     = "service/path"
 	samplePolicy = "policy"
 )
 
-func getService() policy.Service{
+func getService() policy.Service {
 	return policy.Service{
-		Name: "sample",
+		Name:      "sample",
 		Namespace: "ns",
 	}
 }
 
 func getActions() policy.Actions {
 	actions := policy.NewActions()
-	actions.MethodActions[policy.GET] = []policy.Action{
+	actions[policy.GET] = []policy.Action{
 		{KeySet: &fake.KeySet{}, Type: policy.JWT},
 	}
-	actions.MethodActions[policy.ALL] = []policy.Action{
+	actions[policy.ALL] = []policy.Action{
 		{KeySet: &fake.KeySet{}, Type: policy.JWT},
 	}
 	return actions
 }
 
-func getEndpoint(service policy.Service, path string, method policy.Method) policy.Endpoint{
+func getEndpoint(service policy.Service, path string, method policy.Method) policy.Endpoint {
 	return policy.Endpoint{
 		Service: service,
-		Path: path,
-		Method: method,
+		Path:    path,
+		Method:  method,
 	}
 }
 func TestNew(t *testing.T) {
@@ -68,9 +68,14 @@ func TestLocalStore_Client(t *testing.T) {
 
 func policiesTest(t *testing.T, store PolicyStore) {
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []policy.Action{})
-	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), getActions())
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions().MethodActions[policy.GET])
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions().MethodActions[policy.GET])
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL), []policy.Action{
+		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	})
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), []policy.Action{
+		{KeySet: &fake.KeySet{}, Type: policy.JWT},
+	})
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions()[policy.GET])
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions()[policy.ALL])
 }
 
 func TestLocalStore_Policies(t *testing.T) {
