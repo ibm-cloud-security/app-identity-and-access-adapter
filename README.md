@@ -13,17 +13,13 @@
 
 ## Summary
 
-The IBM Cloud App ID Istio Mixer adapter manages authentication and access management across your Istio service mesh. The adapter can be configured with any OIDC / OAuth 2.0 compliant identity provider enabling it to seamlessly control authorization and access management in many heterogeneous environments.
+With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authorization in many heterogeneous environments including both frontend and backend applications.
 
-The adapter supports OIDC / OAuth 2.0 and JWT OAuth 2.0 Bearer Token workflows to protect both frontend and backend applications.
 
 ### Architecture
 
-The Istio service mesh uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh.
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes the information, or attributes, that are sent from the proxy to control identity and access management into and across the service mesh. For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#policy-configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
 
-This deployment allows Istio to extract a wealth of signals about traffic behavior, which can in turn be sent to Mixer to enforce policy decisions.
-
-Situated behind Mixer, the IBM Cloud App ID adapter processes these attributes against custom defined policies to control identity and access management into and across the service mesh.
 
 ![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
 
