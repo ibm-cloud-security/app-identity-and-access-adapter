@@ -18,19 +18,25 @@ With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and
 
 ### Architecture
 
-Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes the information, or attributes, that are sent from the proxy to control identity and access management into and across the service mesh. For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#policy-configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes the information, or attributes, that are sent from the proxy to control identity and access management into and across the service mesh. After it is connected to the service mesh, custom access management policies can be created, updated, and deleted without redeploying applications or changing your code in any way. The policies are specific to Kubernetes services and can be finely tuned to specific service endpoints.
+
+The App ID adapter provides support for two different access control flows that correspond to the frontend and backend of your apps respectively. 
+
+1. [OAuth 2.0 Authorization Bearer](https://tools.ietf.org/html/rfc6750)
+
+2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
+
+For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#policy-configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
 
 
 ![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
 
-> See the section on [Policy Configuration](#policy-configuration) for information on configuring OIDC / OAuth 2.0 policies
-
-Once connected to the service mesh, custom access management policies can be created, updated, and deleted without redeploying applications or code changes changes. These policies are specific to Kubernetes services and can be finely tuned to specific service endpoints.
-
-The Auth 2.0 / OIDC adapter provides support for two types of access control flows corresponding to frontend and backend access control respectively:
-1. [OAuth 2.0 Authorization Bearer](https://tools.ietf.org/html/rfc6750)
-
-2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
+* The Envoy sidecar "proxy" sits in front of your application and calls the Mixer with telemetry before each request.
+* The Mixer dispatches the telemetry to the App ID authentication/ access management adapter.
+* The adapter evaulates the authentication and authorization policies on the request telemetry and returns response - access granted or denied.
+* The proxy responds:
+    * When successful, the proxy forwards the request to the service or applicaiton.
+    * On failure, the proxy returns a failure check response to calling client - the user or another app.
 
 #### API Protection
 
