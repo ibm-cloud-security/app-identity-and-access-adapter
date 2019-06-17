@@ -12,13 +12,13 @@
 [![GithubForks][img-github-forks]][url-github-forks]
 
 
-With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authorization in many heterogeneous environments including both frontend and backend applications.
+With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments including frontend and backend applications.
 {: shortdesc}
 
 
 ## Architecture
 
-Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes the information, or attributes, that are sent from the proxy to control identity and access management into and across the service mesh. After it is connected to the service mesh, custom access management policies can be created, updated, and deleted without redeploying applications or changing your code in any way. The policies are specific to Kubernetes services and can be finely tuned to specific service endpoints.
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes these attributes against custom policies to control identity and access management into and across the service mesh. These access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. Using the adapter, these policies can be created, updated, and deleted without redeploying applications or changing your code in any way. 
 
 The App ID adapter provides support for two different access control flows that correspond to the frontend and backend of your apps respectively. 
 
@@ -43,7 +43,7 @@ For more information about configuring OIDC and OAuth 2.0, see [Policy configura
 
 ### API Protection
 
-The App ID adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component that says `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
+The App ID adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component identifying the case of the error `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
 
 
 For more information about tokens and how they're used, see the App ID documentation. For information, on configuring the OAuth 2.0 Authorization Bearer for the adapter, see [Protecting APIs](#protecting-apis).
@@ -51,15 +51,15 @@ For more information about tokens and how they're used, see the App ID documenta
 
 ### Frontend Protection
 
-If you're using a browser based application, you can use the OIDC / Auth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirect to an implicit `/oidc/callback` endpoint where the adaptor intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. 
+If you're using a browser based application, you can use the OIDC / Auth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. 
 
-To view the user session information including the session tokens, you can use the `Authorization` header.
+To view the user session information including the session tokens, you can look in the `Authorization` header.
 
 ```
 Authorization: Bearer <access_token> <id_token>
 ```
 
-You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `oidc/logout` appended as shown in the following example, they are logged out.
+You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `/oidc/logout` appended as shown in the following example, they will be logged out from their current session.
 
 ```
 https://myhost/path/oidc/logout
@@ -67,7 +67,7 @@ https://myhost/path/oidc/logout
 
 If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
 
-Due to a bug within Istio, the adapter currently stores user session information internally and does no persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
+Due to a bug within Istio, the adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
 
 
 
@@ -103,7 +103,7 @@ To install the chart, initialize Helm in your cluster, define the options that y
 
 ## Applying an authorization and authentication policy
 
-An authentication or authorization policy is a set of conditions that must be met before resource access can occur. By defining an identity provider's service configuration and an access policy that outlines when a particular access control flow should be used, you can control access to a protected resource.
+An authentication or authorization policy is a set of conditions that must be met before a request can access a resource access. By defining an identity provider's service configuration and an access policy that outlines when a particular access control flow should be used, you can control access to any resource in your service mesh.
 
 >> To see example CRD's, check out the [samples directory](./samples/crds).
 
@@ -112,7 +112,7 @@ An authentication or authorization policy is a set of conditions that must be me
 
 Depending on whether you're protecting frontend or backend applications, create a policy configuration with one of the following options.
 
-* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource.
+* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which will be used to validate token signatures.
 
     ```
     apiVersion: "appid.cloud.ibm.com/v1"
@@ -194,11 +194,11 @@ Register application endpoints within a `Policy` CRD to validate incoming reques
 
 ## Cleanup
 
-To remove the Adapter and all of the associated CRDs, you can delete the Helm chart.
+To remove the Adapter and all of the associated CRDs, you can delete the Helm chart and the associated signing + encrpytion keys.
 
 ```bash
 $ helm delete --purge ibmcloudappid
-$ kubectl delete rule ibmcloudappid-keys -n istio-system
+$ kubectl delete secret ibmcloudappid-keys -n istio-system
 ```
 
 ## Logging
