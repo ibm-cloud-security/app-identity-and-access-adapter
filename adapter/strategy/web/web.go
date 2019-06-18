@@ -489,7 +489,7 @@ func (w *WebStrategy) validateState(request *authnz.RequestMsg, c client.Client)
 	r := http.Request{Header: header}
 	oidcStateCookie, err := r.Cookie(buildTokenCookieName(sessionCookie, c))
 	if err != nil {
-		return err
+		return errors.New("state parameter not provided")
 	}
 
 	// Parse encrypted state cookie

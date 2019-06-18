@@ -69,7 +69,7 @@ func TestAuthorizationRedirect(t *testing.T) {
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(2)
+			time.Sleep(2 * time.Second)
 
 			ctx.StopHttpRedirects()
 			res, err := ctx.SendRequest("GET", "/web/home/1", nil)
@@ -94,7 +94,7 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(5)
+			time.Sleep(2 * time.Second)
 
 			var output ApplicationResponseHeaders
 			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, "/web/home/2", &output)

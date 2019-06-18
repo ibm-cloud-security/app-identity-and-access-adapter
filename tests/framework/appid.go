@@ -83,12 +83,15 @@ func (m *AppIDManager) DiscoveryURL() string {
 // LoginToCloudDirectory logs in through an App ID cloud directory login widget returning the result from the login page
 func (m *AppIDManager) LoginToCloudDirectory(t *testing.T, root string, path string, output interface{}) error {
 
-	state, widgetURL := m.initialRequestToFrontend(t, root+path)
+	stateCookie, state, widgetURL := m.initialRequestToFrontend(t, root+path)
+	require.NotNil(t, stateCookie)
+	require.NotNil(t, state)
+	require.NotNil(t, widgetURL)
 
 	adapterCallbackURL, err := m.postCredentialsFromWidget(root+path+callbackEndpoint, state, widgetURL)
 	require.NoError(t, err)
 
-	oidcCookie, adapterOriginalURL, err := m.forwardRedirectToAdapter(adapterCallbackURL)
+	oidcCookie, adapterOriginalURL, err := m.forwardRedirectToAdapter(adapterCallbackURL, stateCookie)
 	require.NoError(t, err)
 
 	return m.sendAuthenticatedRequest(adapterOriginalURL, oidcCookie, output)
@@ -136,23 +139,45 @@ func (m *AppIDManager) ROP(username string, password string) error {
 /// Redirect cannot be used as cookies will not be automatically set
 ///
 
-func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (string, string) {
+func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adapterState *http.Cookie, appIDState string, widgetURL string) {
 
-	res, err := http.DefaultClient.Get(path) // Use default to allow redirect
+	// Make request to the frontend
+	req, err := http.NewRequest("GET", path, nil)
 	require.NoError(t, err)
-	if http.StatusOK != res.StatusCode {
+
+	res, err := m.client.Do(req)
+	require.NoError(t, err)
+
+	// Validate response returns a redirect to App ID
+	defer res.Body.Close()
+	if http.StatusFound != res.StatusCode {
 		body, _ := ioutil.ReadAll(res.Body)
 		require.Fail(t, "Received non OK status code: "+res.Status, string(body))
 	}
-	defer res.Body.Close()
+
+	// parse out the state parameter from the adapter
+	stateCookie := getCookieFromResponse(res, "oidc-cookie")
+	require.NotNil(t, stateCookie)
+
+	url2, err := res.Location()
+	require.NoError(t, err)
+
+	// Follow the redirect to the authorization server
+	redirectRes, err := http.DefaultClient.Get(url2.String()) // Use default to allow redirect
+	require.NoError(t, err)
+	if http.StatusOK != redirectRes.StatusCode {
+		body, _ := ioutil.ReadAll(redirectRes.Body)
+		require.Fail(t, "Received non OK status code: "+redirectRes.Status, string(body))
+	}
+	defer redirectRes.Body.Close()
 
 	// Parse login page
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	doc, err := goquery.NewDocumentFromReader(redirectRes.Body)
 	state, ok := doc.Find(appIDStateID).Attr("value")
 	widgetUrl, okW := doc.Find(widgetURLID).Attr("value")
 	require.True(t, ok)
 	require.True(t, okW)
-	return state, widgetUrl
+	return stateCookie, state, widgetUrl
 }
 
 func (m *AppIDManager) postCredentialsFromWidget(redirectUri string, state string, widgetURL string) (*url.URL, error) {
@@ -185,10 +210,10 @@ func (m *AppIDManager) postCredentialsFromWidget(redirectUri string, state strin
 	return res.Location()
 }
 
-func (m *AppIDManager) forwardRedirectToAdapter(url *url.URL) (*http.Cookie, *url.URL, error) {
+func (m *AppIDManager) forwardRedirectToAdapter(url *url.URL, stateCookie *http.Cookie) (*http.Cookie, *url.URL, error) {
 	req, err := http.NewRequest("GET", url.String(), nil)
 	req.URL = url
-
+	req.AddCookie(stateCookie)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -205,22 +230,25 @@ func (m *AppIDManager) forwardRedirectToAdapter(url *url.URL) (*http.Cookie, *ur
 	}
 
 	url2, err := res.Location()
+	if oidcCookie := getCookieFromResponse(res, "oidc-cookie"); oidcCookie != nil {
+		return oidcCookie, url2, err
+	}
+
+	return nil, nil, fmt.Errorf("oidc cookie not provided")
+}
+
+func getCookieFromResponse(res *http.Response, cookieSubstr string) *http.Cookie {
 	rawCookies := res.Header.Get(setCookie)
 	header := http.Header{}
 	header.Add("Cookie", rawCookies)
 	temp := http.Request{Header: header}
-	var oidcCookie *http.Cookie
 	for _, cookie := range temp.Cookies() {
-		if strings.Contains(cookie.Name, "oidc-cookie") {
-			oidcCookie = cookie
+		if strings.Contains(cookie.Name, cookieSubstr) {
+			return cookie
 		}
 	}
-	if oidcCookie == nil {
-		return nil, nil, fmt.Errorf("oidc cookie not provided")
-	}
-	return oidcCookie, url2, err
+	return nil
 }
-
 func (m *AppIDManager) sendAuthenticatedRequest(url *url.URL, cookie *http.Cookie, output interface{}) error {
 	req, err := http.NewRequest("GET", url.String(), nil)
 	req.URL = url

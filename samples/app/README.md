@@ -8,5 +8,5 @@
 2. Inject the Istio sidecar into your deployment
     
 ```
-$ istioctl kube-inject -f ./kubernetes/sample-app.yaml | kubectl apply -f -
+$ istioctl kube-inject -f ./sample-app.yaml | kubectl apply -f -
 ```

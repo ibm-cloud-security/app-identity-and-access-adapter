@@ -290,27 +290,20 @@ func TestCodeCallback(t *testing.T) {
 		message        string
 		code           int32
 		err            error
-		tokenResponse  *fake.TokenResponse
 	}{
 		{ // missing state
 			generateAuthnzRequest("", "mycode", "", callbackEndpoint, ""),
 			nil,
-			"http: named cookie not present",
+			"state parameter not provided",
 			int32(16),
 			nil,
-			&fake.TokenResponse{
-				Err: errors.New("http: named cookie not present"),
-			},
 		},
 		{ // missing state
 			generateAuthnzRequest("", "mycode", "", callbackEndpoint, "hello"),
 			nil,
-			"http: named cookie not present",
+			"state parameter not provided",
 			int32(16),
 			nil,
-			&fake.TokenResponse{
-				Err: errors.New("http: named cookie not present"),
-			},
 		},
 	}
 
@@ -318,7 +311,6 @@ func TestCodeCallback(t *testing.T) {
 		// Test action
 		action := &engine.Action{
 			Client: &fake.Client{
-				TokenResponse: test.tokenResponse,
 				Server: &fake.AuthServer{
 					Keys: &fake.KeySet{},
 				},

@@ -42,7 +42,7 @@ func TestNew(t *testing.T) {
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		pathPolicy        []v1.PathPolicy
+		pathPolicy        policy.RoutePolicy
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
@@ -51,7 +51,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		{
 			// 0 - no policies
 			input:             genActionMessage("", "", "", ""),
-			pathPolicy:        nil,
+			pathPolicy:        policy.RoutePolicy{},
 			endpoints:         []policy.Endpoint{},
 			expectedAction:    policy.NONE,
 			expectedRuleCount: 0,
@@ -181,16 +181,18 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		{
 			// 12 - existing rules
 			input: genActionMessage("namespace", "svc", "/path", "POST"),
-			pathPolicy: []v1.PathPolicy{
-				{
-					PolicyType: "jwt",
-					Config:     defaultJwtConfigName,
-					/*Rules: []policy.Rule{
-						{
-							Key:   "key",
-							Value: "expected_value",
-						},
-					},*/
+			pathPolicy: policy.RoutePolicy{
+				Actions: []v1.PathPolicy{
+					{
+						PolicyType: "jwt",
+						Config:     defaultJwtConfigName,
+						/*Rules: []policy.Rule{
+							{
+								Key:   "key",
+								Value: "expected_value",
+							},
+						},*/
+					},
 				},
 			},
 			endpoints: []policy.Endpoint{
@@ -211,7 +213,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			store.AddKeySet("namespace/default-jwt-config", &fake.KeySet{})
 			eng := &engine{store: store}
 
-			if test.pathPolicy != nil {
+			if len(test.pathPolicy.Actions) > 0 {
 				for _, ep := range test.endpoints {
 					store.SetPolicies(ep, test.pathPolicy)
 				}
@@ -235,7 +237,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		pathPolicy        []v1.PathPolicy
+		pathPolicy        policy.RoutePolicy
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
@@ -244,10 +246,12 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		{
 			// 0 - No policies
 			input: genActionMessage("namespace", "svc", "/path", "POST"),
-			pathPolicy: []v1.PathPolicy{
-				{
-					PolicyType: "oidc",
-					Config:     defaultOidcConfigName,
+			pathPolicy: policy.RoutePolicy{
+				Actions: []v1.PathPolicy{
+					{
+						PolicyType: "oidc",
+						Config:     defaultOidcConfigName,
+					},
 				},
 			},
 			endpoints:         []policy.Endpoint{},
@@ -258,10 +262,12 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		{
 			// 1 - 1 policy
 			input: genActionMessage("namespace", "svc", "/path", "POST"),
-			pathPolicy: []v1.PathPolicy{
-				{
-					PolicyType: "oidc",
-					Config:     defaultOidcConfigName,
+			pathPolicy: policy.RoutePolicy{
+				Actions: []v1.PathPolicy{
+					{
+						PolicyType: "oidc",
+						Config:     defaultOidcConfigName,
+					},
 				},
 			},
 			endpoints: []policy.Endpoint{
@@ -296,10 +302,12 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		{
 			// 3 - missing client
 			input: genActionMessage("namespace", "svc", "/path", "POST"),
-			pathPolicy: []v1.PathPolicy{
-				{
-					PolicyType: "oidc",
-					Config:     "other client",
+			pathPolicy: policy.RoutePolicy{
+				Actions: []v1.PathPolicy{
+					{
+						PolicyType: "oidc",
+						Config:     "other client",
+					},
 				},
 			},
 			endpoints: []policy.Endpoint{
@@ -319,7 +327,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			store := policy2.New().(*policy2.LocalStore)
 			store.AddClient("namespace/"+defaultOidcConfigName, fake.NewClient(nil))
 			eng := &engine{store: store}
-			if test.pathPolicy != nil {
+			if len(test.pathPolicy.Actions) > 0 {
 				for _, ep := range test.endpoints {
 					store.SetPolicies(ep, test.pathPolicy)
 				}
@@ -361,11 +369,13 @@ func genActionMessage(ns string, svc string, path string, method string) *authnz
 const defaultOidcConfigName = "default-oidc-config"
 const defaultJwtConfigName = "default-jwt-config"
 
-func genJWTPathPolicyArray(cfg string) []v1.PathPolicy {
-	return []v1.PathPolicy{
-		{
-			PolicyType: "jwt",
-			Config:     cfg,
+func genJWTPathPolicyArray(cfg string) policy.RoutePolicy {
+	return policy.RoutePolicy{
+		Actions: []v1.PathPolicy{
+			{
+				PolicyType: "jwt",
+				Config:     cfg,
+			},
 		},
 	}
 }

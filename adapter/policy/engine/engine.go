@@ -87,7 +87,6 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*Action, error) {
 
 // getPolicies returns policies for the given endpoints
 func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
-	actions := make([]Action, 0)
 
 	// Check all possible endpoint variants for policies
 	for _, ep := range endpoints {
@@ -98,11 +97,11 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 			zap.String("method", ep.Method.String()))
 
 		// Get policies for endpoint
-		if policies := m.store.GetPolicies(ep); policies != nil {
+		if routeNode := m.store.GetPolicies(ep); len(routeNode.Actions) > 0 {
 
 			// Convert policy definition into Action
-			endpointActions := make([]Action, len(policies))
-			for i, p := range policies {
+			endpointActions := make([]Action, len(routeNode.Actions))
+			for i, p := range routeNode.Actions {
 				action := Action{
 					PathPolicy: p,
 					Type:       policy.NewType(p.PolicyType),
@@ -129,13 +128,15 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 				}
 				endpointActions[i] = action
 			}
-			actions = append(actions, endpointActions...)
+			if len(endpointActions) > 0 {
+				return endpointActions, nil
+			}
 		} else {
 			zap.S().Debug("No policies found on endpoint: %v", ep)
 		}
 	}
 
-	return actions, nil
+	return make([]Action, 0), nil
 }
 
 // createDefaultRules generates the default JWT validation rules for the given client
