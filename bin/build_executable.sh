@@ -22,4 +22,4 @@ sourceDir="$(dirname "${BASH_SOURCE[0]}")"
 rm -f ${sourceDir}/ibmcloudappid
 
 # Compile new executable
-env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -v -o ${sourceDir}/ibmcloudappid ${sourceDir}/../cmd/main.go
+env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -a -installsuffix cgo -v -o ${sourceDir}/ibmcloudappid ${sourceDir}/../cmd/main.go
