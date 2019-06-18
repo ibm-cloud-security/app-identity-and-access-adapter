@@ -201,13 +201,23 @@ $ helm delete --purge ibmcloudappid
 $ kubectl delete secret ibmcloudappid-keys -n istio-system
 ```
 
-## Logging
+## FAQ and troubleshooting
+
+If you encounter an issue while working with the App ID Adapter, consider the following FAQ's and troubleshooting techniques. For more help, You can ask questions through a forum or open a support ticket. When you are using the forums to ask a question, tag your question so that it is seen by the App ID development team.
+
+  * If you have technical questions about App ID, post your question on <a href="https://stackoverflow.com/" target="_blank">Stack Overflow <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> and tag your question with "ibm-appid".
+  * For questions about the service and getting started instructions, use the <a href="https://developer.ibm.com/" target="_blank">dW Answers <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> forum. Include the `appid` tag.
+
+For more information about getting support, see [how do I get the support that I need](/docs/get-support?topic=get-support-getting-customer-support#getting-customer-support).
+
+
+### Troubleshooting: Logging
 
 By default, logs are styled as JSON and provided at an `info` visbility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range [-1, 7] as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
 
 >> **Note:** When you're manually viewing JSON logs, you might want to tail the logs and "pretty print" them by using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/).
 
-### Adapter
+**Adapter**
 
 To see the Adapter logs, you can use `kubectl` or access the pod from the `ibmcloudappid` pod from the Kubernetes console.
 
@@ -216,7 +226,7 @@ $ export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system 
 $ adapter_logs | jq
 ```
 
-### Mixer
+**Mixer**
 
 If the Adapter does not appear to recieve requests, check the Mixer logs to ensure that it is successfully connected to the Adapter.
 
