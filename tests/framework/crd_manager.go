@@ -54,7 +54,7 @@ func (m *CRDManager) AddCRD(pathToTemplate string, data CRD) error {
 
 	file := strings.Split(pathToTemplate, yamlExt)[0]
 
-	tmpPath := file + "-" + randStringBytes(4) + yamlExt
+	tmpPath := file + "-" + RandStringBytes(4) + yamlExt
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func remove(s []crd, i int) []crd {
 	return s[:len(s)-1]
 }
 
-func randStringBytes(n int) string {
+func RandStringBytes(n int) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]

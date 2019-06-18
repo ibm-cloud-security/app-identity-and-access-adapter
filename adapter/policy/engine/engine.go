@@ -141,13 +141,6 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 // createDefaultRules generates the default JWT validation rules for the given client
 func createDefaultRules(action Action) []policy.Rule {
 	switch action.Type {
-	case policy.JWT:
-		return []policy.Rule{
-			{
-				Key:   iss,
-				Value: action.KeySet.PublicKeyURL(),
-			},
-		}
 	case policy.OIDC:
 		return []policy.Rule{
 			{

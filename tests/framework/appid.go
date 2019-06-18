@@ -140,7 +140,10 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (stri
 
 	res, err := http.DefaultClient.Get(path) // Use default to allow redirect
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, res.StatusCode)
+	if http.StatusOK != res.StatusCode {
+		body, _ := ioutil.ReadAll(res.Body)
+		require.Fail(t, "Received non OK status code: "+res.Status, string(body))
+	}
 	defer res.Body.Close()
 
 	// Parse login page

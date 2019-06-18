@@ -10,13 +10,12 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
-	oidcConfigTemplatePath = "./templates/oidc_config.yaml"
-	oidcPolicyTemplatePath = "./templates/oidc_policy.yaml"
-	sampleAppNamespace     = "sample-app"
-	sampleAppService       = "svc-sample-app"
+	sampleAppNamespace = "sample-app"
+	sampleAppService   = "svc-sample-app"
 )
 
 // ApplicationResponseHeaders models the sample application response json
@@ -62,18 +61,15 @@ func TestAuthorizationRedirect(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			config := buildOIDCConfig(ctx, "oidc-config-1", sampleAppNamespace)
-			policy := buildOIDCPolicy(ctx.AppIDManager.ClientID, "oidc-policy-1", sampleAppNamespace, []v1.TargetElement{
-				{
-					ServiceName: sampleAppService,
-					Paths:       []string{"/web/home/1"},
-				},
-			},
-			)
-			err1 := ctx.CRDManager.AddCRD(oidcConfigTemplatePath, &config)
-			err2 := ctx.CRDManager.AddCRD(oidcPolicyTemplatePath, &policy)
+			configName := "oidc-config-1"
+			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
+			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/1", "", "ALL")
+			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
+			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
 			require.NoError(t, err2)
+
+			time.Sleep(2)
 
 			ctx.StopHttpRedirects()
 			res, err := ctx.SendRequest("GET", "/web/home/1", nil)
@@ -90,19 +86,15 @@ func TestE2E(t *testing.T) {
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
 			ctx.EnableRedirects()
-			config := buildOIDCConfig(ctx, "oidc-config-2", sampleAppNamespace)
-			policy := buildOIDCPolicy(ctx.AppIDManager.ClientID, "oidc-policy-2", sampleAppNamespace, []v1.TargetElement{
-				{
-					ServiceName: sampleAppService,
-					Paths:       []string{"/web/home/2"},
-				},
-			},
-			)
-			// Apply policies
-			err1 := ctx.CRDManager.AddCRD(oidcConfigTemplatePath, &config)
-			err2 := ctx.CRDManager.AddCRD(oidcPolicyTemplatePath, &policy)
+			configName := "oidc-config-2"
+			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
+			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/2", "", "ALL")
+			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
+			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
 			require.NoError(t, err2)
+
+			time.Sleep(5)
 
 			var output ApplicationResponseHeaders
 			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, "/web/home/2", &output)
@@ -115,13 +107,13 @@ func TestE2E(t *testing.T) {
 		})
 }
 
-func buildOIDCConfig(ctx *framework.Context, name string, namespace string) v1.OidcClient {
-	return v1.OidcClient{
+func buildOIDCConfig(ctx *framework.Context, name string, namespace string) v1.OidcConfig {
+	return v1.OidcConfig{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1.OidcClientSpec{
+		Spec: v1.OidcConfigSpec{
 			ClientName:   ctx.AppIDManager.ClientID,
 			ClientID:     ctx.AppIDManager.ClientID,
 			DiscoveryURL: ctx.AppIDManager.DiscoveryURL(),
@@ -130,15 +122,31 @@ func buildOIDCConfig(ctx *framework.Context, name string, namespace string) v1.O
 	}
 }
 
-func buildOIDCPolicy(clientName string, name string, namespace string, target []v1.TargetElement) v1.OidcPolicy {
-	return v1.OidcPolicy{
+func buildOIDCPolicy(name string, namespace string, svc string, oidcConfigName string, exact string, prefix string, method string) v1.Policy {
+	return v1.Policy{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1.OidcPolicySpec{
-			ClientName: clientName,
-			Target:     target,
+		Spec: v1.PolicySpec{
+			Target: []v1.TargetElement{
+				{
+					ServiceName: svc,
+					Paths: []v1.PathConfig{
+						{
+							Exact:  exact,
+							Prefix: prefix,
+							Method: method,
+							Policies: []v1.PathPolicy{
+								{
+									PolicyType: "oidc",
+									Config:     oidcConfigName,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

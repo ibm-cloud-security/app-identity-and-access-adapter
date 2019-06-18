@@ -9,7 +9,7 @@ spec:
       serviceName: svc-sample-app
       paths:
         -
-          exact: /web
+          exact: /web/home
           method: ALL
           policies:
             -

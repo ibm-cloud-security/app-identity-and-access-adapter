@@ -65,7 +65,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -76,7 +76,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -87,7 +87,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -142,7 +142,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/*", "ALL"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -153,7 +153,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/path", "ALL"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -164,7 +164,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/*", "ALL"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1,
+			expectedRuleCount: 0,
 			err:               nil,
 		},
 		{
@@ -197,7 +197,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
 			expectedAction:    policy.JWT,
-			expectedRuleCount: 1, //2, revert when rules exist
+			expectedRuleCount: 0, //1, revert when rules exist
 			err:               nil,
 		},
 	}
@@ -208,7 +208,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		t.Run("Engine", func(t *testing.T) {
 			t.Parallel()
 			store := policy2.New().(*policy2.LocalStore)
-			store.AddKeySet("namespace.default-jwt-config", &fake.KeySet{})
+			store.AddKeySet("namespace/default-jwt-config", &fake.KeySet{})
 			eng := &engine{store: store}
 
 			if test.pathPolicy != nil {
@@ -317,7 +317,7 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			t.Parallel()
 			/// Create new engine
 			store := policy2.New().(*policy2.LocalStore)
-			store.AddClient("namespace."+defaultOidcConfigName, fake.NewClient(nil))
+			store.AddClient("namespace/"+defaultOidcConfigName, fake.NewClient(nil))
 			eng := &engine{store: store}
 			if test.pathPolicy != nil {
 				for _, ep := range test.endpoints {

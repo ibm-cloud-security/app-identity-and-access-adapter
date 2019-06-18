@@ -5,9 +5,6 @@ metadata:
   namespace: sample-app
 spec:
   authMethod:   client_secret_basic
-  clientId:     e047abeb-c0ba-49f4-9204-7a46fae30991
+  clientId:     f16ae5b7-06ff-4191-9a67-37a06cb710ad
   discoveryUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/.well-known/openid-configuration
-  clientSecret: NDg5MzFkNDAtMmE3Ny00YmZlLWFmMjMtZWRmZDEzZjVlMmRl
-  clientSecretRef:
-    name: clientsecret
-    key: secret
+  clientSecret: YjdmNTRhZmYtOWZlMi00NGFiLTkzNzMtOWQwZDcyOWQ5OTA5

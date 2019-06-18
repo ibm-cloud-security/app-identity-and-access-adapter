@@ -118,7 +118,8 @@ func validateClaims(token *jwt.Token, rules []policy.Rule) *errors.OAuthError {
 	for _, rule := range rules {
 		if err := validateClaim(rule.Key, rule.Value, claims); err != nil {
 			return &errors.OAuthError{
-				Msg: err.Error(),
+				Code: errors.InvalidToken,
+				Msg:  err.Error(),
 			}
 		}
 	}

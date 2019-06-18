@@ -1,8 +1,9 @@
 apiVersion: "appid.cloud.ibm.com/v1"
-kind: OidcClient
+kind: OidcConfig
 metadata:
   name: {{.Name}}
 spec:
+  authMethod: client_secret_basic
   oidcClientName: {{.Spec.ClientName}}
   clientId: {{.Spec.ClientID}}
   discoveryUrl: {{.Spec.DiscoveryURL}}
