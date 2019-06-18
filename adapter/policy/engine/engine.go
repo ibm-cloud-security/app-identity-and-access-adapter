@@ -108,7 +108,7 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 					Type:       policy.NewType(p.PolicyType),
 				}
 
-				configName := ep.Service.Namespace + "." + p.Config
+				configName := ep.Service.Namespace + "/" + p.Config
 				zap.L().Debug("Checking for configuration", zap.String("name", configName), zap.String("type", action.PolicyType))
 
 				switch action.Type {

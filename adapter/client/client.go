@@ -2,9 +2,11 @@ package client
 
 import (
 	"errors"
+
+	"go.uber.org/zap"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"go.uber.org/zap"
 )
 
 // Client encapsulates an authn/z client object

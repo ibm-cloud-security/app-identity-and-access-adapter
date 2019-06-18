@@ -166,29 +166,40 @@ func TestGetClientSecret(t *testing.T) {
 	}
 }
 
-func TestHandler_HandleAddEvent_JwtConfig(t *testing.T) {
+func TestHandler_HandleAddDeleteEvent_JwtConfig(t *testing.T) {
 	testHandler := &CrdHandler{
 		store: storePolicy.New(),
 	}
 	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Add
 	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Update policy
-	assert.Equal(t, testHandler.store.GetKeySet("sample.sample").PublicKeyURL(), jwksUrl)
+	key := "sample/sample"
+	assert.Equal(t, testHandler.store.GetKeySet(key).PublicKeyURL(), jwksUrl)
+	testHandler.HandleDeleteEvent(policy.CrdKey{
+		Id: key,
+		CrdType: v1.JWTCONFIG,
+	})
+	assert.Nil(t, testHandler.store.GetKeySet(key))
 }
 
-func TestHandler_HandleAddEvent_OidcConfig(t *testing.T) {
+func TestHandler_HandleAddDeleteEvent_OidcConfig(t *testing.T) {
 	testHandler := &CrdHandler{
 		store: storePolicy.New(),
 	}
 	policyName := "oidcconfig"
+	key := policyName + "/" + policyName
 	testHandler.HandleAddUpdateEvent(OidcConfigGenerator(policyName, "oidc", jwksUrl))
-	client := testHandler.store.GetClient(policyName + "." + policyName)
-	assert.Equal(t, client.Secret(), secretFromPlainText)
+	assert.Equal(t, testHandler.store.GetClient(key).Secret(), secretFromPlainText)
+	testHandler.HandleDeleteEvent(policy.CrdKey{
+		Id: key,
+		CrdType: v1.OIDCCONFIG,
+	})
+	assert.Nil(t, testHandler.store.GetKeySet(key))
 	// invalid OidcConfig object
 	testHandler.HandleAddUpdateEvent(GetOidcConfig(v1.OidcConfigSpec{}, GetObjectMetaWithName("sample"), GetTypeMeta()))
-	assert.Nil(t, testHandler.store.GetClient("sample.sample"))
+	assert.Nil(t, testHandler.store.GetClient("sample/sample"))
 }
 
-func TestHandler_HandleAddEvent_Policy(t *testing.T) {
+func TestHandler_HandleAddDeleteEvent_Policy(t *testing.T) {
 	testHandler := &CrdHandler{
 		store: storePolicy.New(),
 	}
@@ -199,79 +210,11 @@ func TestHandler_HandleAddEvent_Policy(t *testing.T) {
 	// getEndpoint(getDefaultService(), policy.GET, "/path")
 	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getDefaultPathPolicy())
 	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getDefaultPathPolicy())
+	key := "sample/sample"
+	testHandler.HandleDeleteEvent(policy.CrdKey{
+		Id: key,
+		CrdType: v1.POLICY,
+	})
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), []v1.PathPolicy{})
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), []v1.PathPolicy{})
 }
-
-/*
-func TestCrdHandler_HandleDeleteEvent(t *testing.T) {
-	testHandler := &CrdHandler{
-		store: storePolicy.New(),
-	}
-	tests := []struct {
-		objType  Type
-		obj      interface{}
-		initial  int
-		expected int
-		endpoint policy.Endpoint
-		crd      policy.CrdKey
-	}{
-		{
-			objType:  JWTPolicy,
-			obj:      JwtPolicyGenerator(make([]v1.TargetElement, 0)),
-			initial:  0,
-			expected: 0,
-			endpoint: GetEndpoint("sample", "samplesrv", "*", "*"),
-			crd:      policy.CrdKey{Id: "sample/sample"},
-		},
-		{
-			objType:  JWTPolicy,
-			obj:      JwtPolicyGenerator(make([]v1.TargetElement, 0)),
-			initial:  0,
-			expected: 0,
-			endpoint: GetEndpoint("sample", "samplesrv", "/path", "*"),
-			crd:      policy.CrdKey{Id: "sample/sample"},
-		},
-		{
-			objType:  OIDCPolicy,
-			obj:      OidcPolicyGenerator(TargetGenerator(make([]string, 0), nil)),
-			initial:  0,
-			expected: 0,
-			endpoint: GetEndpoint("sample", "samplesrv", "/path", "*"),
-			crd:      policy.CrdKey{Id: "sample/sample"},
-		},
-		{
-			objType:  OIDCClient,
-			obj:      OidcClientGenerator("name", "id", "url"),
-			initial:  0,
-			expected: 0,
-			endpoint: GetEndpoint("sample", "samplesrv", "/path", "*"),
-			crd:      policy.CrdKey{Id: "sample/sample"},
-		},
-	}
-	for _, test := range tests {
-		if test.objType == JWTPolicy {
-			assert.NotNil(t, test.initial, testHandler.store.GetWebPolicies(test.endpoint))
-		} else {
-			assert.NotNil(t, test.expected, testHandler.store.GetWebPolicies(test.endpoint))
-		}
-		switch obj := test.obj.(type) {
-		case v1.JwtPolicy:
-			testHandler.HandleAddUpdateEvent(&obj)
-			testHandler.HandleDeleteEvent(&obj)
-			testHandler.HandleDeleteEvent(test.crd)
-		case v1.OidcPolicy:
-			testHandler.HandleAddUpdateEvent(&obj)
-			testHandler.HandleDeleteEvent(test.crd)
-		case v1.OidcClient:
-			testHandler.HandleAddUpdateEvent(&obj)
-			//testHandler.HandleDeleteEvent(crd)
-		}
-		if test.objType == JWTPolicy {
-			assert.NotNil(t, test.expected, testHandler.store.GetApiPolicies(test.endpoint))
-		} else {
-			assert.NotNil(t, test.expected, testHandler.store.GetWebPolicies(test.endpoint))
-		}
-	}
-}
-
-
- */

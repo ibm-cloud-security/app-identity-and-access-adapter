@@ -44,7 +44,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	switch crd := obj.(type) {
 	case *v1.JwtConfig:
 		zap.L().Info("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
-		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "." + crd.ObjectMeta.Name
+		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "/" + crd.ObjectMeta.Name
 		if c.store.GetKeySet(crd.Spec.ClientName) != nil {
 			zap.L().Info("Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		}
@@ -62,7 +62,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		zap.L().Info("Policy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcConfig:
 		zap.L().Debug("Create/Update OidcConfig", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
-		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "." + crd.ObjectMeta.Name
+		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "/" + crd.ObjectMeta.Name
 		authorizationServer := authserver.New(crd.Spec.DiscoveryURL)
 		keySets := keyset.New(authorizationServer.JwksEndpoint(), nil)
 		authorizationServer.SetKeySet(keySets)
@@ -103,7 +103,6 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 		zap.L().Warn("Expected to receive CrdKey from Kubernetes informer")
 		return
 	}
-	// TODO: Temporary fix for policy deletion. Needs support for OIDC clients. This should come from the controller `policy.CrdKey` not constructed blindly here
 	zap.S().Debugf("crdKey : %s", crdKey.Id)
 	zap.S().Debugf("crdType : %s", crdKey.CrdType)
 	switch crdKey.CrdType {
