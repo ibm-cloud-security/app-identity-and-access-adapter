@@ -32,7 +32,8 @@ const (
 	applicationFormEncoded = "application/x-www-form-urlencoded"
 	contentType            = "Content-Type"
 	setCookie              = "set-cookie"
-	appIDStateID           = "#facebook_state"
+	facebookStateID        = "#facebook_state"
+	samlStateID            = "#SAML_State"
 	widgetURLID            = "#widgetUrl"
 )
 
@@ -85,8 +86,8 @@ func (m *AppIDManager) LoginToCloudDirectory(t *testing.T, root string, path str
 
 	stateCookie, state, widgetURL := m.initialRequestToFrontend(t, root+path)
 	require.NotNil(t, stateCookie)
-	require.NotNil(t, state)
-	require.NotNil(t, widgetURL)
+	require.NotEmpty(t, state)
+	require.NotEmpty(t, widgetURL)
 
 	adapterCallbackURL, err := m.postCredentialsFromWidget(root+path+callbackEndpoint, state, widgetURL)
 	require.NoError(t, err)
@@ -173,7 +174,10 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 	// Parse login page
 	doc, err := goquery.NewDocumentFromReader(redirectRes.Body)
-	state, ok := doc.Find(appIDStateID).Attr("value")
+	state, ok := doc.Find(facebookStateID).Attr("value")
+	if !ok || state == "" {
+		state, ok = doc.Find(samlStateID).Attr("value")
+	}
 	widgetUrl, okW := doc.Find(widgetURLID).Attr("value")
 	require.True(t, ok)
 	require.True(t, okW)
