@@ -1,6 +1,7 @@
 package apistrategy
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"strings"
 
 	"go.uber.org/zap"
@@ -12,7 +13,6 @@ import (
 	"istio.io/istio/mixer/pkg/status"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -40,7 +40,7 @@ func New() strategy.Strategy {
 ////////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *policy2.Action) (*authnz.HandleAuthnZResponse, error) {
+func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(r)

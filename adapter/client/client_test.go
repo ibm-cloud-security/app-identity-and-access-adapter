@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestAuthServerNew(t *testing.T) {
-	n := New(v1.OidcClientSpec{
+func TestClientNew(t *testing.T) {
+	n := New(v1.OidcConfigSpec{
 		ClientSecret: "secret",
 		ClientID:     "id",
 		ClientName:   "name",
@@ -18,17 +18,32 @@ func TestAuthServerNew(t *testing.T) {
 	assert.Equal(t, "name", n.Name())
 	assert.Equal(t, "secret", n.Secret())
 	assert.Nil(t, n.AuthorizationServer())
-	res, err := n.ExchangeGrantCode("", "")
+}
+
+func TestClientTokens(t *testing.T) {
+	c := remoteClient{
+		v1.OidcConfigSpec{
+			ClientSecret: "secret",
+			ClientID:     "id",
+			ClientName:   "name",
+		},
+		nil,
+	}
+
+	res, err := c.ExchangeGrantCode("", "")
 	assert.Nil(t, res)
 	assert.EqualError(t, err, "invalid client configuration :: missing authorization server")
 
-	c := n.(*remoteClient)
-	c.authServer = &fake.AuthServer{}
-	res2, err2 := c.ExchangeGrantCode("", "") // MockServer returns nil, nil
+	res2, err2 := c.RefreshToken("") // MockServer returns nil, nil
 	assert.Nil(t, res2)
-	assert.Nil(t, err2)
+	assert.EqualError(t, err2, "invalid client configuration :: missing authorization server")
 
-	res3, err3 := c.RefreshToken("")
+	c.authServer = fake.NewAuthServer()
+	res3, err3 := c.ExchangeGrantCode("", "")
 	assert.Nil(t, res3)
 	assert.Nil(t, err3)
+
+	res4, err4 := c.RefreshToken("")
+	assert.Nil(t, res4)
+	assert.Nil(t, err4)
 }

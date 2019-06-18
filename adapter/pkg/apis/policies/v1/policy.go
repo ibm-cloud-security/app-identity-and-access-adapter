@@ -17,7 +17,7 @@ type Policy struct {
 
 // PolicySpec is the spec for a Policy resource
 type PolicySpec struct {
-	Target     []TargetElement `json:"targets"`
+	Target []TargetElement `json:"targets"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

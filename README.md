@@ -17,7 +17,7 @@ The IBM Cloud App ID Istio Mixer adapter manages authentication and access manag
 
 The adapter supports OIDC / OAuth 2.0 and JWT OAuth 2.0 Bearer Token workflows to protect both frontend and backend applications.
 
-### Architecture
+## Architecture
 
 The Istio service mesh uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh.
 
@@ -36,7 +36,7 @@ The Auth 2.0 / OIDC adapter provides support for two types of access control flo
 
 2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
 
-#### API Protection
+### API Protection
 
 The OAuth 2.0 Authorization Bearer flow is used for protecting service APIs by validating JWT Bearer tokens in the authorization header. Unauthenticated clients will be returned HTTP 401 response status with a list of scopes needed to obtain authorization.
 
@@ -46,35 +46,45 @@ In case of invalid/expired tokens the APIStrategy will return HTTP 401 with `Www
 
 Fo information, on configuring OAuth 2.0 Authorization Bearer see [Protecting APIs](#protecting-apis) below.
 
-#### Frontend Protection
+### Frontend Protection
 
 Browser based applications can use the OIDC / OAuth 2.0 authorization_grant flow to authenticate users on frontend applications.
 
-When an unauthenticated user is detected, they are automatically redirected to the authentication page. Once authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request, obtains tokens from the identity providers, and then redirects the user back to their originally requested URL.
+![App ID Adapter flow chart](./images/istio.png)
 
-Protected applications endpoints can view the user session information using the `Authorization` header, which will contain the session tokens.
+1. A request is sent to made to your frontend application
+
+2. Telemetry data is is sent to Mixer and then forwarded to the IBM Cloud App ID Adapter
+
+3. An unauthenticated user is detected, they are automatically redirected to the authentication page.
+
+4. Once authentication completes, the browser is redirected to an implicit declared `/oidc/callback` endpoint
+
+5. The adapter intercepts the request, obtains tokens from the identity providers, and then redirects the user back to their originally requested URL.
+
+Once a user is authenticated, protected applications endpoints can view the user's access and identity tokens from the `Authorization` header.
 
     Authorization: Bearer <access_token> <id_token>`
 
-Authenticated users can then logout by access any protected endpoint with the `/oidc/logout` suffix.
+Users can logout using any protected endpoint with the `/oidc/logout` suffix.
 
-    https://myhost/path/oidc/logout
+    e.g. https://myhost/path/oidc/logout
 
 Refresh Token may be used to acquire new access and identity tokens automatically without the need to re-authenticate. If the configured IdP returns a refresh token, it will be persisted in the session and used to retrieve new tokens once the identity token has expired.
 
 >> **WARNING:** Due to a bug within Istio, the adapter currently stores user session internally and is not persisted across replicates or over failover. Users using the adapter should limit their workloads to a single replica until the bug is addressed in the next release.
 
-### Installation and usage
+## Installation and usage
 
 The adapter can be installed using the accompanying helm chart. The chart comes with an opinionated set of configuration values that may be updated depending on project needs.
 
-#### Prerequisites
+### Prerequisites
 
 - [Kubernetes Cluster](https://kubernetes.io/)
 - [Istio v1.1](https://istio.io/docs/setup/kubernetes/install/)
 - [Helm](https://helm.sh/)
 
-#### Adapter Installation
+### Adapter Installation
 
 1. If not already installed, install helm in you cluster
     ```bash
@@ -88,23 +98,23 @@ The adapter can be installed using the accompanying helm chart. The chart comes 
     $ helm install ./helm/ibmcloudappid --name ibmcloudappid
     ```
 
-### Authorization and Authentication Policies
+## Authorization and Authentication Policies
 
-In order to apply authorization and access policies, you will need to define an identity provider with an authorization server configuration in addition to a policy outlining when a particular access control flow should be used.
+In order to apply authorization and access policies, you will need to create:
+
+1. A [policy configuration](#policy-configuration)
+
+2. A [policy definition](#policy-definition)
 
 >> See example CRDs, under the [samples directory](./samples/crds)
 
+### Policy Configuration
+
 #### OAuth 2.0 JWT Bearer Policies
 
-The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs using JSON Web Tokens [(JWTs)](https://tools.ietf.org/html/rfc7519.html).
+The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs using JSON Web Tokens [(JWT)](https://tools.ietf.org/html/rfc7519.html) by first defining a `JWTConfig`.
 
-The adapter supports configuring OAuth Bearer API protection by:
-
-1. Defining a `JwtConfig` CRD containing the public key resource.
-
-2. Registering server endpoints within a `Policy` CRD to validate incoming requests
-
-##### OAuth 2.0 Authorization Bearer Configuration Resource
+Create a `JwtConfig` CRD containing the public key resource.
 
 ```helmyaml
 kind: JwtConfig
@@ -121,17 +131,9 @@ kind: JwtConfig
 | jwksUrl | string | yes | The endpoint containing a JSON object representing a set of JSON Web Keys (JWKs) required to verify the authenticity of issued ID and access tokens. |
 
 
-#### Protecting Frontend Applications
+#### OAuth 2.0 / OIDC Policies
 
-Frontend applications requiring user authentication can be configured to use the OIDC / Auth 2.0 authentication flow.
-
-To protect frontend applications you will need to:
-
-1. Define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider.
-
-2. Register server endpoints within a `Policy` CRD to protect incoming requests
-
-##### OAuth 2.0 /  OIDC Configuration Resource
+Frontend applications requiring user authentication can be configured to use the OIDC / Auth 2.0 authentication flow by first defining an `OIDCConfig`.
 
 ```helmyaml
 kind: OidcConfig
@@ -156,9 +158,11 @@ kind: OidcConfig
 | clientSecretRef.name |string|yes| name of the Kubernetes Secret containing the clientSecret  |
 | clientSecretRef.key |string|yes| field within the Kubernetes Secret containing the clientSecret   |
 
-###### Policy Resource
+### Policy Definition
 
-Policies can be configured using the Policy CRD. Each Policy applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods which should be protected.
+Policies can be defined using the `Policy` CRD.
+
+Each Policy applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods which should be protected.
 
 ```helmyaml
 kind: Policy

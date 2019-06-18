@@ -1,6 +1,7 @@
 package apistrategy
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"testing"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
@@ -22,7 +23,7 @@ func TestNew(t *testing.T) {
 func TestHandleAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req           *authnz.HandleAuthnZRequest
-		action        *policy.Action
+		action        *engine.Action
 		message       string
 		code          int32
 		invalidToken  string
@@ -30,7 +31,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 	}{
 		{
 			generateAuthRequest(""),
-			&policy.Action{},
+			&engine.Action{},
 			"authorization header not provided",
 			int32(16),
 			"",
@@ -38,7 +39,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("bearer"),
-			&policy.Action{},
+			&engine.Action{},
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
 			"",
@@ -46,7 +47,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			&policy.Action{},
+			&engine.Action{},
 			"invalid access token",
 			int32(16),
 			"access",
@@ -54,7 +55,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			&policy.Action{},
+			&engine.Action{},
 			"",
 			int32(0),
 			"",
@@ -62,7 +63,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access id"),
-			&policy.Action{},
+			&engine.Action{},
 			"invalid ID token",
 			int32(16),
 			"id",

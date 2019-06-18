@@ -1,7 +1,7 @@
 package policy
 
 import (
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 )
 
 type Method int
@@ -38,16 +38,6 @@ func NewMethod(method string) Method {
 	}
 }
 
-// Action encapsulates information needed to begin executing a policy
-type Action struct {
-	Type       Type
-	//KeySet     keyset.KeySet
-	//Client     client.Client
-	Config string
-	RedirectUri string
-	Rules      []Rule
-}
-
 type Actions = map[Method][]v1.PathPolicy
 
 // New creates a new Actions
@@ -56,7 +46,7 @@ func NewActions() Actions {
 }
 
 type ParsedPolicies struct {
-	Actions []v1.PathPolicy
+	Actions  []v1.PathPolicy
 	Endpoint Endpoint
 }
 
@@ -64,6 +54,6 @@ type ParsedPolicies struct {
 func NewParsedPolicies(service Endpoint, actions []v1.PathPolicy) ParsedPolicies {
 	return ParsedPolicies{
 		Endpoint: service,
-		Actions: actions,
+		Actions:  actions,
 	}
 }

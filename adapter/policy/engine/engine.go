@@ -21,7 +21,7 @@ const (
 
 // PolicyEngine is responsible for making policy decisions
 type PolicyEngine interface {
-	Evaluate(msg *authnz.TargetMsg) (*policy.Action, error)
+	Evaluate(msg *authnz.TargetMsg) (*Action, error)
 }
 
 type engine struct {
@@ -41,7 +41,7 @@ func New(store policy2.PolicyStore) (PolicyEngine, error) {
 
 // Evaluate makes authn/z decision based on authorization action
 // being performed.
-func (m *engine) Evaluate(target *authnz.TargetMsg) (*policy.Action, error) {
+func (m *engine) Evaluate(target *authnz.TargetMsg) (*Action, error) {
 	zap.L().Debug("Evaluating policies",
 		zap.String("namespace", target.Namespace),
 		zap.String("service", target.Service),
@@ -49,30 +49,29 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*policy.Action, error) {
 		zap.String("method", target.Method),
 	)
 
+	// Strip custom path components
 	if strings.HasSuffix(target.Path, callbackEndpoint) {
 		target.Path = strings.Split(target.Path, callbackEndpoint)[0]
 	} else if strings.HasSuffix(target.Path, logoutEndpoint) {
 		target.Path = strings.Split(target.Path, logoutEndpoint)[0]
 	}
 
-	policies := m.getPolicies(endpointsToCheck(target))
+	// Get All policies protecting target
+	policies, err := m.getPolicies(endpointsToCheck(target))
+	if err != nil {
+		zap.L().Error("Could not retrieve configured policies", zap.Error(err))
+		return nil, err
+	}
 
 	zap.L().Debug("Checking policies", zap.Int("count", len(policies)))
 	if len(policies) == 0 {
-		return &policy.Action{
+		return &Action{
 			Type: policy.NONE,
 		}, nil
 	}
 
+	// Validate and cleanse action policies
 	for i, p := range policies {
-		if p.Type == policy.JWT && p.KeySet == nil {
-			zap.L().Error("Missing JWKS set : cannot authenticate user")
-			return nil, errors.New("missing JWKs set : cannot authenticate user")
-		} else if p.Type == policy.OIDC && p.Client == nil {
-			zap.L().Error("Missing OIDC client : cannot authenticate user")
-			return nil, errors.New("missing OIDC client : cannot authenticate user")
-		}
-
 		if p.Rules == nil {
 			policies[i].Rules = createDefaultRules(p)
 		} else {
@@ -87,21 +86,60 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*policy.Action, error) {
 ////////////////// utils //////////////////
 
 // getPolicies returns policies for the given endpoints
-func (m *engine) getPolicies(endpoints []policy.Endpoint) []policy.Action {
-	size := 0
-	tmp := make([]policy.Action, size)
+func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
+	actions := make([]Action, 0)
 
+	// Check all possible endpoint variants for policies
 	for _, ep := range endpoints {
-		if action := m.store.GetPolicies(ep); action != nil {
-			tmp = append(tmp, action...)
+		zap.L().Debug("Retrieving policies for endpoint",
+			zap.String("namespace", ep.Service.Namespace),
+			zap.String("service", ep.Service.Name),
+			zap.String("path", ep.Path),
+			zap.String("method", ep.Method.String()))
+
+		// Get policies for endpoint
+		if policies := m.store.GetPolicies(ep); policies != nil {
+
+			// Convert policy definition into Action
+			endpointActions := make([]Action, len(policies))
+			for i, p := range policies {
+				action := Action{
+					PathPolicy: p,
+					Type:       policy.NewType(p.PolicyType),
+				}
+
+				configName := ep.Service.Namespace + "." + p.Config
+				zap.L().Debug("Checking for configuration", zap.String("name", configName), zap.String("type", action.PolicyType))
+
+				switch action.Type {
+				case policy.JWT:
+					if set := m.store.GetKeySet(configName); set != nil {
+						action.KeySet = set
+					} else {
+						return nil, errors.New("missing JWK Set : cannot authorize request")
+					}
+				case policy.OIDC:
+					if client := m.store.GetClient(configName); client != nil {
+						action.Client = client
+					} else {
+						return nil, errors.New("missing OIDC client : cannot authenticate user")
+					}
+				default:
+					return nil, errors.New("unexpected policy configuration")
+				}
+				endpointActions[i] = action
+			}
+			actions = append(actions, endpointActions...)
+		} else {
+			zap.S().Debug("No policies found on endpoint: %v", ep)
 		}
 	}
 
-	return tmp
+	return actions, nil
 }
 
 // createDefaultRules generates the default JWT validation rules for the given client
-func createDefaultRules(action policy.Action) []policy.Rule {
+func createDefaultRules(action Action) []policy.Rule {
 	switch action.Type {
 	case policy.JWT:
 		return []policy.Rule{
@@ -122,6 +160,7 @@ func createDefaultRules(action policy.Action) []policy.Rule {
 	}
 }
 
+// endpointsToCheck returns the possible endpoints housing the authn/z policies for the given target
 func endpointsToCheck(target *authnz.TargetMsg) []policy.Endpoint {
 	service := policy.Service{Namespace: target.Namespace, Name: target.Service}
 	return []policy.Endpoint{

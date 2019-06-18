@@ -10,4 +10,4 @@ spec:
   clientSecret: NDg5MzFkNDAtMmE3Ny00YmZlLWFmMjMtZWRmZDEzZjVlMmRl
   clientSecretRef:
     name: clientsecret
-    key:          secret
+    key: secret

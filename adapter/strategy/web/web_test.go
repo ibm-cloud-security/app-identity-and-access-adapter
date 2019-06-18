@@ -2,6 +2,7 @@ package webstrategy
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"net/http"
 	"strings"
 	"sync"
@@ -34,7 +35,7 @@ func TestNew(t *testing.T) {
 func TestHandleNewAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		directResponse *v1beta1.DirectHttpResponse
 		message        string
 		code           int32
@@ -42,7 +43,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 	}{
 		{ // Invalid Action Configuration
 			generateAuthnzRequest("", "", "", "", ""),
-			&policy.Action{},
+			&engine.Action{},
 			nil,
 			"invalid OIDC configuration",
 			int32(16),
@@ -50,7 +51,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 		},
 		{ // New Authentication
 			generateAuthnzRequest("", "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(nil),
 			},
 			&v1beta1.DirectHttpResponse{
@@ -96,7 +97,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 func TestRefreshTokenFlow(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		sessionId      string
 		session        *authserver.TokenResponse
 		directResponse *v1beta1.DirectHttpResponse
@@ -106,7 +107,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 	}{
 		{ // successful refresh flow
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(&fake.TokenResponse{
 					Res: &authserver.TokenResponse{
 						IdentityToken: "identity",
@@ -128,7 +129,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token request fails
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(&fake.TokenResponse{
 					Err: errors.New("could not retrieve tokens"),
 				}),
@@ -150,7 +151,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token is empty
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(nil),
 			},
 			"session",
@@ -170,7 +171,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token request fails
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(&fake.TokenResponse{
 					Err: errors.New("could not retrieve tokens"),
 				}),
@@ -236,7 +237,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 func TestErrCallback(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		directResponse *v1beta1.DirectHttpResponse
 		message        string
 		code           int32
@@ -244,7 +245,7 @@ func TestErrCallback(t *testing.T) {
 	}{
 		{ // Err callback with cookies
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
-			&policy.Action{
+			&engine.Action{
 				Client: &fake.Client{
 					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
@@ -256,7 +257,7 @@ func TestErrCallback(t *testing.T) {
 		},
 		{ // Err callback
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
-			&policy.Action{
+			&engine.Action{
 				Client: &fake.Client{
 					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
@@ -315,7 +316,7 @@ func TestCodeCallback(t *testing.T) {
 
 	for _, test := range tests {
 		// Test action
-		action := &policy.Action{
+		action := &engine.Action{
 			Client: &fake.Client{
 				TokenResponse: test.tokenResponse,
 				Server: &fake.AuthServer{
@@ -360,7 +361,7 @@ func TestLogout(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		action := &policy.Action{
+		action := &engine.Action{
 			Client: &fake.Client{
 				TokenResponse: test.tokenResponse,
 				Server: &fake.AuthServer{

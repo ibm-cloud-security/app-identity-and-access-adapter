@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"testing"
 
 	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
@@ -41,7 +42,7 @@ func TestNew(t *testing.T) {
 func TestEvaluateJWTPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		actions           []policy.Action
+		pathPolicy        []v1.PathPolicy
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
@@ -49,8 +50,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 	}{
 		{
 			// 0 - no policies
-			input:             generateActionMessage("", "", "", ""),
-			actions:           nil,
+			input:             genActionMessage("", "", "", ""),
+			pathPolicy:        nil,
 			endpoints:         []policy.Endpoint{},
 			expectedAction:    policy.NONE,
 			expectedRuleCount: 0,
@@ -58,8 +59,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		},
 		{
 			// 1 - 1 policy
-			input:   generateActionMessage("namespace", "svc", "/path", "POST"),
-			actions: genJWTActionArray(),
+			input:      genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
@@ -69,8 +70,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		},
 		{
 			// 2 - logout
-			input:   generateActionMessage("namespace", "svc", "/path/oidc/logout", "POST"),
-			actions: genJWTActionArray(),
+			input:      genActionMessage("namespace", "svc", "/path/oidc/logout", "POST"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
@@ -80,8 +81,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		},
 		{
 			// 3 - callback
-			input:   generateActionMessage("namespace", "svc", "/path/oidc/callback", "POST"),
-			actions: genJWTActionArray(),
+			input:      genActionMessage("namespace", "svc", "/path/oidc/callback", "POST"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
@@ -91,8 +92,8 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		},
 		{
 			// 4 - Diff method
-			input:   generateActionMessage("namespace", "svc", "/path", "GET"),
-			actions: genJWTActionArray(),
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/path", "POST"),
 			},
@@ -101,25 +102,102 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 			err:               nil,
 		},
 		{
-			// 5 - Generic Method
-			input:   generateActionMessage("namespace", "svc", "/path", "OTHER"),
-			actions: genJWTActionArray(),
+			// 5 - Diff service
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
-				genEndpoint("namespace", "svc", "/path", "*"),
+				genEndpoint("namespace", "svc2", "/path", "GET"),
+			},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
+		},
+		{
+			// 6 - Diff namespace
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace2", "svc", "/path", "GET"),
+			},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
+		},
+		{
+			// 7 - Diff Path
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/hello", "GET"),
+			},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               nil,
+		},
+		{
+			// 8 - Generic Path
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/*", "ALL"),
 			},
 			expectedAction:    policy.JWT,
 			expectedRuleCount: 1,
 			err:               nil,
 		},
 		{
-			// 6 - Generic Path / Method
-			input:   generateActionMessage("namespace", "svc", "/path", "GET"),
-			actions: genJWTActionArray(),
+			// 9 - Generic Method
+			input:      genActionMessage("namespace", "svc", "/path", "OTHER"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "ALL"),
+			},
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 1,
+			err:               nil,
+		},
+		{
+			// 10 - Generic Path / Method
+			input:      genActionMessage("namespace", "svc", "/path", "GET"),
+			pathPolicy: genJWTPathPolicyArray(defaultJwtConfigName),
 			endpoints: []policy.Endpoint{
 				genEndpoint("namespace", "svc", "/*", "ALL"),
 			},
 			expectedAction:    policy.JWT,
 			expectedRuleCount: 1,
+			err:               nil,
+		},
+		{
+			// 11 - missing KeySet
+			input:      genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: genJWTPathPolicyArray(""),
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               errors.New("missing JWK Set : cannot authorize request"),
+		},
+		{
+			// 12 - existing rules
+			input: genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: []v1.PathPolicy{
+				{
+					PolicyType: "jwt",
+					Config:     defaultJwtConfigName,
+					/*Rules: []policy.Rule{
+						{
+							Key:   "key",
+							Value: "expected_value",
+						},
+					},*/
+				},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:    policy.JWT,
+			expectedRuleCount: 1, //2, revert when rules exist
 			err:               nil,
 		},
 	}
@@ -128,21 +206,24 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 		/// Create new engine
 		test := ts
 		t.Run("Engine", func(t *testing.T) {
+			t.Parallel()
 			store := policy2.New().(*policy2.LocalStore)
-			store.AddClient("name", fake.NewClient(nil))
-			store.AddKeySet("serverurl", &fake.KeySet{})
-			for _, ep := range test.endpoints {
-				if test.actions != nil {
-					store.SetPolicies(ep, test.actions)
-				}
-
-			}
+			store.AddKeySet("namespace.default-jwt-config", &fake.KeySet{})
 			eng := &engine{store: store}
+
+			if test.pathPolicy != nil {
+				for _, ep := range test.endpoints {
+					store.SetPolicies(ep, test.pathPolicy)
+				}
+			}
+
 			result, err := eng.Evaluate(test.input)
 
 			// Result
 			if test.err != nil {
 				assert.Equal(t, test.err, err)
+			} else if err != nil {
+				t.Fail()
 			} else {
 				assert.Equal(t, test.expectedRuleCount, len(result.Rules))
 				assert.Equal(t, test.expectedAction, result.Type)
@@ -154,7 +235,7 @@ func TestEvaluateJWTPolicies(t *testing.T) {
 func TestEvaluateOIDCPolicies(t *testing.T) {
 	tests := []struct {
 		input             *authnz.TargetMsg
-		actions           []policy.Action
+		pathPolicy        []v1.PathPolicy
 		endpoints         []policy.Endpoint
 		expectedAction    policy.Type
 		expectedRuleCount int
@@ -162,12 +243,11 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 	}{
 		{
 			// 0 - No policies
-			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			actions: []policy.Action{
+			input: genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: []v1.PathPolicy{
 				{
-					Type:       policy.OIDC,
-					Client:     &fake.Client{},
-					ClientName: "name",
+					PolicyType: "oidc",
+					Config:     defaultOidcConfigName,
 				},
 			},
 			endpoints:         []policy.Endpoint{},
@@ -177,12 +257,11 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 		},
 		{
 			// 1 - 1 policy
-			input: generateActionMessage("namespace", "svc", "/path", "POST"),
-			actions: []policy.Action{
+			input: genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: []v1.PathPolicy{
 				{
-					Type:       policy.OIDC,
-					Client:     &fake.Client{},
-					ClientName: "name",
+					PolicyType: "oidc",
+					Config:     defaultOidcConfigName,
 				},
 			},
 			endpoints: []policy.Endpoint{
@@ -192,24 +271,65 @@ func TestEvaluateOIDCPolicies(t *testing.T) {
 			expectedRuleCount: 1,
 			err:               nil,
 		},
+		/*{ Uncomment when rules exist
+			// 2 - existing rules
+			input: genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: []v1.PathPolicy{
+				{
+					PolicyType: "oidc",
+					Config:     defaultOidcConfigName,
+					Rules: []policy.Rule{
+						{
+							Key:   "key",
+							Value: "expected_value",
+						},
+					},
+				},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:    policy.OIDC,
+			expectedRuleCount: 2,
+			err:               nil,
+		},*/
+		{
+			// 3 - missing client
+			input: genActionMessage("namespace", "svc", "/path", "POST"),
+			pathPolicy: []v1.PathPolicy{
+				{
+					PolicyType: "oidc",
+					Config:     "other client",
+				},
+			},
+			endpoints: []policy.Endpoint{
+				genEndpoint("namespace", "svc", "/path", "POST"),
+			},
+			expectedAction:    policy.NONE,
+			expectedRuleCount: 0,
+			err:               errors.New("missing OIDC client : cannot authenticate user"),
+		},
 	}
 
-	for _, test := range tests {
-		t.Run("oidc test", func(t *testing.T) {
+	for _, ts := range tests {
+		test := ts
+		t.Run("OIDCTests", func(t *testing.T) {
+			t.Parallel()
 			/// Create new engine
 			store := policy2.New().(*policy2.LocalStore)
-			store.AddClient("client", &fake.Client{Server: &fake.AuthServer{}})
+			store.AddClient("namespace."+defaultOidcConfigName, fake.NewClient(nil))
 			eng := &engine{store: store}
-			for _, ep := range test.endpoints {
-				if test.actions != nil {
-					store.SetPolicies(ep, test.actions)
+			if test.pathPolicy != nil {
+				for _, ep := range test.endpoints {
+					store.SetPolicies(ep, test.pathPolicy)
 				}
-
 			}
 			// Result
 			result, err := eng.Evaluate(test.input)
 			if test.err != nil {
 				assert.Equal(t, test.err, err)
+			} else if err != nil {
+				t.Fail()
 			} else {
 				assert.Equal(t, test.expectedRuleCount, len(result.Rules))
 				assert.Equal(t, test.expectedAction, result.Type)
@@ -229,7 +349,7 @@ func genEndpoint(ns string, svc string, path string, method string) policy.Endpo
 	}
 }
 
-func generateActionMessage(ns string, svc string, path string, method string) *authnz.TargetMsg {
+func genActionMessage(ns string, svc string, path string, method string) *authnz.TargetMsg {
 	return &authnz.TargetMsg{
 		Namespace: ns,
 		Service:   svc,
@@ -238,11 +358,14 @@ func generateActionMessage(ns string, svc string, path string, method string) *a
 	}
 }
 
-func genJWTActionArray() []policy.Action {
-	return []policy.Action{
+const defaultOidcConfigName = "default-oidc-config"
+const defaultJwtConfigName = "default-jwt-config"
+
+func genJWTPathPolicyArray(cfg string) []v1.PathPolicy {
+	return []v1.PathPolicy{
 		{
-			Type:   policy.JWT,
-			KeySet: &fake.KeySet{},
+			PolicyType: "jwt",
+			Config:     cfg,
 		},
 	}
 }

@@ -1,5 +1,7 @@
 package policy
 
+import "go.uber.org/zap"
+
 // Type represents a policy types (WEB/API)
 type Type int
 
@@ -15,7 +17,9 @@ const (
 // Endpoint captures a request endpoint
 type Endpoint struct {
 	Service Service
+	// Path holds a url path string
 	Path string
+	// Method holds an HTTP Method
 	Method Method
 }
 
@@ -41,4 +45,16 @@ var typeNames = [...]string{"JWT", "OIDC", "NONE"}
 
 func (t Type) String() string {
 	return typeNames[t]
+}
+
+func NewType(t string) Type {
+	zap.S().Info("Type: ", t)
+	switch t {
+	case "jwt":
+		return JWT
+	case "oidc":
+		return OIDC
+	default:
+		return NONE
+	}
 }

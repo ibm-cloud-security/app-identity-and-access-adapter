@@ -1,0 +1,6 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: JwtConfig
+metadata:
+  name: {{.Name}}
+spec:
+  jwksUrl: {{.Spec.JwksURL}}

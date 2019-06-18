@@ -2,6 +2,7 @@ package webstrategy
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"net/http"
 	"strings"
 	"sync"
@@ -88,7 +89,7 @@ func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy 
 }
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
-func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	if strings.HasSuffix(r.Instance.Request.Path, logoutEndpoint) {
 		zap.L().Debug("Received logout request.", zap.String("client_name", action.Client.Name()))
 		return w.handleLogout(r, action)
@@ -118,7 +119,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 
 // isAuthorized checks for the existence of valid cookies
 // returns an error in the event of an Internal Server Error
-func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	if action.Client == nil {
 		zap.L().Warn("Internal server error: OIDC client not provided")
 		return nil, errors.New("invalid OIDC configuration")
@@ -212,7 +213,7 @@ func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZRespon
 }
 
 // handleLogout processes logout requests by deleting session cookies and returning to the base path
-func (w *WebStrategy) handleLogout(r *authnz.HandleAuthnZRequest, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleLogout(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	header := http.Header{}
 	header.Add("Cookie", r.Instance.Request.Headers.Cookies)
 	request := http.Request{Header: header}
@@ -254,7 +255,7 @@ func (w *WebStrategy) handleLogout(path string, action *engine.Action) (*authnz.
 */
 
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
-func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	err := w.validateState(request, action.Client)
 	if err != nil {
@@ -287,7 +288,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
-func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
 	/// Build and store session state
 	state, stateCookie, err := w.buildStateParam(action.Client)

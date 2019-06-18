@@ -55,6 +55,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		zap.L().Debug("Create/Update Policy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
 		parsedPolicies := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		for _, policies := range parsedPolicies {
+			zap.S().Debug("Adding policy for endpoint", policies.Endpoint)
 			c.store.SetPolicies(policies.Endpoint, policies.Actions)
 		}
 		zap.L().Info("Policy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
@@ -112,24 +113,24 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 		}
 	}
 	/*
-	switch mapping.Type {
-	case policy.JWT:
-		zap.L().Debug("Deleting JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
-		for _, ep := range mapping.Endpoints {
-			c.store.DeleteApiPolicy(ep, mapping.Spec)
+		switch mapping.Type {
+		case policy.JWT:
+			zap.L().Debug("Deleting JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
+			for _, ep := range mapping.Endpoints {
+				c.store.DeleteApiPolicy(ep, mapping.Spec)
+			}
+			c.store.DeletePolicyMapping(crdKey.Id)
+			zap.L().Info("Successfully deleted JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
+		case policy.OIDC:
+			zap.L().Debug("Deleting OIDC Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
+			for _, ep := range mapping.Endpoints {
+				c.store.DeleteWebPolicy(ep, mapping.Spec)
+			}
+			c.store.DeletePolicyMapping(crdKey.Id)
+			zap.L().Info("Successfully deleted OIDC Policy", zap.String("type", "OIDC"), zap.String("id", crdKey.Id))
+		default:
+			zap.L().Warn("Unknown policy type")
 		}
-		c.store.DeletePolicyMapping(crdKey.Id)
-		zap.L().Info("Successfully deleted JWT Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
-	case policy.OIDC:
-		zap.L().Debug("Deleting OIDC Policy", zap.String("type", "JWT"), zap.String("id", crdKey.Id))
-		for _, ep := range mapping.Endpoints {
-			c.store.DeleteWebPolicy(ep, mapping.Spec)
-		}
-		c.store.DeletePolicyMapping(crdKey.Id)
-		zap.L().Info("Successfully deleted OIDC Policy", zap.String("type", "OIDC"), zap.String("id", crdKey.Id))
-	default:
-		zap.L().Warn("Unknown policy type")
-	}
 
 	*/
 }
