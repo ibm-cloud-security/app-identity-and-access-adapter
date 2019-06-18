@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const (
+	sampleAppNamespace = "sample-app"
+	sampleAppService   = "svc-sample-app"
+)
+
 ///
 // Create a before method to setup a suite before tests execute
 //
@@ -34,7 +39,7 @@ func before(ctx *framework.Context) error {
 // Create a cleanup method to execute once a suite has completed
 //
 func after(ctx *framework.Context) error {
-	//_ = ctx.CRDManager.CleanUp()
+	_ = ctx.CRDManager.CleanUp()
 	return nil
 }
 
@@ -83,9 +88,10 @@ func TestInvalidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			configName := "jwt-config-2"
-			config := buildJwtConfig(configName, "sample-app", ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-2", "sample-app", "svc-sample-app", configName, "/api/headers", "", "ALL")
+			configName := "jwt-config-0"
+			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
+			policy := buildJwtPolicy("jwt-name-0", sampleAppNamespace, sampleAppService, configName, randomPath, "", "GET")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -115,14 +121,13 @@ func TestInvalidHeader(t *testing.T) {
 				},
 			}
 
+			time.Sleep(1 * time.Second) // Give a second to sync adapter
+
 			for _, test := range tests {
-				time.Sleep(1 * time.Second) // Give a second to sync adapter
 				t.Run("Request", func(st *testing.T) {
-					st.Parallel()
-					res, err := sendAuthRequest(ctx, "GET", "/api/headers", test.authorization)
+					res, err := sendAuthRequest(ctx, "GET", randomPath, test.authorization)
 					if err != nil {
-						st.Fail()
-						return
+						st.FailNow()
 					}
 					require.Equal(st, http.StatusUnauthorized, res.StatusCode)
 					validateResponseCookie(st, test.err, res.Header)
@@ -136,8 +141,9 @@ func TestDeletePolicy(t *testing.T) {
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
 			configName := "jwt-config-3"
-			config := buildJwtConfig(configName, "sample-app", ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-2", "sample-app", "svc-sample-app", configName, "/api/headers", "", "ALL")
+			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
+			policy := buildJwtPolicy("jwt-name-2", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -147,7 +153,7 @@ func TestDeletePolicy(t *testing.T) {
 
 			time.Sleep(1 * time.Second)
 
-			res, err := sendAuthRequest(ctx, "GET", "/api/headers", "")
+			res, err := sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 
@@ -156,13 +162,13 @@ func TestDeletePolicy(t *testing.T) {
 
 			time.Sleep(1 * time.Second)
 
-			res, err = sendAuthRequest(ctx, "GET", "/api/headers", "")
+			res, err = sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
 }
 
-func TestPrefixHeader(t *testing.T) {
+func TestPrefixHeaderAllMethods(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
@@ -184,39 +190,49 @@ func TestPrefixHeader(t *testing.T) {
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "GET",
-					path:          "/api/headers/" + framework.RandStringBytes(3),
+					path:          "/api/headers/" + framework.RandString(3),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken + " " + ctx.AppIDManager.Tokens.IdentityToken,
 					method:        "PUT",
-					path:          "/api/headers/" + framework.RandStringBytes(3),
+					path:          "/api/headers/" + framework.RandString(3),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "PATCH",
-					path:          "/api/headers/" + framework.RandStringBytes(3),
+					path:          "/api/headers/" + framework.RandString(3),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "POST",
-					path:          "/api/headers/" + framework.RandStringBytes(3),
+					path:          "/api/headers/" + framework.RandString(3),
+				},
+				{
+					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
+					method:        "DELETE",
+					path:          "/api/headers/" + framework.RandString(3),
+				},
+				{
+					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
+					method:        "PATCH",
+					path:          "/api/headers/" + framework.RandString(3),
 				},
 			}
 
 			_, err = sendAuthRequest(ctx, "GET", "/api/headers", tests[0].authorization)
 			if err != nil {
-				t.Fail()
-				return
+				t.FailNow()
 			}
 
-			for _, test := range tests {
-				time.Sleep(1 * time.Second) // Give a second to sync adapter
+			time.Sleep(1 * time.Second) // Give a second to sync adapter
+
+			for _, ts := range tests {
+				test := ts
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
 					res, err := sendAuthRequest(ctx, test.method, test.path, test.authorization)
 					if err != nil {
-						st.Fail()
-						return
+						st.FailNow()
 					}
 					require.Equal(st, http.StatusOK, res.StatusCode)
 				})
@@ -228,10 +244,10 @@ func TestValidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-
-			configName := "jwt-config-4"
-			config := buildJwtConfig(configName, "sample-app", ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-2", "sample-app", "svc-sample-app", configName, "/api/headers", "", "POST")
+			configName := "jwt-config-55"
+			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
+			policy := buildJwtPolicy("jwt-policy-2", sampleAppNamespace, sampleAppService, configName, randomPath, "", "POST")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -248,45 +264,53 @@ func TestValidHeader(t *testing.T) {
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "POST",
-					path:          "/api/headers",
+					path:          randomPath,
 					status:        http.StatusOK,
-				},
-				{
-					authorization: "Bearer",
-					method:        "POST",
-					path:          "/api/headers",
-					status:        http.StatusUnauthorized,
 				},
 				{
 					authorization: "",
 					method:        "GET",
-					path:          "/api/headers",
+					path:          randomPath,
 					status:        http.StatusOK,
 				},
 				{
 					authorization: "",
 					method:        "PUT",
-					path:          "/api/headers",
+					path:          randomPath,
 					status:        http.StatusOK,
 				},
 				{
 					authorization: "",
-					method:        "POST",
-					path:          "/api/headers/1",
+					method:        "PATCH",
+					path:          randomPath,
+					status:        http.StatusOK,
+				},
+				{
+					authorization: "",
+					method:        "DELETE",
+					path:          randomPath,
 					status:        http.StatusOK,
 				},
 			}
 
-			for _, test := range tests {
-				time.Sleep(1 * time.Second) // Give a second to sync adapter
+			time.Sleep(2 * time.Second) // Give a second to sync adapter
+
+			// Base case
+			res, err := sendAuthRequest(ctx, "POST", randomPath, "no auth")
+			if err != nil {
+				t.FailNow()
+			}
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode, "Expected path to be protected")
+
+			for _, ts := range tests {
+				test := ts
 				t.Run("Request", func(st *testing.T) {
 					st.Parallel()
 					res, err := sendAuthRequest(ctx, test.method, test.path, test.authorization)
 					if err != nil {
-						st.Fail()
-						return
+						st.FailNow()
 					}
-					require.Equal(st, test.status, res.StatusCode)
+					require.Equal(st, test.status, res.StatusCode, test.path)
 				})
 			}
 		})

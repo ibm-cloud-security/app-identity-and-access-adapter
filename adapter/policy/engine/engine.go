@@ -128,11 +128,14 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 				}
 				endpointActions[i] = action
 			}
-			if len(endpointActions) > 0 {
-				return endpointActions, nil
-			}
+
+			return endpointActions, nil
 		} else {
-			zap.S().Debug("No policies found on endpoint: %v", ep)
+			zap.L().Debug("No policies policies for endpoint",
+				zap.String("namespace", ep.Service.Namespace),
+				zap.String("service", ep.Service.Name),
+				zap.String("path", ep.Path),
+				zap.String("method", ep.Method.String()))
 		}
 	}
 
