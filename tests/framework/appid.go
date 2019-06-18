@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	defaultUsername = "username@ibm.com"
-	defaultPassword = "password"
+	DefaultUsername = "username@ibm.com"
+	DefaultPassword = "password"
 	clientID        = "APPID_CLIENT_ID"
 	clientSecret    = "APPID_CLIENT_SECRET"
 	oauthServerUrl  = "APPID_OAUTH_SERVER_URL"
@@ -182,8 +182,8 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 func (m *AppIDManager) postCredentialsFromWidget(redirectUri string, state string, widgetURL string) (*url.URL, error) {
 	form := url.Values{
-		"email":       {defaultUsername},
-		"password":    {defaultPassword},
+		"email":       {DefaultUsername},
+		"password":    {DefaultPassword},
 		"redirectUri": {redirectUri},
 		"clientId":    {m.ClientID},
 		"state":       {state},
