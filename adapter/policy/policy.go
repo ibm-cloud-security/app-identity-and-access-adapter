@@ -1,6 +1,10 @@
 package policy
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+)
 
 // Type represents a policy types (WEB/API)
 type Type int
@@ -26,6 +30,7 @@ type Endpoint struct {
 // CrdKey represents a CustomResourceDefinition ID
 type CrdKey struct {
 	Id string
+	CrdType v1.CrdType
 }
 
 // Rule represents a policy validation rule
@@ -36,9 +41,16 @@ type Rule struct {
 
 // PolicyMapping captures information of created endpoints by policy
 type PolicyMapping struct {
-	Type      Type
-	Endpoints []Endpoint
-	Spec      interface{}
+	Actions  []v1.PathPolicy
+	Endpoint Endpoint
+}
+
+// New creates a new ParsedPolicies
+func NewPolicyMapping(service Endpoint, actions []v1.PathPolicy) PolicyMapping {
+	return PolicyMapping{
+		Endpoint: service,
+		Actions:  actions,
+	}
 }
 
 var typeNames = [...]string{"JWT", "OIDC", "NONE"}

@@ -45,7 +45,7 @@ func getTargetElements(service string, paths []v1.PathConfig) v1.TargetElement {
 }
 
 type output struct {
-	policies []policy.ParsedPolicies
+	policies []policy.PolicyMapping
 	total int
 }
 
@@ -63,7 +63,7 @@ func TestParsedTarget(t *testing.T) {
 			},
 			output: output{
 				total: 2,
-				policies: []policy.ParsedPolicies{
+				policies: []policy.PolicyMapping{
 					{
 						Endpoint: getEndpoint(getDefaultService(), policy.ALL, "/*"),
 						Actions: getDefaultPathPolicy(),
@@ -84,7 +84,7 @@ func TestParsedTarget(t *testing.T) {
 			},
 			output: output{
 				total: 3,
-				policies: []policy.ParsedPolicies{
+				policies: []policy.PolicyMapping{
 					{
 						Endpoint: getEndpoint(getDefaultService(), policy.ALL, "/"),
 						Actions: getDefaultPathPolicy(),
@@ -109,7 +109,7 @@ func TestParsedTarget(t *testing.T) {
 			},
 			output: output{
 				total: 3,
-				policies: []policy.ParsedPolicies{
+				policies: []policy.PolicyMapping{
 					{
 						Endpoint: getEndpoint(getDefaultService(), policy.ALL, "/*"),
 						Actions: getDefaultPathPolicy(),

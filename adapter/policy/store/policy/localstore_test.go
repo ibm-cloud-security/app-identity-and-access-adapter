@@ -87,7 +87,7 @@ func TestLocalStore_Policies(t *testing.T) {
 
 func policyMappingTest(t *testing.T, store PolicyStore) {
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))
-	store.AddPolicyMapping(samplePolicy, &policy.PolicyMapping{})
+	store.AddPolicyMapping(samplePolicy, []policy.PolicyMapping{})
 	assert.NotNil(t, store.GetPolicyMapping(samplePolicy))
 	store.DeletePolicyMapping(samplePolicy)
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))

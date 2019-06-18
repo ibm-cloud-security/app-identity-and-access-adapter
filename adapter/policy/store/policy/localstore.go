@@ -15,7 +15,7 @@ type LocalStore struct {
 	// policies maps endpoint -> list of actions
 	policies map[policy.Service]pathtrie.Trie
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
-	policyMappings map[string]*policy.PolicyMapping
+	policyMappings map[string][]policy.PolicyMapping
 	keysets        map[string]keyset.KeySet // jwt config ClientName:keyset
 }
 
@@ -24,24 +24,31 @@ func New() PolicyStore {
 	return &LocalStore{
 		clients:        make(map[string]client.Client),
 		policies:       make(map[policy.Service]pathtrie.Trie),
-		policyMappings: make(map[string]*policy.PolicyMapping),
+		policyMappings: make(map[string][]policy.PolicyMapping),
 		keysets:        make(map[string]keyset.KeySet),
 	}
 }
 
-func (l *LocalStore) GetKeySet(jwksURL string) keyset.KeySet {
+func (l *LocalStore) GetKeySet(clientName string) keyset.KeySet {
 	if l.keysets != nil {
-		return l.keysets[jwksURL]
+		return l.keysets[clientName]
 	}
 	return nil
 }
 
-func (l *LocalStore) AddKeySet(jwksURL string, jwks keyset.KeySet) {
+func (l *LocalStore) AddKeySet(clientName string, jwks keyset.KeySet) {
 	if l.keysets == nil {
 		l.keysets = make(map[string]keyset.KeySet)
 	}
-	l.keysets[jwksURL] = jwks
+	l.keysets[clientName] = jwks
 }
+
+func (l *LocalStore) DeleteKeySet(clientName string) {
+	if l.keysets != nil {
+		delete(l.keysets, clientName)
+	}
+}
+
 
 func (l *LocalStore) GetClient(clientName string) client.Client {
 	if l.clients != nil {
@@ -55,6 +62,12 @@ func (l *LocalStore) AddClient(clientName string, clientObject client.Client) {
 		l.clients = make(map[string]client.Client)
 	}
 	l.clients[clientName] = clientObject
+}
+
+func (l *LocalStore) DeleteClient(clientName string) {
+	if l.clients != nil {
+		delete(l.clients, clientName)
+	}
 }
 
 func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) []v1.PathPolicy {
@@ -91,7 +104,7 @@ func (s *LocalStore) SetPolicies(endpoint policy.Endpoint, actions []v1.PathPoli
 	}
 }
 
-func (s *LocalStore) GetPolicyMapping(policy string) *policy.PolicyMapping {
+func (s *LocalStore) GetPolicyMapping(policy string) []policy.PolicyMapping {
 	if s.policyMappings != nil {
 		return s.policyMappings[policy]
 	}
@@ -104,9 +117,9 @@ func (s *LocalStore) DeletePolicyMapping(policy string) {
 	}
 }
 
-func (s *LocalStore) AddPolicyMapping(name string, mapping *policy.PolicyMapping) {
+func (s *LocalStore) AddPolicyMapping(name string, mapping []policy.PolicyMapping) {
 	if s.policyMappings == nil {
-		s.policyMappings = make(map[string]*policy.PolicyMapping)
+		s.policyMappings = make(map[string][]policy.PolicyMapping)
 	}
 	s.policyMappings[name] = mapping
 }

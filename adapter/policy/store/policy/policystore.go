@@ -9,14 +9,16 @@ import (
 
 // PolicyStore stores policy information
 type PolicyStore interface {
-	GetKeySet(jwksURL string) keyset.KeySet
-	AddKeySet(jwksURL string, jwks keyset.KeySet)
+	GetKeySet(clientName string) keyset.KeySet
+	AddKeySet(clientName string, jwks keyset.KeySet)
+	DeleteKeySet(clientName string)
 	GetClient(clientName string) client.Client
 	AddClient(clientName string, client client.Client)
+	DeleteClient(clientName string)
 	GetPolicies(endpoint policy.Endpoint) []v1.PathPolicy
 	SetPolicies(endpoint policy.Endpoint, actions []v1.PathPolicy)
 	// DeletePolicies(ep policy.Endpoint, obj interface{})
-	GetPolicyMapping(policy string) *policy.PolicyMapping
-	AddPolicyMapping(policy string, mapping *policy.PolicyMapping)
+	GetPolicyMapping(policy string) []policy.PolicyMapping
+	AddPolicyMapping(policy string, mapping []policy.PolicyMapping)
 	DeletePolicyMapping(policy string)
 }

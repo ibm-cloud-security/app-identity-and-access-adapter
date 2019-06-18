@@ -19,12 +19,12 @@ func getEndpoint(service policy.Service, method policy.Method, path string) poli
 	}
 }
 
-func getParsedPolicy(service policy.Service, method policy.Method, path string, policies []v1.PathPolicy) policy.ParsedPolicies{
-	return policy.NewParsedPolicies(getEndpoint(service, method, path), policies)
+func getParsedPolicy(service policy.Service, method policy.Method, path string, policies []v1.PathPolicy) policy.PolicyMapping{
+	return policy.NewPolicyMapping(getEndpoint(service, method, path), policies)
 }
 
-func parseTarget(target []v1.TargetElement, namespace string) []policy.ParsedPolicies {
-	targets := make([]policy.ParsedPolicies, 0)
+func parseTarget(target []v1.TargetElement, namespace string) []policy.PolicyMapping {
+	targets := make([]policy.PolicyMapping, 0)
 	if len(target) > 0 {
 		for _, items := range target {
 			service := policy.Service{

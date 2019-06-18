@@ -44,16 +44,3 @@ type Actions = map[Method][]v1.PathPolicy
 func NewActions() Actions {
 	return make(map[Method][]v1.PathPolicy)
 }
-
-type ParsedPolicies struct {
-	Actions  []v1.PathPolicy
-	Endpoint Endpoint
-}
-
-// New creates a new ParsedPolicies
-func NewParsedPolicies(service Endpoint, actions []v1.PathPolicy) ParsedPolicies {
-	return ParsedPolicies{
-		Endpoint: service,
-		Actions:  actions,
-	}
-}

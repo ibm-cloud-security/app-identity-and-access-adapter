@@ -2,10 +2,13 @@ package controller
 
 import (
 	"fmt"
+	"time"
+
+	"go.uber.org/zap"
+
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
-	"go.uber.org/zap"
-	"time"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -18,6 +21,7 @@ import (
 // logging, client connectivity, informing (list and watching)
 // queueing, and handling of resource changes
 type Controller struct {
+	CrdType   v1.CrdType
 	Clientset kubernetes.Interface
 	Queue     workqueue.RateLimitingInterface
 	Informer  cache.SharedIndexInformer
@@ -110,7 +114,7 @@ func (c *Controller) processNextItem() bool {
 	// a code path of successful queue key processing
 	if !exists {
 		zap.L().Debug("Controller.processNextItem: object deleted detected: %s", zap.String("key", keyRaw))
-		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw})
+		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw, CrdType: c.CrdType})
 		c.Queue.Forget(key)
 	} else {
 		zap.L().Debug("Controller.processNextItem: object created detected: %s", zap.String("key", keyRaw))
