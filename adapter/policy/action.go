@@ -1,9 +1,5 @@
 package policy
 
-import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-)
-
 type Method int
 
 const (
@@ -38,9 +34,9 @@ func NewMethod(method string) Method {
 	}
 }
 
-type Actions = map[Method][]v1.PathPolicy
+type Actions = map[Method]RoutePolicy
 
 // New creates a new Actions
 func NewActions() Actions {
-	return make(map[Method][]v1.PathPolicy)
+	return make(map[Method]RoutePolicy)
 }

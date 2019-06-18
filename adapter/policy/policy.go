@@ -45,6 +45,18 @@ type PolicyMapping struct {
 	Endpoint Endpoint
 }
 
+type RoutePolicy struct {
+	PolicyReference string
+	Actions  []v1.PathPolicy
+}
+
+func NewRoutePolicy() RoutePolicy{
+	return RoutePolicy{
+		PolicyReference: "",
+		Actions: make([]v1.PathPolicy,0),
+	}
+}
+
 // New creates a new ParsedPolicies
 func NewPolicyMapping(service Endpoint, actions []v1.PathPolicy) PolicyMapping {
 	return PolicyMapping{

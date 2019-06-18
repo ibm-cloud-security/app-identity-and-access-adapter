@@ -2,8 +2,6 @@
 package handler
 
 import (
-	"reflect"
-
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
@@ -52,12 +50,12 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
 	case *v1.Policy:
 		zap.L().Debug("Create/Update Policy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))
+		mappingId := crd.ObjectMeta.Namespace + "/" +crd.ObjectMeta.Name
 		parsedPolicies := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
 		for _, policies := range parsedPolicies {
 			zap.S().Debug("Adding policy for endpoint", policies.Endpoint)
-			c.store.SetPolicies(policies.Endpoint, policies.Actions)
+			c.store.SetPolicies(policies.Endpoint, policy.RoutePolicy{ PolicyReference: mappingId, Actions: policies.Actions})
 		}
-		mappingId := crd.ObjectMeta.Namespace + "/" +crd.ObjectMeta.Name
 		c.store.AddPolicyMapping(mappingId, parsedPolicies)
 		zap.L().Info("Policy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcConfig:
@@ -119,10 +117,11 @@ func (c *CrdHandler) handleDeletePolicy(key string) {
 	for _, policies := range parsedPolicies {
 		zap.S().Debug("Getting policy for endpoint", policies.Endpoint)
 		storedPolicy := c.store.GetPolicies(policies.Endpoint)
-		if reflect.DeepEqual(storedPolicy, policies.Actions) {
-			// set policies to empty
-			c.store.SetPolicies(policies.Endpoint, []v1.PathPolicy{})
+		if storedPolicy.PolicyReference == key {
+			c.store.SetPolicies(policies.Endpoint, policy.NewRoutePolicy())
 		}
 	}
-	zap.S().Debug("Delete policy completed", )
+	// remove entry from policyMapping
+	c.store.DeletePolicyMapping(key)
+	zap.S().Debug("Delete policy completed")
 }

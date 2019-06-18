@@ -27,11 +27,15 @@ func getService() policy.Service {
 
 func getActions() policy.Actions {
 	actions := policy.NewActions()
-	actions[policy.GET] = []v1.PathPolicy{
-		{PolicyType: "jwt", Config:"samplejwt"},
+	actions[policy.GET] = policy.RoutePolicy {
+		Actions: []v1.PathPolicy{
+			{PolicyType: "jwt", Config:"samplejwt"},
+		},
 	}
-	actions[policy.ALL] = []v1.PathPolicy{
-		{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
+	actions[policy.ALL] = policy.RoutePolicy {
+		Actions: []v1.PathPolicy{
+			{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
+		},
 	}
 	return actions
 }
@@ -69,13 +73,11 @@ func TestLocalStore_Client(t *testing.T) {
 }
 
 func policiesTest(t *testing.T, store PolicyStore) {
-	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), []v1.PathPolicy{})
-	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL), []v1.PathPolicy{
-		{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
-	})
-	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET), []v1.PathPolicy{
-		{PolicyType: "jwt", Config:"samplejwt"},
-	})
+	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), policy.NewRoutePolicy())
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL),
+		policy.RoutePolicy{ Actions:[]v1.PathPolicy{ {PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"}}})
+	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET),
+		policy.RoutePolicy{Actions: []v1.PathPolicy{{PolicyType: "jwt", Config:"samplejwt"}}})
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions()[policy.GET])
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions()[policy.ALL])
 }

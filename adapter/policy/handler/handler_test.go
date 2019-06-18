@@ -20,11 +20,11 @@ const (
 )
 
 func GetObjectMeta() metav1.ObjectMeta {
-	return metav1.ObjectMeta{Namespace: "sample", Name: "sample"}
+	return metav1.ObjectMeta{Namespace: ns, Name: "sample"}
 }
 
 func GetObjectMetaWithName(name string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{Namespace: name, Name: name}
+	return metav1.ObjectMeta{Namespace: ns, Name: name}
 }
 
 func GetTypeMeta() metav1.TypeMeta {
@@ -54,6 +54,27 @@ func GetJwtConfig(spec v1.JwtConfigSpec, objMeta metav1.ObjectMeta, typeMeta met
 
 func GetPolicy(spec v1.PolicySpec, objMeta metav1.ObjectMeta, typeMeta metav1.TypeMeta) *v1.Policy {
 	return &v1.Policy{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
+}
+
+func getDefaultRoutePolicy() policy.RoutePolicy{
+	return policy.NewRoutePolicy()
+}
+
+func getRoutePolicy(policyReference string) policy.RoutePolicy{
+	return policy.RoutePolicy{
+		PolicyReference: policyReference,
+		Actions: getPathPolicy(),
+	}
+}
+
+func getPathPolicy() []v1.PathPolicy{
+	return []v1.PathPolicy{
+		{
+			PolicyType: policy.OIDC.String(),
+			RedirectUri: jwksUrl,
+			Config: "sampleoidc",
+		},
+	}
 }
 
 func GetOidcConfig(spec v1.OidcConfigSpec, objMeta metav1.ObjectMeta, typeMeta metav1.TypeMeta) *v1.OidcConfig {
@@ -155,7 +176,7 @@ func TestGetClientSecret(t *testing.T) {
 			secret: secretFromPlainText,
 		},
 	}
-	_, _ = testHandler.kubeClient.CoreV1().Secrets("sample").Create(MockKubeSecret())
+	_, _ = testHandler.kubeClient.CoreV1().Secrets(ns).Create(MockKubeSecret())
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(st *testing.T) {
@@ -172,7 +193,7 @@ func TestHandler_HandleAddDeleteEvent_JwtConfig(t *testing.T) {
 	}
 	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Add
 	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Update policy
-	key := "sample/sample"
+	key := "ns/sample"
 	assert.Equal(t, testHandler.store.GetKeySet(key).PublicKeyURL(), jwksUrl)
 	testHandler.HandleDeleteEvent(policy.CrdKey{
 		Id: key,
@@ -186,7 +207,7 @@ func TestHandler_HandleAddDeleteEvent_OidcConfig(t *testing.T) {
 		store: storePolicy.New(),
 	}
 	policyName := "oidcconfig"
-	key := policyName + "/" + policyName
+	key := "ns/" + policyName
 	testHandler.HandleAddUpdateEvent(OidcConfigGenerator(policyName, "oidc", jwksUrl))
 	assert.Equal(t, testHandler.store.GetClient(key).Secret(), secretFromPlainText)
 	testHandler.HandleDeleteEvent(policy.CrdKey{
@@ -196,7 +217,7 @@ func TestHandler_HandleAddDeleteEvent_OidcConfig(t *testing.T) {
 	assert.Nil(t, testHandler.store.GetKeySet(key))
 	// invalid OidcConfig object
 	testHandler.HandleAddUpdateEvent(GetOidcConfig(v1.OidcConfigSpec{}, GetObjectMetaWithName("sample"), GetTypeMeta()))
-	assert.Nil(t, testHandler.store.GetClient("sample/sample"))
+	assert.Nil(t, testHandler.store.GetClient("ns/sample"))
 }
 
 func TestHandler_HandleAddDeleteEvent_Policy(t *testing.T) {
@@ -204,17 +225,17 @@ func TestHandler_HandleAddDeleteEvent_Policy(t *testing.T) {
 		store: storePolicy.New(),
 	}
 	targets := []v1.TargetElement{
-		getTargetElements(service, getPathConfigs(getPathConfig("/path", "/paths", "GET", getDefaultPathPolicy()))),
+		getTargetElements(service, getPathConfigs(getPathConfig("/path", "/paths", "GET", getPathPolicy()))),
 	}
 	testHandler.HandleAddUpdateEvent(PolicyGenerator(targets))
+	key := "ns/sample"
 	// getEndpoint(getDefaultService(), policy.GET, "/path")
-	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getDefaultPathPolicy())
-	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getDefaultPathPolicy())
-	key := "sample/sample"
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getRoutePolicy(key))
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getRoutePolicy(key))
 	testHandler.HandleDeleteEvent(policy.CrdKey{
 		Id: key,
 		CrdType: v1.POLICY,
 	})
-	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), []v1.PathPolicy{})
-	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), []v1.PathPolicy{})
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getDefaultRoutePolicy())
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getDefaultRoutePolicy())
 }
