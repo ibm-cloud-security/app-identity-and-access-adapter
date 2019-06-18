@@ -46,7 +46,7 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 	case *v1.JwtConfig:
 		zap.L().Info("Create/Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		crd.Spec.ClientName = crd.ObjectMeta.Namespace + "." + crd.ObjectMeta.Name
-		if c.store.GetKeySet(crd.Spec.JwksURL) != nil {
+		if c.store.GetKeySet(crd.Spec.ClientName) != nil {
 			zap.L().Info("Update JwtPolicy", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("name", crd.Name), zap.String("namespace", crd.Namespace))
 		}
 		c.store.AddKeySet(crd.Spec.ClientName, keyset.New(crd.Spec.JwksURL, nil))
@@ -57,27 +57,6 @@ func (c *CrdHandler) HandleAddUpdateEvent(obj interface{}) {
 		for _, policies := range parsedPolicies {
 			c.store.SetPolicies(policies.Endpoint, policies.Actions)
 		}
-		/*
-		mappingKey := generatePolicyMappingKey(policy.OIDC, crd.ObjectMeta.Namespace, crd.ObjectMeta.Name)
-		policyEndpoints := parseTarget(crd.Spec.Target, crd.ObjectMeta.Namespace)
-
-		if c.store.GetPolicyMapping(mappingKey) != nil {
-			// for update delete the old object mappings
-			zap.L().Debug("Update event for Policy. Calling Delete to remove the old mappings")
-			c.HandleDeleteEvent(policy.CrdKey{Id: mappingKey})
-		}
-
-		c.store.AddPolicyMapping(mappingKey, &policy.PolicyMapping{Type: policy.OIDC, Endpoints: policyEndpoints, Spec: crd.Spec})
-		for _, ep := range policyEndpoints {
-			c.store.SetWebPolicy(ep, policy.Action{
-				Type:       policy.OIDC,
-				KeySet:     nil,
-				Client:     c.store.GetClient(crd.Spec.ClientName),
-				ClientName: crd.Spec.ClientName,
-				Rules:      nil})
-		}
-
-		 */
 		zap.L().Info("Policy created/updated", zap.String("ID", string(crd.ObjectMeta.UID)))
 	case *v1.OidcConfig:
 		zap.L().Debug("Create/Update OidcConfig", zap.String("ID", string(crd.ObjectMeta.UID)), zap.String("clientSecret", crd.Spec.ClientSecret), zap.String("name", crd.ObjectMeta.Name), zap.String("namespace", crd.ObjectMeta.Namespace))

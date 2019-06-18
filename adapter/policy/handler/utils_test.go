@@ -36,6 +36,7 @@ func getPathConfig(exact string, prefix string, method string, policies []v1.Pat
 func getPathConfigs(path v1.PathConfig) []v1.PathConfig{
 	return []v1.PathConfig{ path,}
 }
+
 func getTargetElements(service string, paths []v1.PathConfig) v1.TargetElement {
 	return v1.TargetElement{
 		ServiceName: service,

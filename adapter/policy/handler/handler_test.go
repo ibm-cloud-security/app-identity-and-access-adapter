@@ -1,172 +1,157 @@
 package handler
-/*
+
 import (
 	"testing"
 
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 	"github.com/stretchr/testify/assert"
 	k8sV1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-)
 
-type Type int
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	storePolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+)
 
 const (
-	JWTPolicy Type = iota
-	OIDCPolicy
-	OIDCClient
-	NONE
 	secretFromRef       string = "secretFromRef"
 	secretFromPlainText string = "secretFromPlainTextssd"
+	jwksUrl             string = "https://sampleurl"
 )
 
-func GetObjctMeta() meta_v1.ObjectMeta {
-	return meta_v1.ObjectMeta{Namespace: "sample", Name: "sample"}
+func GetObjectMeta() metav1.ObjectMeta {
+	return metav1.ObjectMeta{Namespace: "sample", Name: "sample"}
 }
 
-func GetTypeMeta() meta_v1.TypeMeta {
-	return meta_v1.TypeMeta{APIVersion: "v1", Kind: "JwtPolicy"}
+func GetObjectMetaWithName(name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{Namespace: name, Name: name}
 }
 
-func GetEndpoint(ns string, service string, path string, method string) policy.Endpoint {
-	return policy.Endpoint{Namespace: ns, Service: service, Path: path, Method: method}
+func GetTypeMeta() metav1.TypeMeta {
+	return metav1.TypeMeta{APIVersion: "v1", Kind: "JwtPolicy"}
 }
 
-func GetTargetElement(service string, paths []string) v1.TargetElement {
+func GetTargetElement(service string, paths []v1.PathConfig) v1.TargetElement {
 	return v1.TargetElement{ServiceName: service, Paths: paths}
 }
 
-func TargetGenerator(service []string, paths []string) []v1.TargetElement {
-	target := make([]v1.TargetElement, 0)
-	for _, svc := range service {
-		target = append(target, GetTargetElement(svc, paths))
-	}
-	return target
+func GetJwtConfigSpec(jwks string) v1.JwtConfigSpec {
+	return v1.JwtConfigSpec{JwksURL: jwks}
 }
 
-func GetJwtPolicySpec(jwks string, target []v1.TargetElement) v1.JwtPolicySpec {
-	return v1.JwtPolicySpec{JwksURL: jwks, Target: target}
+func GetPolicySpec(target []v1.TargetElement) v1.PolicySpec {
+	return v1.PolicySpec{Target: target}
 }
 
-func GetOidcPolicySpec(name string, target []v1.TargetElement) v1.OidcPolicySpec {
-	return v1.OidcPolicySpec{ClientName: name, Target: target}
-}
-
-func GetOidcClientSpec(name string, id string, url string) v1.OidcClientSpec {
+func GetOidcConfigSpec(name string, id string, url string) v1.OidcConfigSpec {
 	emptyRef := v1.ClientSecretRef{}
-	return v1.OidcClientSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: secretFromPlainText, ClientSecretRef: emptyRef}
+	return v1.OidcConfigSpec{ClientName: name, ClientID: id, DiscoveryURL: url, ClientSecret: secretFromPlainText, ClientSecretRef: emptyRef}
 }
 
-func GetJwtPolicy(spec v1.JwtPolicySpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.JwtPolicy {
-	return v1.JwtPolicy{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
+func GetJwtConfig(spec v1.JwtConfigSpec, objMeta metav1.ObjectMeta, typeMeta metav1.TypeMeta) *v1.JwtConfig {
+	return &v1.JwtConfig{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
 }
 
-func GetOidcPolicy(spec v1.OidcPolicySpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.OidcPolicy {
-	return v1.OidcPolicy{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
+func GetPolicy(spec v1.PolicySpec, objMeta metav1.ObjectMeta, typeMeta metav1.TypeMeta) *v1.Policy {
+	return &v1.Policy{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
 }
 
-func GetOidcClient(spec v1.OidcClientSpec, objMeta meta_v1.ObjectMeta, typeMeta meta_v1.TypeMeta) v1.OidcClient {
-	return v1.OidcClient{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
+func GetOidcConfig(spec v1.OidcConfigSpec, objMeta metav1.ObjectMeta, typeMeta metav1.TypeMeta) *v1.OidcConfig {
+	return &v1.OidcConfig{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
 }
 
 func MockKubeSecret() *k8sV1.Secret {
 	// create kube secret
 	data := map[string][]byte{"secretKey": []byte(secretFromRef)}
-	objData := meta_v1.ObjectMeta{Name: "mysecret"}
+	objData := metav1.ObjectMeta{Name: "mysecret"}
 	return &k8sV1.Secret{Data: data, ObjectMeta: objData}
 }
 
-func JwtPolicyGenerator(targets []v1.TargetElement) v1.JwtPolicy {
-	if len(targets) == 0 {
-		targets = append(targets, GetTargetElement("samplesrv", []string{"/path"}))
-	}
-	jwtPolicySpec := GetJwtPolicySpec("https://sampleurl", targets)
-	return GetJwtPolicy(jwtPolicySpec, GetObjctMeta(), GetTypeMeta())
+func JwtConfigGenerator() *v1.JwtConfig {
+	jwtPolicySpec := GetJwtConfigSpec(jwksUrl)
+	return GetJwtConfig(jwtPolicySpec, GetObjectMeta(), GetTypeMeta())
 }
 
-func OidcPolicyGenerator(targets []v1.TargetElement) v1.OidcPolicy {
+func PolicyGenerator(targets []v1.TargetElement) *v1.Policy {
 	if len(targets) == 0 {
 		targets = append(targets, GetTargetElement("samplesrv", nil))
 	}
-	oidcPolicySpec := GetOidcPolicySpec("sampleoidc", targets)
-	return GetOidcPolicy(oidcPolicySpec, GetObjctMeta(), GetTypeMeta())
+	oidcPolicySpec := GetPolicySpec(targets)
+	return GetPolicy(oidcPolicySpec, GetObjectMeta(), GetTypeMeta())
 }
 
-func OidcClientGenerator(name string, id string, url string) v1.OidcClient {
-	return GetOidcClient(GetOidcClientSpec(name, id, url), GetObjctMeta(), GetTypeMeta())
+func OidcConfigGenerator(name string, id string, url string) *v1.OidcConfig {
+	return GetOidcConfig(GetOidcConfigSpec(name, id, url), GetObjectMetaWithName(name), GetTypeMeta())
 }
 
-func OidcClientWithRef(name string, id string, url string, ref v1.ClientSecretRef) v1.OidcClient {
-	return GetOidcClient(
-		v1.OidcClientSpec{
+func OidcConfigWithRef(name string, id string, url string, ref v1.ClientSecretRef) *v1.OidcConfig {
+	return GetOidcConfig(
+		v1.OidcConfigSpec{
 			ClientName:      name,
 			ClientID:        id,
 			DiscoveryURL:    url,
 			ClientSecret:    "",
 			ClientSecretRef: ref,
-		}, GetObjctMeta(), GetTypeMeta())
+		}, GetObjectMeta(), GetTypeMeta())
 }
 
-func OidcClientNoSecret(name string, id string, url string) v1.OidcClient {
-	return GetOidcClient(
-		v1.OidcClientSpec{
+func OidcConfigNoSecret(name string, id string, url string) *v1.OidcConfig {
+	return GetOidcConfig(
+		v1.OidcConfigSpec{
 			ClientName:   name,
 			ClientID:     id,
 			DiscoveryURL: url,
-		}, GetObjctMeta(), GetTypeMeta())
+		}, GetObjectMeta(), GetTypeMeta())
 }
 
 func TestNew(t *testing.T) {
-	assert.NotNil(t, New(policy2.New(), fake.NewSimpleClientset()))
+	assert.NotNil(t, New(storePolicy.New(), fake.NewSimpleClientset()))
 }
 
 func TestGetClientSecret(t *testing.T) {
 	testHandler := &CrdHandler{
-		store:      policy2.New(),
+		store:      storePolicy.New(),
 		kubeClient: fake.NewSimpleClientset(),
 	}
 	tests := []struct {
 		name   string
-		obj    v1.OidcClient
+		obj    *v1.OidcConfig
 		secret string
 	}{
 		{
 			name:   "Plain text secret",
-			obj:    GetOidcClient(GetOidcClientSpec("name", "id", "url"), GetObjctMeta(), GetTypeMeta()),
+			obj:    GetOidcConfig(GetOidcConfigSpec("name", "id", "url"), GetObjectMeta(), GetTypeMeta()),
 			secret: secretFromPlainText,
 		},
 		{
 			name:   "No secret",
-			obj:    OidcClientNoSecret("name", "id", "url"),
+			obj:    OidcConfigNoSecret("name", "id", "url"),
 			secret: "",
 		},
 		{
 			name:   "secret from ref",
-			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "secretKey"}),
+			obj:    OidcConfigWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "secretKey"}),
 			secret: secretFromRef,
 		},
 		{
 			name:   "invalid ref name",
-			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "invalidKey"}),
+			obj:    OidcConfigWithRef("name", "id", "url", v1.ClientSecretRef{Name: "mysecret", Key: "invalidKey"}),
 			secret: "",
 		},
 		{
 			name:   "invalid ref key",
-			obj:    OidcClientWithRef("name", "id", "url", v1.ClientSecretRef{Name: "invalidName", Key: "secretKey"}),
+			obj:    OidcConfigWithRef("name", "id", "url", v1.ClientSecretRef{Name: "invalidName", Key: "secretKey"}),
 			secret: "",
 		},
 		{
 			name: "plaintext secret w/ invalid ref",
-			obj: GetOidcClient(
-				v1.OidcClientSpec{
+			obj: GetOidcConfig(
+				v1.OidcConfigSpec{
 					ClientName:      "name",
 					ClientID:        "id",
 					DiscoveryURL:    "url",
 					ClientSecret:    secretFromPlainText,
-					ClientSecretRef: v1.ClientSecretRef{Name: "mysecret", Key: ""}}, GetObjctMeta(), GetTypeMeta()),
+					ClientSecretRef: v1.ClientSecretRef{Name: "mysecret", Key: ""}}, GetObjectMeta(), GetTypeMeta()),
 			secret: secretFromPlainText,
 		},
 	}
@@ -175,84 +160,51 @@ func TestGetClientSecret(t *testing.T) {
 		test := test
 		t.Run(test.name, func(st *testing.T) {
 			st.Parallel()
-			res := testHandler.getClientSecret(&test.obj)
+			res := testHandler.getClientSecret(test.obj)
 			assert.Equal(st, test.secret, res)
 		})
 	}
 }
 
-func TestHandler_HandleAddEvent(t *testing.T) {
+func TestHandler_HandleAddEvent_JwtConfig(t *testing.T) {
 	testHandler := &CrdHandler{
-		store: policy2.New(),
+		store: storePolicy.New(),
 	}
-	tests := []struct {
-		objType  Type
-		obj      interface{}
-		initial  int
-		expected int
-		endpoint policy.Endpoint
-	}{
-		{
-			objType:  JWTPolicy,
-			obj:      JwtPolicyGenerator(TargetGenerator([]string{"samplesrv"}, nil)),
-			initial:  0,
-			expected: 1,
-			endpoint: GetEndpoint("sample", "samplesrv", "*", "*"),
-		},
-		{
-			objType:  OIDCPolicy,
-			obj:      OidcPolicyGenerator(make([]v1.TargetElement, 0)),
-			initial:  0,
-			expected: 1,
-			endpoint: GetEndpoint("sample", "samplesrv", "*", "*"),
-		},
-		{
-			objType:  OIDCClient,
-			obj:      OidcClientGenerator("name", "id", "url"),
-			initial:  0,
-			expected: 1,
-			endpoint: GetEndpoint("sample", "samplesrv", "*", "*"),
-		},
-		{
-			objType:  NONE,
-			obj:      nil,
-			initial:  0,
-			expected: 0,
-			endpoint: GetEndpoint("sample", "samplesrv", "*", "*"),
-		},
-	}
-	for _, test := range tests {
-		if test.objType == JWTPolicy {
-			assert.NotNil(t, test.initial, testHandler.store.GetApiPolicies(test.endpoint))
-		} else if test.objType == OIDCPolicy {
-			assert.NotNil(t, test.initial, testHandler.store.GetWebPolicies(test.endpoint))
-		}
-		switch obj := test.obj.(type) {
-
-		case v1.JwtPolicy:
-			testHandler.HandleAddUpdateEvent(&obj)
-			testHandler.HandleAddUpdateEvent(&obj)
-		case v1.OidcPolicy:
-			testHandler.HandleAddUpdateEvent(&obj)
-
-		case v1.OidcClient:
-			testHandler.HandleAddUpdateEvent(&obj)
-
-		default:
-			testHandler.HandleAddUpdateEvent(&obj)
-		}
-		if test.objType == JWTPolicy {
-			assert.NotNil(t, test.expected, testHandler.store.GetApiPolicies(test.endpoint))
-		} else if test.objType == OIDCPolicy {
-			assert.NotNil(t, test.expected, testHandler.store.GetWebPolicies(test.endpoint))
-		}
-
-	}
+	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Add
+	testHandler.HandleAddUpdateEvent(JwtConfigGenerator()) // Update policy
+	assert.Equal(t, testHandler.store.GetKeySet("sample.sample").PublicKeyURL(), jwksUrl)
 }
 
+func TestHandler_HandleAddEvent_OidcConfig(t *testing.T) {
+	testHandler := &CrdHandler{
+		store: storePolicy.New(),
+	}
+	policyName := "oidcconfig"
+	testHandler.HandleAddUpdateEvent(OidcConfigGenerator(policyName, "oidc", jwksUrl))
+	client := testHandler.store.GetClient(policyName + "." + policyName)
+	assert.Equal(t, client.Secret(), secretFromPlainText)
+	// invalid OidcConfig object
+	testHandler.HandleAddUpdateEvent(GetOidcConfig(v1.OidcConfigSpec{}, GetObjectMetaWithName("sample"), GetTypeMeta()))
+	assert.Nil(t, testHandler.store.GetClient("sample.sample"))
+}
+
+func TestHandler_HandleAddEvent_Policy(t *testing.T) {
+	testHandler := &CrdHandler{
+		store: storePolicy.New(),
+	}
+	targets := []v1.TargetElement{
+		getTargetElements(service, getPathConfigs(getPathConfig("/path", "/paths", "GET", getDefaultPathPolicy()))),
+	}
+	testHandler.HandleAddUpdateEvent(PolicyGenerator(targets))
+	// getEndpoint(getDefaultService(), policy.GET, "/path")
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getDefaultPathPolicy())
+	assert.Equal(t, testHandler.store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getDefaultPathPolicy())
+}
+
+/*
 func TestCrdHandler_HandleDeleteEvent(t *testing.T) {
 	testHandler := &CrdHandler{
-		store: policy2.New(),
+		store: storePolicy.New(),
 	}
 	tests := []struct {
 		objType  Type
@@ -320,4 +272,6 @@ func TestCrdHandler_HandleDeleteEvent(t *testing.T) {
 		}
 	}
 }
-*/
+
+
+ */
