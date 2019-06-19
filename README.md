@@ -12,7 +12,7 @@
 [![GithubForks][img-github-forks]][url-github-forks]
 
 
-With the IBM Cloud App ID Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments including frontend and backend applications.
+With the [IBM Cloud App ID](https://cloud.ibm.com/services/appid) Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
 {: shortdesc}
 
 
@@ -26,24 +26,23 @@ The App ID adapter provides support for two different access control flows that 
 
 2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
 
-For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#policy-configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
+For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#Defining-a-Configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
 
 
-![Istio Mixer Architecture](/docs
-    https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
+![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
 
 * The Envoy sidecar "proxy" sits in front of your application and calls the Mixer with telemetry before each request.
-* The Mixer dispatches the telemetry to the App ID authentication/ access management adapter.
-* The adapter evaulates the authentication and authorization policies on the request telemetry and returns response - access granted or denied.
+* The Mixer dispatches the telemetry to the App ID authentication/ access management Adapter.
+* The Adapter evaulates the authentication and authorization policies on the request telemetry and returns response - access granted or denied.
 * The proxy responds:
-    * When successful, the proxy forwards the request to the service or applicaiton.
-    * On failure, the proxy returns a failure check response to calling client - the user or another app.
+    * When successful, the proxy forwards the request to the service or application.
+    * On failure, the proxy returns a failure check response to the calling client - the user or another app.
 
 
 
 ### API Protection
 
-The App ID adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component identifying the case of the error `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
+The App ID Adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer flow expects a request to contain an Authorization header with a valid access token and optionally, an identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an `HTTP 401` response with an optional error component identifying the case of the error `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
 
 
 For more information about tokens and how they're used, see the App ID documentation. For information, on configuring the OAuth 2.0 Authorization Bearer for the adapter, see [Protecting APIs](#protecting-apis).
@@ -53,13 +52,13 @@ For more information about tokens and how they're used, see the App ID documenta
 
 If you're using a browser based application, you can use the OIDC / Auth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. 
 
-To view the user session information including the session tokens, you can look in the `Authorization` header.
+To view the user session information, including the session tokens, you can look in the `Authorization` header.
 
 ```
 Authorization: Bearer <access_token> <id_token>
 ```
 
-You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `/oidc/logout` appended as shown in the following example, they will be logged out from their current session.
+You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `/oidc/logout` appended as shown in the following example, they are logged out from their current session.
 
 ```
 https://myhost/path/oidc/logout
@@ -112,7 +111,7 @@ An authentication or authorization policy is a set of conditions that must be me
 
 Depending on whether you're protecting frontend or backend applications, create a policy configuration with one of the following options.
 
-* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which will be used to validate token signatures.
+* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which is used to validate token signatures.
 
     ```
     apiVersion: "appid.cloud.ibm.com/v1"
@@ -121,7 +120,7 @@ Depending on whether you're protecting frontend or backend applications, create 
         name: samplejwtpolicy
         namespace: sample-app
     spec:
-        jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
+        jwksUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
     ```
 
 * For frontend applications: Browser based applications that require user authentication can be configured to use the OIDC / OAuth 2.0 authentication flow. To define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider, use the following example as a guide.
@@ -132,7 +131,7 @@ Depending on whether you're protecting frontend or backend applications, create 
         name: oidc-provider-config
         namespace: sample-namespace
     spec:
-        discoveryUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/oidc-discovery/.well-known
+        discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/oidc-discovery/.well-known
         clientId: 1234-abcd-efgh-4567
         clientSecret: randomlyGeneratedClientSecret
         clientSecretRef:
