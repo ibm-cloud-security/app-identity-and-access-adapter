@@ -8,16 +8,18 @@ spec:
     -
       serviceName: svc-sample-app
       paths:
-        -
-          exact: /web/home
+        - exact: /web/home
           method: ALL
           policies:
-            -
-              policyType: oidc
+            - policyType: oidc
               config: sampleoidcconfig
               redirectUri: https://myapp.com/home
-        -
-          prefix: /
+              rules:
+                - claim: scope
+                  match: ALL
+                  value:
+                    - appid-default
+        - prefix: /
           method: ALL
           policies:
             -

@@ -5,9 +5,9 @@ metadata:
 spec:
     group: appid.cloud.ibm.com
     versions:
-    - name:    v1
-      served:  true
-      storage: true
+        - name:    v1
+          served:  true
+          storage: true
     scope: Namespaced
     names:
         plural:   policies
@@ -18,15 +18,15 @@ spec:
             properties:
                 spec:
                     required:
-                    - targets
+                        - targets
                     properties:
                         targets:
                             type: array
                             items:
                                 type: object
                                 required:
-                                - serviceName
-                                - paths
+                                    - serviceName
+                                    - paths
                                 properties:
                                     serviceName:
                                         type:      string
@@ -45,40 +45,48 @@ spec:
                                                 method:
                                                     type: string
                                                     enum:
-                                                    - ALL
-                                                    - GET
-                                                    - DELETE
-                                                    - POST
-                                                    - PUT
+                                                        - ALL
+                                                        - GET
+                                                        - DELETE
+                                                        - POST
+                                                        - PUT
                                                 policies:
                                                     type:      array
                                                     items:
                                                         type: object
                                                         required:
-                                                        - policyType
-                                                        - config
+                                                            - policyType
+                                                            - config
                                                         properties:
                                                             policyType:
                                                                 type:      string
                                                                 enum:
-                                                                - jwt
-                                                                - oidc
+                                                                    - jwt
+                                                                    - oidc
                                                             config:
                                                                 type:      string
                                                                 minLength: 1
                                                             redirectUri:
                                                                 type:    string
                                                                 pattern: '^(?:http(s)?:\/\/)?((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|((\d{1,3}\.){3}\d{1,3}))(\:\d+)?(\/[-a-z\d%_.~+]*)*(\?[;&a-z\d%_.~+=-]*)?(\#[-a-z\d_]*)?$'
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                                            rules:
+                                                                type:       array
+                                                                items:
+                                                                    type:   object
+                                                                    required:
+                                                                        - claim
+                                                                        - value
+                                                                    properties:
+                                                                        claim:
+                                                                            type:      string
+                                                                            minLength: 1
+                                                                        match:
+                                                                            type: string
+                                                                            enum:
+                                                                                - ALL
+                                                                                - ANY
+                                                                                - NOT
+                                                                        value:
+                                                                            type:      array
+                                                                            items:
+                                                                                type: string
