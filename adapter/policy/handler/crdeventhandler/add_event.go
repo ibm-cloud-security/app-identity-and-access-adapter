@@ -35,17 +35,12 @@ type PolicyAddEventHandler struct {
 func (e *JwtConfigAddEventHandler) HandleAddUpdateEvent() {
 	zap.L().Info("Create/Update JwtPolicy", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
 	e.Obj.Spec.ClientName = e.Obj.ObjectMeta.Namespace + "/" + e.Obj.ObjectMeta.Name
-	/*
-	if e.Store.GetKeySet(e.Obj.Spec.ClientName) != nil {
-		zap.L().Info("Update JwtPolicy", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
-	}
-	*/
 	e.Store.AddKeySet(e.Obj.Spec.ClientName, keyset.New(e.Obj.Spec.JwksURL, nil))
 	zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.ObjectMeta.Name), zap.String("namespace", e.Obj.ObjectMeta.Namespace))
 }
 
 func (e *OidcConfigAddEventHandler) HandleAddUpdateEvent() {
-	zap.L().Debug("Create/Update OidcConfig", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("clientSecret", e.Obj.Spec.ClientSecret), zap.String("name", e.Obj.ObjectMeta.Name), zap.String("namespace", e.Obj.ObjectMeta.Namespace))
+	zap.L().Debug("Create/Update OidcConfig", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.ObjectMeta.Name), zap.String("namespace", e.Obj.ObjectMeta.Namespace))
 	e.Obj.Spec.ClientName = e.Obj.ObjectMeta.Namespace + "/" + e.Obj.ObjectMeta.Name
 	if e.Obj.Spec.AuthMethod == "" {
 		e.Obj.Spec.AuthMethod = "client_secret_basic"
@@ -53,15 +48,11 @@ func (e *OidcConfigAddEventHandler) HandleAddUpdateEvent() {
 	authorizationServer := authserver.New(e.Obj.Spec.DiscoveryURL)
 	keySets := keyset.New(authorizationServer.JwksEndpoint(), nil)
 	authorizationServer.SetKeySet(keySets)
-	if secret := GetClientSecret(e.Obj, e.KubeClient); secret != "" {
-		e.Obj.Spec.ClientSecret = secret
-		// Create and store OIDC Client
-		oidcClient := client.New(e.Obj.Spec, authorizationServer)
-		e.Store.AddClient(oidcClient.Name(), oidcClient)
-		zap.L().Info("OidcConfig created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
-	} else {
-		zap.L().Warn("Failed to create Object: client secret is invalid")
-	}
+	e.Obj.Spec.ClientSecret = GetClientSecret(e.Obj, e.KubeClient)
+	// Create and store OIDC Client
+	oidcClient := client.New(e.Obj.Spec, authorizationServer)
+	e.Store.AddClient(oidcClient.Name(), oidcClient)
+	zap.L().Info("OidcConfig created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
 }
 
 func (e *PolicyAddEventHandler) HandleAddUpdateEvent() {
