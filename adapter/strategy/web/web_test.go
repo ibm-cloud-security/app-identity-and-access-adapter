@@ -282,6 +282,7 @@ func TestCodeCallback(t *testing.T) {
 	}
 
 	var tests = []struct {
+		redirectUri    string
 		tokenRes       *fake.TokenResponse
 		req            *authnz.HandleAuthnZRequest
 		directResponse *v1beta1.DirectHttpResponse
@@ -289,6 +290,7 @@ func TestCodeCallback(t *testing.T) {
 		err            error
 	}{
 		{ // missing state cookie
+			"",
 			nil,
 			generateAuthnzRequest("", "code", "", callbackEndpoint, ""),
 			&v1beta1.DirectHttpResponse{
@@ -298,6 +300,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // invalid state - missing
+			"",
 			nil,
 			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: ""}), "code", "", callbackEndpoint, defaultState),
 			&v1beta1.DirectHttpResponse{
@@ -307,6 +310,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // invalid state - missing expiration
+			"",
 			nil,
 			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: defaultState}), "code", "", callbackEndpoint, defaultState),
 			&v1beta1.DirectHttpResponse{
@@ -316,6 +320,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // invalid state - mismatch
+			"",
 			nil,
 			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, "session2"),
 			&v1beta1.DirectHttpResponse{
@@ -325,6 +330,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // state not returned from IdP
+			"",
 			nil,
 			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, ""),
 			&v1beta1.DirectHttpResponse{
@@ -334,6 +340,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // could not exchange grant code
+			"",
 			defaultFailureTokenResponse("problem getting tokens"),
 			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
 			&v1beta1.DirectHttpResponse{
@@ -343,6 +350,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // invalid tokens
+			"",
 			&fake.TokenResponse{
 				Res: &authserver.TokenResponse{
 					IdentityToken: "invalid_token",
@@ -356,6 +364,7 @@ func TestCodeCallback(t *testing.T) {
 			nil,
 		},
 		{ // success
+			"",
 			defaultSuccessTokenResponse(),
 			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
 			&v1beta1.DirectHttpResponse{
@@ -368,13 +377,29 @@ func TestCodeCallback(t *testing.T) {
 			"Successfully authenticated : redirecting to original URL",
 			nil,
 		},
+		{ // success w/new redirect
+			"https://" + defaultHost + "/another_path",
+			defaultSuccessTokenResponse(),
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 302,
+				Headers: map[string]string{
+					"location": "https://" + defaultHost + "/another_path",
+					setCookie:  "oidc-test-id",
+				},
+			},
+			"Successfully authenticated : redirecting to original URL",
+			nil,
+		},
 	}
 
 	for _, ts := range tests {
 		test := ts
 		t.Run("callback", func(t *testing.T) {
 			t.Parallel()
-			action := &engine.Action{Client: fake.NewClient(test.tokenRes)}
+			action := &engine.Action{}
+			action.Client = fake.NewClient(test.tokenRes)
+			action.RedirectUri = test.redirectUri
 
 			r, errs := api.HandleAuthnZRequest(test.req, action)
 			if test.err != nil {
