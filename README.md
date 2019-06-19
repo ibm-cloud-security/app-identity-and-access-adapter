@@ -11,229 +11,231 @@
 [![GithubStars][img-github-stars]][url-github-stars]
 [![GithubForks][img-github-forks]][url-github-forks]
 
-## Summary
 
-The IBM Cloud App ID Istio Mixer adapter manages authentication and access management across your Istio service mesh. The adapter can be configured with any OIDC / OAuth 2.0 compliant identity provider enabling it to seamlessly control authorization and access management in many heterogeneous environments.
+With the [IBM Cloud App ID](https://cloud.ibm.com/services/appid) Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
+{: shortdesc}
 
-The adapter supports OIDC / OAuth 2.0 and JWT OAuth 2.0 Bearer Token workflows to protect both frontend and backend applications.
 
-### Architecture
+## Architecture
 
-The Istio service mesh uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh.
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes these attributes against custom policies to control identity and access management into and across the service mesh. These access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. Using the adapter, these policies can be created, updated, and deleted without redeploying applications or changing your code in any way. 
 
-This deployment allows Istio to extract a wealth of signals about traffic behavior, which can in turn be sent to Mixer to enforce policy decisions.
+The App ID adapter provides support for two different access control flows that correspond to the frontend and backend of your apps respectively. 
 
-Situated behind Mixer, the IBM Cloud App ID adapter processes these attributes against custom defined policies to control identity and access management into and across the service mesh.
-
-![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
-
-> See the section on [Policy Configuration](#policy-configuration) for information on configuring OIDC / OAuth 2.0 policies
-
-Once connected to the service mesh, custom access management policies can be created, updated, and deleted without redeploying applications or code changes changes. These policies are specific to Kubernetes services and can be finely tuned to specific service endpoints.
-
-The Auth 2.0 / OIDC adapter provides support for two types of access control flows corresponding to frontend and backend access control respectively:
 1. [OAuth 2.0 Authorization Bearer](https://tools.ietf.org/html/rfc6750)
 
 2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
 
-#### API Protection
+For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#Defining-a-Configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
 
-The OAuth 2.0 Authorization Bearer flow is used for protecting service APIs by validating JWT Bearer tokens in the authorization header. Unauthenticated clients will be returned HTTP 401 response status with a list of scopes needed to obtain authorization.
 
-This authorization flow expects request to contain an Authorization header with valid access token and optional identity token. See App ID docs for additional information. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`
+![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
 
-In case of invalid/expired tokens the APIStrategy will return HTTP 401 with `Www-Authenticate=Bearer scope="{scope}" error="{error}"`. The error component is optional.
+* The Envoy sidecar "proxy" sits in front of your application and calls the Mixer with telemetry before each request.
+* The Mixer dispatches the telemetry to the App ID authentication/ access management Adapter.
+* The Adapter evaulates the authentication and authorization policies on the request telemetry and returns response - access granted or denied.
+* The proxy responds:
+    * When successful, the proxy forwards the request to the service or application.
+    * On failure, the proxy returns a failure check response to the calling client - the user or another app.
 
-Fo information, on configuring OAuth 2.0 Authorization Bearer see [Protecting APIs](#protecting-apis) below.
 
-#### Frontend Protection
 
-Browser based applications can use the OIDC / OAuth 2.0 authorization_grant flow to authenticate users on frontend applications.
+### API Protection
 
-When an unauthenticated user is detected, they are automatically redirected to the authentication page. Once authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request, obtains tokens from the identity providers, and then redirects the user back to their originally requested URL.
+The App ID Adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer flow expects a request to contain an Authorization header with a valid access token and optionally, an identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an `HTTP 401` response with an optional error component identifying the case of the error `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
 
-Protected applications endpoints can view the user session information using the `Authorization` header, which will contain the session tokens.
 
-    Authorization: Bearer <access_token> <id_token>`
+For more information about tokens and how they're used, see the App ID documentation. For information, on configuring the OAuth 2.0 Authorization Bearer for the adapter, see [Protecting APIs](#protecting-apis).
 
-Authenticated users can then logout by access any protected endpoint with the `/oidc/logout` suffix.
 
-    https://myhost/path/oidc/logout
+### Frontend Protection
 
-Refresh Token may be used to acquire new access and identity tokens automatically without the need to re-authenticate. If the configured IdP returns a refresh token, it will be persisted in the session and used to retrieve new tokens once the identity token has expired.
+If you're using a browser based application, you can use the OIDC / Auth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. 
 
->> **WARNING:** Due to a bug within Istio, the adapter currently stores user session internally and is not persisted across replicates or over failover. Users using the adapter should limit their workloads to a single replica until the bug is addressed in the next release.
+To view the user session information, including the session tokens, you can look in the `Authorization` header.
 
-### Installation and usage
+```
+Authorization: Bearer <access_token> <id_token>
+```
 
-The adapter can be installed using the accompanying helm chart. The chart comes with an opinionated set of configuration values that may be updated depending on project needs.
+You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `/oidc/logout` appended as shown in the following example, they are logged out from their current session.
 
-#### Prerequisites
+```
+https://myhost/path/oidc/logout
+```
+
+If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
+
+Due to a bug within Istio, the adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
+
+
+
+## Installation and usage
+
+You can install the Adapter by using the accompanying Helm chart. You can configure the chart to match the needs of your project.
+
+
+### Before you begin
+
+Before you get started, be sure you have the following prerequisites installed.
 
 - [Kubernetes Cluster](https://kubernetes.io/)
 - [Istio v1.1](https://istio.io/docs/setup/kubernetes/install/)
 - [Helm](https://helm.sh/)
 
-#### Adapter Installation
 
-1. If not already installed, install helm in you cluster
+### Adapter Installation
+
+To install the chart, initialize Helm in your cluster, define the options that you want to use, and then run the install command.
+
+1. If you haven't already, install Helm in your cluster.
     ```bash
     $ helm init
     ```
 
-2. Update the helm chart [here](./helm/values.yaml) with your custom configuration
+2. Update the [Helm chart](./helm/values.yaml) with your custom configuration.
 
-3. Install the Adapter Helm chart
+3. Install the chart.
     ```bash
     $ helm install ./helm/ibmcloudappid --name ibmcloudappid
     ```
 
-### Authorization and Authentication Policies
+## Applying an authorization and authentication policy
 
-In order to apply authorization and access policies, you will need to define an identity provider with an authorization server configuration in addition to a policy outlining when a particular access control flow should be used.
+An authentication or authorization policy is a set of conditions that must be met before a request can access a resource access. By defining an identity provider's service configuration and an access policy that outlines when a particular access control flow should be used, you can control access to any resource in your service mesh.
 
->> See example CRDs, under the [samples directory](./samples/crds)
-
-#### OAuth 2.0 JWT Bearer Policies
-
-The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs using JSON Web Tokens [(JWTs)](https://tools.ietf.org/html/rfc7519.html).
-
-The adapter supports configuring OAuth Bearer API protection by:
-
-1. Defining a `JwtConfig` CRD containing the public key resource.
-
-2. Registering server endpoints within a `Policy` CRD to validate incoming requests
-
-##### OAuth 2.0 Authorization Bearer Configuration Resource
-
-```helmyaml
-kind: JwtConfig
-  metadata:
-    name: jwt-provider-config-1
-    namespace: sample-namespace
-  spec:
-    jwksUrl: <oauth-provider-jwks-endpoint>
-```
+>> To see example CRD's, check out the [samples directory](./samples/crds).
 
 
-| Field | Type | Required | Description |
-| --- | :---: | :---: | :---: |
-| jwksUrl | string | yes | The endpoint containing a JSON object representing a set of JSON Web Keys (JWKs) required to verify the authenticity of issued ID and access tokens. |
+### Defining a Configuration
+
+Depending on whether you're protecting frontend or backend applications, create a policy configuration with one of the following options.
+
+* For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which is used to validate token signatures.
+
+    ```
+    apiVersion: "appid.cloud.ibm.com/v1"
+    kind: JwtConfig
+    metadata:
+        name: samplejwtpolicy
+        namespace: sample-app
+    spec:
+        jwksUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
+    ```
+
+* For frontend applications: Browser based applications that require user authentication can be configured to use the OIDC / OAuth 2.0 authentication flow. To define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider, use the following example as a guide.
+
+    ```helmyaml
+    kind: OidcConfig
+    metadata:
+        name: oidc-provider-config
+        namespace: sample-namespace
+    spec:
+        discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/oidc-discovery/.well-known
+        clientId: 1234-abcd-efgh-4567
+        clientSecret: randomlyGeneratedClientSecret
+        clientSecretRef:
+            name: <name-of-my-kube-secret>
+            key: <key-in-my-kube-secret>
+    ```
+
+    | Field   | Type | Required |      Description      |
+    |----------|:-------------:|:-------------:| :---: |
+    | `discoveryUrl` | string | yes| A well-known endpoint that contains a JSON document of OIDC/OAuth 2.0 configuration information. |
+    | `clientId` | string | yes | An identifier for the client that is used for authentication. |
+    | `clientSecret` | string | *no|  A plain text secret that is used to authenticate the client. If not provided, a `clientSecretRef` must exist. |
+    | `clientSecretRef` | object | no | A reference secret that is used to authenticate the client. This can be used in place of the `clientSecret`. |
+    | `clientSecretRef.name` | string |yes | The name of the Kubernetes Secret that contains the `clientSecret`. |
+    | `clientSecretRef.key` | string | yes | The field within the Kubernetes Secret that contains the `clientSecret`. |
 
 
-#### Protecting Frontend Applications
+### Register application endpoints
 
-Frontend applications requiring user authentication can be configured to use the OIDC / Auth 2.0 authentication flow.
+Register application endpoints within a `Policy` CRD to validate incoming requests and enforce authentication rules. Each `Policy` applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods that you want to protect.
 
-To protect frontend applications you will need to:
+    ```helmyaml
+    kind: Policy
+    metadata:
+        name: policy-1
+        namespace: sample-namespace
+    spec:
+        targets:
+        - service: svc-service-name-123
+            paths: 
+            - exact: /web
+             method: GET
+             policies: 
+            - type: oidc
+               config: <name-OidcConfig-resource>
+            - prefix: /api
+            policies:
+            - type: jwt
+               config: <name-JwtConfig-resource>
+    ```
 
-1. Define an `OidcConfig` CRD containing the client used to facilitate the authentication flow with the Identity provider.
+    | Service Object | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
+    | `paths` | array | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
 
-2. Register server endpoints within a `Policy` CRD to protect incoming requests
+    | Path Object    | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `exact or prefix` | string | yes | The path that you want to apply the policies on. Options include `exact` and `prefix`. `exact` matches the provides endpoints exactly with the last `/` trimmed. `prefix` matches the endpoints that begin with the route prefix that you provide. |
+    | `method` | enum | no | The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
+    | `policies` | array | no | The OIDC/JWT policies that you want to apply.  |
 
-##### OAuth 2.0 /  OIDC Configuration Resource
+    | Policy Object  | Type | Required | Description   |
+    |----------------|:----:|:--------:| :-----------: |
+    | `type` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
+    | `config` | string | yes | The name of the provider config that you want to use. |
 
-```helmyaml
-kind: OidcConfig
-  metadata:
-    name: oidc-provider-config
-    namespace: sample-namespace
-  spec:
-    discoveryUrl: <oidc-provider-well-known-endpoint>
-    clientId: <oauth2-client-id>
-    clientSecret: <oauth2-plain-text-client-secret>
-    clientSecretRef:
-        name: <name-of-my-kube-secret>
-        key: <key-in-my-kube-secret>
-```
 
-| Field   | Type |Required|      Description      |
-|----------|:-------------:|:-------------:| :---: |
-| discoveryUrl |string|yes| well-known endpoint containing a JSON document of OIDC/OAuth 2.0 configuration information |
-| clientId |string|yes| identifier for the client used for authentication  |
-| clientSecret | string|*no|  plaintext secret used to authenticate the client. If not provided, a `clientSecretRef` must exist. |
-| clientSecretRef |object|*no| reference secret used to authenticate the client. This may be used in place of the plaintext `clientSecret`  |
-| clientSecretRef.name |string|yes| name of the Kubernetes Secret containing the clientSecret  |
-| clientSecretRef.key |string|yes| field within the Kubernetes Secret containing the clientSecret   |
 
-###### Policy Resource
+## Cleanup
 
-Policies can be configured using the Policy CRD. Each Policy applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods which should be protected.
-
-```helmyaml
-kind: Policy
-  metadata:
-    name: policy-1
-    namespace: sample-namespace
-  spec:
-    targets:
-      - service: svc-service-name-123
-        paths: 
-         - exact: /web
-           method: GET
-           policies: 
-           - type: oidc
-             config: <name-OidcConfig-resource>
-        - prefix: /api
-          policies:
-           - type: jwt
-             config: <name-JwtConfig-resource>
-```
-
-| Service Object   |     Type      |Required|     Description      |
-|----------|:-------------:|:-------------:| :---: |
-| service |string|yes| name of Kubernetes service in the Policy namespace to protect |
-| paths | array |yes| list of path objects defining endpoints to protect. If an empty array, all paths are protected |
-
-| Path Object   |     Type      |Required|     Description      |
-|----------|:-------------:|:-------------:| :---: |
-| exact or prefix |string|yes| path to apply the policies onto. Exact matches endpoints exactly as provided with the last `/` trimmed. Prefix matches endpoints beginning with the route prefix provided |
-| method |enum|no| The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
-| policies |array|no| The OIDC/JWT policies that should be applied.  |
-
-| Policy Object   |     Type     | Required |     Description      |
-|----------|:-------------:|:-------------:| :---: |
-| type |enum|yes| type of OIDC policy: `jwt` or `oidc` |
-| config |string|yes| name of provider config to use |
-
-### Cleanup
-
-The adapter and all associated CRDs can be removed by deleting the helm chart.
+To remove the Adapter and all of the associated CRDs, you can delete the Helm chart and the associated signing + encrpytion keys.
 
 ```bash
 $ helm delete --purge ibmcloudappid
-$ kubectl delete rule ibmcloudappid-keys -n istio-system
+$ kubectl delete secret ibmcloudappid-keys -n istio-system
 ```
 
-### Debugging
+## FAQ and troubleshooting
 
-#### Logging
+If you encounter an issue while working with the App ID Adapter, consider the following FAQ's and troubleshooting techniques. For more help, You can ask questions through a forum or open a support ticket. When you are using the forums to ask a question, tag your question so that it is seen by the App ID development team.
 
-By default, the adapter logs at an INFO visibility level with a JSON styled output for ease of integration with external logging systems.
+  * If you have technical questions about App ID, post your question on <a href="https://stackoverflow.com/" target="_blank">Stack Overflow <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> and tag your question with "ibm-appid".
+  * For questions about the service and getting started instructions, use the <a href="https://developer.ibm.com/" target="_blank">dW Answers <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> forum. Include the `appid` tag.
 
-You can update this configuration in the helm chart. Supported log levels range from [-1, 7] following from zapcore. See their [docs](https://godoc.org/go.uber.org/zap/zapcore#Level) for level details.
+For more information about getting support, see [how do I get the support that I need](/docs/get-support?topic=get-support-getting-customer-support#getting-customer-support).
 
->> **Note:** If viewing JSON logs manually you may want to tail the logs and pretty print them using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/). Check the section on [debugging](#debugging) for additional details
 
-#### Adapter
+### Troubleshooting: Logging
 
-To see the adapter logs, you can use `kubectl` or access the pod from the `ibmcloudappid` pod from the Kubernetes console.
+By default, logs are styled as JSON and provided at an `info` visbility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range [-1, 7] as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
+
+>> **Note:** When you're manually viewing JSON logs, you might want to tail the logs and "pretty print" them by using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/).
+
+**Adapter**
+
+To see the Adapter logs, you can use `kubectl` or access the pod from the `ibmcloudappid` pod from the Kubernetes console.
 
 ```bash
 $ export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
 $ adapter_logs | jq
 ```
 
-#### Mixer
+**Mixer**
 
-In the event, the adapter does not appear to be receiving requests check the Mixer logs to ensure it has connected to the adapter succesfully.
+If the Adapter does not appear to recieve requests, check the Mixer logs to ensure that it is successfully connected to the Adapter.
 
 ```bash
 $ export mixer_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
 $ mixer_logs
 ```
 
-### License
+## License
+
 This package contains code licensed under the Apache License, Version 2.0 (the "License"). You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 and may also view the License in the LICENSE file within this package.
 
 [img-ibmcloud-powered]: https://img.shields.io/badge/ibm%20cloud-powered-blue.svg
