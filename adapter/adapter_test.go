@@ -92,7 +92,7 @@ func TestHandleAuthorization(t *testing.T) {
 	for _, ts := range tests {
 		test := ts
 		t.Run("adapter", func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			mock.action = test.action
 			mock.err = test.err
 			result, err := s.HandleAuthnZ(context.Background(), test.req)

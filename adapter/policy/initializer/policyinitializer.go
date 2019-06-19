@@ -67,8 +67,11 @@ func getKubeConfig() (*rest.Config, error) {
 		zap.L().Warn("Error creating an in-cluster config. Attempting local config...", zap.Error(err))
 
 		// attempt to create a local config client
-		zap.L().Info(("HOME : " + os.Getenv("HOME")))
-		kubeConfigPath := os.Getenv("HOME") + "/.kube/config"
+		kubeConfigPath := os.Getenv("KUBECONFIG")
+		if kubeConfigPath == "" {
+			zap.L().Info("Attempting to use minikube : " + os.Getenv("HOME"))
+			kubeConfigPath = os.Getenv("HOME") + "/.kube/config"
+		}
 
 		// create the config from the path
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
