@@ -38,7 +38,8 @@ type OAuthError struct {
 // ExpiredTokenError creates a new expired token error
 func ExpiredTokenError() *OAuthError {
 	return &OAuthError{
-		Msg: ExpiredToken,
+		Code: InvalidToken,
+		Msg:  ExpiredToken,
 	}
 }
 

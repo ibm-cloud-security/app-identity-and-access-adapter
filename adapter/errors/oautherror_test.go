@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
 	"testing"
@@ -42,7 +43,7 @@ func TestInternalServerException(t *testing.T) {
 	assert.Equal(t, "", err.ScopeStr())
 }
 
-func TestVarients(t *testing.T) {
+func TestVariants(t *testing.T) {
 	err := &OAuthError{}
 	assert.Equal(t, "an error occurred", err.Error())
 	err.Msg = "msg"
@@ -52,4 +53,17 @@ func TestVarients(t *testing.T) {
 	assert.Equal(t, "code", err.Error())
 	err.Msg = "msg"
 	assert.Equal(t, "code: msg", err.Error())
+}
+
+func TestExpiredTokenError(t *testing.T) {
+	err := ExpiredTokenError()
+	assert.Equal(t, ExpiredToken, err.Msg)
+	assert.Equal(t, InvalidToken, err.Code)
+}
+
+func TestOK(t *testing.T) {
+	err := ExpiredTokenError()
+	assert.NoError(t, err.OK())
+	err = &OAuthError{}
+	assert.Error(t, err.OK(), errors.New("invalid OAuth 2.0 Error: `error` field does not exist"))
 }
