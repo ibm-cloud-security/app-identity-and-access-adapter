@@ -18,7 +18,6 @@ spec:
             properties:
                 spec:
                     required:
-                    - authMethod
                     - clientId
                     - discoveryUrl
                     properties:

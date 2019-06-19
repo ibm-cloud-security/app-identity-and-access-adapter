@@ -16,7 +16,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
-	github.com/prometheus/common v0.2.0
 	github.com/spf13/cobra v0.0.3
 	github.com/stretchr/testify v1.3.0
 	go.uber.org/zap v1.10.0
@@ -28,6 +27,7 @@ require (
 	istio.io/api v0.0.0-20190515205759-982e5c3888c6
 	istio.io/istio v0.0.0-20190516081059-beb17827e164
 	k8s.io/api v0.0.0-20190612125737-db0771252981
+	k8s.io/apiextensions-apiserver v0.0.0-20190221221350-bfb440be4b87
 	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/code-generator v0.0.0-20190612125529-c522cb6c26aa
