@@ -45,7 +45,7 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []policy.R
 
 	if tokenStr == "" {
 		zap.L().Debug("Unauthorized - Token does not exist")
-		return &errors.OAuthError{Msg: errors.InvalidToken}
+		return errors.UnauthorizedHTTPException("token not provided", nil)
 	}
 
 	if jwks == nil {
@@ -65,7 +65,7 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []policy.R
 	claimErr := validateClaims(token, rules)
 	if claimErr != nil {
 		zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
-		return claimErr
+		return errors.UnauthorizedHTTPException(claimErr.Msg, nil)
 	}
 
 	zap.L().Debug("Token has been validated")
@@ -139,7 +139,7 @@ func validateClaim(name string, expected string, claims jwt.MapClaims) error {
 		if found, ok := claims[name].(string); ok {
 			if found != expected {
 				zap.L().Debug("Token validation error - claim invalid", zap.String("claim_name", name), zap.String("expected", expected), zap.String("found", found))
-				return fmt.Errorf("token validation error - expected claim %s to equal %s, but found %s", name, expected, found)
+				return fmt.Errorf("token validation error - expected claim `%s` to equal %s, but found %s", name, expected, found)
 			}
 			zap.L().Debug("Validated token claim", zap.String("claim_name", name))
 			return nil
