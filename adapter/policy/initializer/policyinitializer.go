@@ -9,17 +9,17 @@ import (
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/workqueue"
-
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
 	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/workqueue"
 )
 
 // Initializer interface contains the methods that are required
@@ -68,7 +68,9 @@ func getKubeConfig() (*rest.Config, error) {
 
 		// attempt to create a local config client
 		kubeConfigPath := os.Getenv("KUBECONFIG")
-		if kubeConfigPath == "" {
+		if kubeConfigPath != "" {
+			zap.L().Info("Using KubeConfig : " + kubeConfigPath)
+		} else {
 			zap.L().Info("Attempting to use minikube : " + os.Getenv("HOME"))
 			kubeConfigPath = os.Getenv("HOME") + "/.kube/config"
 		}
