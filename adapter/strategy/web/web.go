@@ -2,7 +2,6 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"net/http"
 	"strings"
 	"sync"
@@ -27,6 +26,7 @@ import (
 	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -57,9 +57,15 @@ type WebStrategy struct {
 	kubeClient kubernetes.Interface
 
 	// mutex protects all fields below
-	mutex        *sync.Mutex
-	secureCookie *securecookie.SecureCookie
-	tokenCache   *sync.Map
+	mutex      *sync.Mutex
+	encrpytor  Encryptor
+	tokenCache *sync.Map
+}
+
+// Encryptor signs and encrypts values. Used for cookie encryption
+type Encryptor interface {
+	Encode(name string, value interface{}) (string, error)
+	Decode(name, value string, dst interface{}) error
 }
 
 // OidcCookie represents a token stored in browser
@@ -154,11 +160,11 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
 			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
 			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
-		} else {
-			zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
-			w.tokenCache.Delete(sessionCookie.Value)
-			return nil, nil
 		}
+
+		zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
+		w.tokenCache.Delete(sessionCookie.Value)
+		return nil, nil
 	}
 
 	zap.L().Debug("User is currently authenticated")
@@ -316,16 +322,16 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 
 // getSecureCookie retrieves the SecureCookie encryption struct in a
 // thread safe manner.
-func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
+func (w *WebStrategy) getSecureCookie() (Encryptor, error) {
 	// Allow all threads to check if instance already exists
-	if w.secureCookie != nil {
-		return w.secureCookie, nil
+	if w.encrpytor != nil {
+		return w.encrpytor, nil
 	}
 	w.mutex.Lock()
 	// Once this thread has the lock check again to see if it had been set while waiting
-	if w.secureCookie != nil {
+	if w.encrpytor != nil {
 		w.mutex.Unlock()
-		return w.secureCookie, nil
+		return w.encrpytor, nil
 	}
 	// We need to generate a new key set
 	sc, err := w.generateSecureCookie()
@@ -335,7 +341,7 @@ func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
 
 // generateSecureCookie instantiates a SecureCookie instance using either the preconfigured
 // key secret cookie or a dynamically generated pair.
-func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error) {
+func (w *WebStrategy) generateSecureCookie() (Encryptor, error) {
 	var secret interface{}
 	// Check if key set was already configured. This should occur during helm install
 	secret, err := networking.Retry(3, 1, func() (interface{}, error) {
@@ -353,8 +359,8 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 
 	if s, ok := secret.(*v1.Secret); ok {
 		zap.S().Infof("Synced secret: %v", defaultKeySecret)
-		w.secureCookie = securecookie.New(s.Data[hashKey], s.Data[blockKey])
-		return w.secureCookie, nil
+		w.encrpytor = securecookie.New(s.Data[hashKey], s.Data[blockKey])
+		return w.encrpytor, nil
 	} else {
 		zap.S().Error("Could not convert interface to secret")
 		return nil, errors.New("could not sync signing / encryption secrets")
@@ -487,7 +493,8 @@ func (w *WebStrategy) validateState(request *authnz.RequestMsg, c client.Client)
 		"Cookie": {request.Headers.Cookies},
 	}
 	r := http.Request{Header: header}
-	oidcStateCookie, err := r.Cookie(buildTokenCookieName(sessionCookie, c))
+	name := buildTokenCookieName(sessionCookie, c)
+	oidcStateCookie, err := r.Cookie(name)
 	if err != nil {
 		return errors.New("state parameter not provided")
 	}
