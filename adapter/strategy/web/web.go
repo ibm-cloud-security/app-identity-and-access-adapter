@@ -290,6 +290,10 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 
 	zap.L().Debug("OIDC callback: created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))
 
+	if action.RedirectUri != "" {
+		redirectURI = action.RedirectUri
+	}
+
 	return buildSuccessRedirectResponse(redirectURI, []*http.Cookie{cookie}), nil
 }
 
