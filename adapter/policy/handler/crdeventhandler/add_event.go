@@ -35,9 +35,11 @@ type PolicyAddEventHandler struct {
 func (e *JwtConfigAddEventHandler) HandleAddUpdateEvent() {
 	zap.L().Info("Create/Update JwtPolicy", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
 	e.Obj.Spec.ClientName = e.Obj.ObjectMeta.Namespace + "/" + e.Obj.ObjectMeta.Name
+	/*
 	if e.Store.GetKeySet(e.Obj.Spec.ClientName) != nil {
 		zap.L().Info("Update JwtPolicy", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.Name), zap.String("namespace", e.Obj.Namespace))
 	}
+	*/
 	e.Store.AddKeySet(e.Obj.Spec.ClientName, keyset.New(e.Obj.Spec.JwksURL, nil))
 	zap.L().Info("JwtPolicy created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.ObjectMeta.Name), zap.String("namespace", e.Obj.ObjectMeta.Namespace))
 }
