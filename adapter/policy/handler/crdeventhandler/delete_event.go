@@ -13,18 +13,18 @@ type DeleteEventHandler interface {
 }
 
 type JwtConfigDeleteEventHandler struct {
-	Key string
-	Store storepolicy.PolicyStore
+	Key   string
+	Store storepolicy.Store
 }
 
 type OidcConfigDeleteEventHandler struct {
-	Key string
-	Store storepolicy.PolicyStore
+	Key   string
+	Store storepolicy.Store
 }
 
 type PolicyDeleteEventHandler struct {
-	Key string
-	Store storepolicy.PolicyStore
+	Key   string
+	Store storepolicy.Store
 }
 
 func (e *JwtConfigDeleteEventHandler) HandleDeleteEvent() {
@@ -49,21 +49,21 @@ func (e *PolicyDeleteEventHandler) HandleDeleteEvent() {
 	zap.S().Debug("Delete policy completed")
 }
 
-func GetDeleteEventHandler(crd policy.CrdKey, store storepolicy.PolicyStore) DeleteEventHandler {
+func GetDeleteEventHandler(crd policy.CrdKey, store storepolicy.Store) DeleteEventHandler {
 	switch crd.CrdType {
 	case v1.JWTCONFIG:
 		return &JwtConfigDeleteEventHandler{
-			Key:   crd.Id,
+			Key:   crd.ID,
 			Store: store,
 		}
 	case v1.OIDCCONFIG:
 		return &OidcConfigDeleteEventHandler{
-			Key:   crd.Id,
+			Key:   crd.ID,
 			Store: store,
 		}
 	case v1.POLICY:
 		return &PolicyDeleteEventHandler{
-			Key:   crd.Id,
+			Key:   crd.ID,
 			Store: store,
 		}
 	default:

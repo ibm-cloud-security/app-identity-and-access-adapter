@@ -27,14 +27,14 @@ func getService() policy.Service {
 
 func getActions() policy.Actions {
 	actions := policy.NewActions()
-	actions[policy.GET] = policy.RoutePolicy {
+	actions[policy.GET] = policy.RoutePolicy{
 		Actions: []v1.PathPolicy{
-			{PolicyType: "jwt", Config:"samplejwt"},
+			{PolicyType: "jwt", Config: "samplejwt"},
 		},
 	}
-	actions[policy.ALL] = policy.RoutePolicy {
+	actions[policy.ALL] = policy.RoutePolicy{
 		Actions: []v1.PathPolicy{
-			{PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"},
+			{PolicyType: "oidc", Config: "sampleoidc", RedirectUri: "https://sampleapp.com"},
 		},
 	}
 	return actions
@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, New())
 }
 
-func keySetTest(t *testing.T, store PolicyStore) {
+func keySetTest(t *testing.T, store Store) {
 	assert.Nil(t, store.GetKeySet(jwksurl))
 	store.AddKeySet(jwksurl, &fake.KeySet{})
 	assert.NotNil(t, store.GetKeySet(jwksurl))
@@ -62,7 +62,7 @@ func TestLocalStore_KeySet(t *testing.T) {
 	keySetTest(t, New())
 }
 
-func clientTest(t *testing.T, store PolicyStore) {
+func clientTest(t *testing.T, store Store) {
 	assert.Nil(t, store.GetClient(clientname))
 	store.AddClient(clientname, &fake.Client{})
 	assert.NotNil(t, store.GetClient(clientname))
@@ -72,12 +72,12 @@ func TestLocalStore_Client(t *testing.T) {
 	clientTest(t, New())
 }
 
-func policiesTest(t *testing.T, store PolicyStore) {
+func policiesTest(t *testing.T, store Store) {
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), policy.NewRoutePolicy())
 	store.SetPolicies(getEndpoint(getService(), endpoint, policy.ALL),
-		policy.RoutePolicy{ Actions:[]v1.PathPolicy{ {PolicyType:"oidc", Config:"sampleoidc", RedirectUri:"https://sampleapp.com"}}})
+		policy.RoutePolicy{Actions: []v1.PathPolicy{{PolicyType: "oidc", Config: "sampleoidc", RedirectUri: "https://sampleapp.com"}}})
 	store.SetPolicies(getEndpoint(getService(), endpoint, policy.GET),
-		policy.RoutePolicy{Actions: []v1.PathPolicy{{PolicyType: "jwt", Config:"samplejwt"}}})
+		policy.RoutePolicy{Actions: []v1.PathPolicy{{PolicyType: "jwt", Config: "samplejwt"}}})
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.GET)), getActions()[policy.GET])
 	assert.Equal(t, store.GetPolicies(getEndpoint(getService(), endpoint, policy.PUT)), getActions()[policy.ALL])
 }
@@ -87,9 +87,9 @@ func TestLocalStore_Policies(t *testing.T) {
 	policiesTest(t, New())
 }
 
-func policyMappingTest(t *testing.T, store PolicyStore) {
+func policyMappingTest(t *testing.T, store Store) {
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))
-	store.AddPolicyMapping(samplePolicy, []policy.PolicyMapping{})
+	store.AddPolicyMapping(samplePolicy, []policy.Mapping{})
 	assert.NotNil(t, store.GetPolicyMapping(samplePolicy))
 	store.DeletePolicyMapping(samplePolicy)
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))

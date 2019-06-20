@@ -12,23 +12,23 @@ import (
 )
 
 func getEndpoint(service policy.Service, method policy.Method, path string) policy.Endpoint {
-	return  policy.Endpoint{
+	return policy.Endpoint{
 		Service: service,
-		Method: method,
-		Path: path,
+		Method:  method,
+		Path:    path,
 	}
 }
 
-func getParsedPolicy(service policy.Service, method policy.Method, path string, policies []v1.PathPolicy) policy.PolicyMapping{
+func getParsedPolicy(service policy.Service, method policy.Method, path string, policies []v1.PathPolicy) policy.Mapping {
 	return policy.NewPolicyMapping(getEndpoint(service, method, path), policies)
 }
 
-func ParseTarget(target []v1.TargetElement, namespace string) []policy.PolicyMapping {
-	targets := make([]policy.PolicyMapping, 0)
+func ParseTarget(target []v1.TargetElement, namespace string) []policy.Mapping {
+	targets := make([]policy.Mapping, 0)
 	if len(target) > 0 {
 		for _, items := range target {
 			service := policy.Service{
-				Name: items.ServiceName,
+				Name:      items.ServiceName,
 				Namespace: namespace,
 			}
 			if items.Paths != nil && len(items.Paths) > 0 {
@@ -42,8 +42,8 @@ func ParseTarget(target []v1.TargetElement, namespace string) []policy.PolicyMap
 					}
 
 					if path.Prefix != "" {
-						if !strings.HasSuffix(path.Prefix,"/*") {
-							if strings.HasSuffix(path.Prefix,"/") {
+						if !strings.HasSuffix(path.Prefix, "/*") {
+							if strings.HasSuffix(path.Prefix, "/") {
 								path.Prefix = path.Prefix + "*"
 							} else {
 								path.Prefix = path.Prefix + "/*"

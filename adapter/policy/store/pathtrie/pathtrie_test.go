@@ -8,7 +8,7 @@ import (
 )
 
 type Case struct {
-	key string
+	key   string
 	value interface{}
 }
 

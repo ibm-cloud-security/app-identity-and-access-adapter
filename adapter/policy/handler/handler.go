@@ -18,14 +18,14 @@ type PolicyHandler interface {
 
 // CrdHandler is responsible for storing and managing policy/client data
 type CrdHandler struct {
-	store      policystore.PolicyStore
+	store      policystore.Store
 	kubeClient kubernetes.Interface
 }
 
 // //////////////// constructor //////////////////
 
 // New creates a PolicyManager
-func New(store policystore.PolicyStore, kubeClient kubernetes.Interface) PolicyHandler {
+func New(store policystore.Store, kubeClient kubernetes.Interface) PolicyHandler {
 	return &CrdHandler{
 		store:      store,
 		kubeClient: kubeClient,
@@ -49,7 +49,7 @@ func (c *CrdHandler) HandleDeleteEvent(obj interface{}) {
 		zap.L().Warn("Expected to receive CrdKey from Kubernetes informer")
 		return
 	}
-	zap.S().Debugf("crdKey : %s", crdKey.Id)
+	zap.S().Debugf("crdKey : %s", crdKey.ID)
 	zap.S().Debugf("crdType : %s", crdKey.CrdType)
 	handler := crdeventhandler.GetDeleteEventHandler(crdKey, c.store)
 	if handler != nil {

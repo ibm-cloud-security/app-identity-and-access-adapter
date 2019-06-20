@@ -18,9 +18,9 @@ var SchemeGroupVersion = schema.GroupVersion{
 // create a SchemeBuilder which uses functions to add types to
 // the scheme
 var (
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	localSchemeBuilder = &SchemeBuilder
-	AddToScheme   = SchemeBuilder.AddToScheme
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
 func init() {

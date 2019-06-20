@@ -6,51 +6,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestPathSegmenter(t *testing.T) {
 	type result struct {
 		segment string
-		next int
+		next    int
 	}
 	type testObj struct {
-		path    string
+		path     string
 		expected result
 	}
 
-	tests := [] testObj{
+	tests := []testObj{
 		{
 			path: "",
 			expected: result{
 				segment: "",
-				next: -1,
+				next:    -1,
 			},
 		},
 		{
 			path: "/",
 			expected: result{
 				segment: "/",
-				next: -1,
+				next:    -1,
 			},
 		},
 		{
 			path: "/*",
 			expected: result{
 				segment: "/*",
-				next: -1,
+				next:    -1,
 			},
 		},
 		{
 			path: "/path",
 			expected: result{
 				segment: "/path",
-				next: -1,
+				next:    -1,
 			},
 		},
 		{
 			path: "/path/user",
 			expected: result{
 				segment: "/path",
-				next: 5,
+				next:    5,
 			},
 		},
 	}

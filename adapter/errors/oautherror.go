@@ -23,6 +23,7 @@ const (
 	InsufficientScope = "insufficient_scope"
 )
 
+// Error messages
 const (
 	ExpiredToken = "Token is expired"
 )
@@ -68,9 +69,8 @@ func (e *OAuthError) Error() string {
 		return e.Msg
 	} else if e.Msg == "" {
 		return e.Code
-	} else {
-		return e.Code + ": " + e.Msg
 	}
+	return e.Code + ": " + e.Msg
 }
 
 // ShortDescription returns the prettified HTTP Errors
@@ -109,7 +109,7 @@ func (e *OAuthError) HTTPCode() v1beta1.HttpStatusCode {
 	}
 }
 
-// HTTPCode returns Istio compliant HTTPStatusCode
+// OK validates the error message contains the correct fields
 func (e *OAuthError) OK() error {
 	if e.Code == "" {
 		return errors.New("invalid OAuth 2.0 Error: `error` field does not exist")

@@ -1,7 +1,9 @@
 package policy
 
+// Method is an enum of HTTP Methods
 type Method int
 
+// Supported HTTP methods
 const (
 	ALL Method = iota
 	GET
@@ -11,10 +13,12 @@ const (
 	PATCH
 )
 
+// String converts a Method type to its prettified string
 func (m Method) String() string {
 	return [...]string{"ALL", "GET", "PUT", "POST", "DELETE", "PATCH"}[m]
 }
 
+// NewMethod creates a Method type from a string
 func NewMethod(method string) Method {
 	switch method {
 	case "ALL":
@@ -34,9 +38,10 @@ func NewMethod(method string) Method {
 	}
 }
 
+// Actions maps Methods to RoutePolicies
 type Actions = map[Method]RoutePolicy
 
-// New creates a new Actions
+// NewActions creates a new Actions map
 func NewActions() Actions {
 	return make(map[Method]RoutePolicy)
 }

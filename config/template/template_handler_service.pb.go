@@ -48,7 +48,7 @@ type HandleAuthnZRequest struct {
 	// call. In that case, adapter_config will have type_url as 'google.protobuf.Any.type_url' and would contain string
 	// value of session_id (returned from InfrastructureBackend.CreateSession).
 	AdapterConfig *types.Any `protobuf:"bytes,2,opt,name=adapter_config,json=adapterConfig,proto3" json:"adapter_config,omitempty"`
-	// Id to dedupe identical requests from Mixer.
+	// ID to dedupe identical requests from Mixer.
 	DedupId string `protobuf:"bytes,3,opt,name=dedup_id,json=dedupId,proto3" json:"dedup_id,omitempty"`
 }
 

@@ -17,19 +17,19 @@ type AddUpdateEventHandler interface {
 }
 
 type JwtConfigAddEventHandler struct {
-	Obj *v1.JwtConfig
-	Store storepolicy.PolicyStore
+	Obj   *v1.JwtConfig
+	Store storepolicy.Store
 }
 
 type OidcConfigAddEventHandler struct {
-	Obj *v1.OidcConfig
+	Obj        *v1.OidcConfig
 	KubeClient kubernetes.Interface
-	Store storepolicy.PolicyStore
+	Store      storepolicy.Store
 }
 
 type PolicyAddEventHandler struct {
-	Obj *v1.Policy
-	Store storepolicy.PolicyStore
+	Obj   *v1.Policy
+	Store storepolicy.Store
 }
 
 func (e *JwtConfigAddEventHandler) HandleAddUpdateEvent() {
@@ -57,11 +57,11 @@ func (e *OidcConfigAddEventHandler) HandleAddUpdateEvent() {
 
 func (e *PolicyAddEventHandler) HandleAddUpdateEvent() {
 	zap.L().Debug("Create/Update Policy", zap.String("ID", string(e.Obj.ObjectMeta.UID)), zap.String("name", e.Obj.ObjectMeta.Name), zap.String("namespace", e.Obj.ObjectMeta.Namespace))
-	mappingId := e.Obj.ObjectMeta.Namespace + "/" +e.Obj.ObjectMeta.Name
+	mappingId := e.Obj.ObjectMeta.Namespace + "/" + e.Obj.ObjectMeta.Name
 	parsedPolicies := ParseTarget(e.Obj.Spec.Target, e.Obj.ObjectMeta.Namespace)
 	for _, policies := range parsedPolicies {
 		zap.S().Debug("Adding policy for endpoint", policies.Endpoint)
-		e.Store.SetPolicies(policies.Endpoint, policy.RoutePolicy{ PolicyReference: mappingId, Actions: policies.Actions})
+		e.Store.SetPolicies(policies.Endpoint, policy.RoutePolicy{PolicyReference: mappingId, Actions: policies.Actions})
 	}
 	e.Store.AddPolicyMapping(mappingId, parsedPolicies)
 	zap.L().Info("Policy created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)))
@@ -83,7 +83,7 @@ func GetClientSecret(crd *v1.OidcConfig, kubeClient kubernetes.Interface) string
 	return ""
 }
 
-func GetAddEventHandler(obj interface{}, store storepolicy.PolicyStore, kubeClient kubernetes.Interface) AddUpdateEventHandler {
+func GetAddEventHandler(obj interface{}, store storepolicy.Store, kubeClient kubernetes.Interface) AddUpdateEventHandler {
 	switch crd := obj.(type) {
 	case *v1.JwtConfig:
 		return &JwtConfigAddEventHandler{

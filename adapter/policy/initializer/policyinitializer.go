@@ -41,7 +41,7 @@ func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
 	return pi.Handler
 }
 
-func New(store policy.PolicyStore) (Initializer, error) {
+func New(store policy.Store) (Initializer, error) {
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ import (
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		store policy2.PolicyStore
+		store policy2.Store
 		err   error
 	}{
 		{

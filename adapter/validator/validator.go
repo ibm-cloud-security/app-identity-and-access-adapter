@@ -15,8 +15,8 @@ import (
 const (
 	kid   = "kid"
 	scope = "scope"
-	NOT   = "NOT"
-	ANY   = "ANY"
+	not   = "not"
+	any   = "any"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies
@@ -149,9 +149,9 @@ func checkAccessPolicy(rule v1.Rule, claims jwt.MapClaims) error {
 		return err
 	}
 	switch rule.Match {
-	case ANY:
+	case any:
 		return validateClaimMatchesAny(rule.Claim, m, rule.Value)
-	case NOT:
+	case not:
 		return validateClaimDoesNotMatch(rule.Claim, m, rule.Value)
 	default: // "ALL"
 		return validateClaimMatchesAll(rule.Claim, m, rule.Value)
@@ -219,7 +219,7 @@ func convertClaimType(value interface{}) (map[string]struct{}, error) {
 		m[strconv.FormatBool(t)] = struct{}{}
 		return m, nil
 	case float64:
-		m[strconv.FormatFloat(t, 'f', 0, 64)] = struct{}{}
+		m[fmt.Sprintf("%v", value)] = struct{}{}
 		return m, nil
 	case string:
 		for _, v := range strings.Split(t, " ") {
@@ -232,7 +232,7 @@ func convertClaimType(value interface{}) (map[string]struct{}, error) {
 			case string:
 				m[s2] = struct{}{}
 			case float64:
-				m[strconv.FormatFloat(s2, 'f', 0, 64)] = struct{}{}
+				m[fmt.Sprintf("%v", v)] = struct{}{}
 			case bool:
 				m[strconv.FormatBool(s2)] = struct{}{}
 			default:

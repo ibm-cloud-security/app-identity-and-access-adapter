@@ -114,7 +114,7 @@ func (c *Controller) processNextItem() bool {
 	// a code path of successful queue key processing
 	if !exists {
 		zap.L().Debug("Controller.processNextItem: object deleted detected: %s", zap.String("key", keyRaw))
-		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw, CrdType: c.CrdType})
+		c.Handler.HandleDeleteEvent(policy.CrdKey{ID: keyRaw, CrdType: c.CrdType})
 		c.Queue.Forget(key)
 	} else {
 		zap.L().Debug("Controller.processNextItem: object created detected: %s", zap.String("key", keyRaw))

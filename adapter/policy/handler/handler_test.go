@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	jwksUrl             string = "https://sampleurl"
-	ns string = "ns"
+	jwksUrl string = "https://sampleurl"
+	ns      string = "ns"
 )
 
 func getObjectMeta() metav1.ObjectMeta {
@@ -24,7 +24,6 @@ func getObjectMeta() metav1.ObjectMeta {
 func getTypeMeta() metav1.TypeMeta {
 	return metav1.TypeMeta{APIVersion: "v1", Kind: "JwtPolicy"}
 }
-
 
 func getJwtConfigSpec(jwks string) v1.JwtConfigSpec {
 	return v1.JwtConfigSpec{JwksURL: jwks}
@@ -52,7 +51,7 @@ func TestHandler_HandleEventTest(t *testing.T) {
 	key := "ns/sample"
 	assert.Equal(t, testHandler.store.GetKeySet(key).PublicKeyURL(), jwksUrl)
 	testHandler.HandleDeleteEvent(policy.CrdKey{
-		Id: key,
+		ID:      key,
 		CrdType: v1.JWTCONFIG,
 	})
 	assert.Nil(t, testHandler.store.GetKeySet(key))

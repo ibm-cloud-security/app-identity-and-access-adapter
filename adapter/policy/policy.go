@@ -1,9 +1,7 @@
 package policy
 
 import (
-	"go.uber.org/zap"
-
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 )
 
 // Type represents a policy types (WEB/API)
@@ -29,31 +27,34 @@ type Endpoint struct {
 
 // CrdKey represents a CustomResourceDefinition ID
 type CrdKey struct {
-	Id      string
+	// ID if of the form "namespace/crd_name"
+	ID string
+	// CrdType is the type of CRD
 	CrdType v1.CrdType
 }
 
-// PolicyMapping captures information of created endpoints by policy
-type PolicyMapping struct {
+// Mapping captures information of created endpoints by policy
+type Mapping struct {
 	Actions  []v1.PathPolicy
 	Endpoint Endpoint
 }
 
+// RoutePolicy captures information of created endpoints by policy
 type RoutePolicy struct {
 	PolicyReference string
 	Actions         []v1.PathPolicy
 }
 
+// NewRoutePolicy creates a new RoutePolicy
 func NewRoutePolicy() RoutePolicy {
 	return RoutePolicy{
-		PolicyReference: "",
-		Actions:         make([]v1.PathPolicy, 0),
+		Actions: make([]v1.PathPolicy, 0),
 	}
 }
 
-// New creates a new ParsedPolicies
-func NewPolicyMapping(service Endpoint, actions []v1.PathPolicy) PolicyMapping {
-	return PolicyMapping{
+// NewPolicyMapping creates a new Mapping object
+func NewPolicyMapping(service Endpoint, actions []v1.PathPolicy) Mapping {
+	return Mapping{
 		Endpoint: service,
 		Actions:  actions,
 	}
@@ -61,12 +62,13 @@ func NewPolicyMapping(service Endpoint, actions []v1.PathPolicy) PolicyMapping {
 
 var typeNames = [...]string{"JWT", "OIDC", "NONE"}
 
+// String returns a prettified string of the given Type
 func (t Type) String() string {
 	return typeNames[t]
 }
 
+// NewType creates a new policy Type
 func NewType(t string) Type {
-	zap.S().Info("Type: ", t)
 	switch t {
 	case "jwt":
 		return JWT

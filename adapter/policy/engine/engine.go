@@ -26,11 +26,11 @@ type PolicyEngine interface {
 }
 
 type engine struct {
-	store policy2.PolicyStore
+	store policy2.Store
 }
 
 // New creates a PolicyEngine
-func New(store policy2.PolicyStore) (PolicyEngine, error) {
+func New(store policy2.Store) (PolicyEngine, error) {
 	if store == nil {
 		zap.L().Error("Trying to create PolicyEngine, but no store provided.")
 		return nil, errors.New("could not create policy engine using undefined store")
