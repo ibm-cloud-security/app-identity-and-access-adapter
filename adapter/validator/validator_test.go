@@ -95,21 +95,21 @@ func TestTokenValidation(t *testing.T) {
 		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to not match any of: [" + testAud + " 2]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
-				Match: "not",
+				Match: "NOT",
 				Value: []string{testAud, "2"},
 			},
 		}},
 		{validAudStrToken, nil, testKeySet, []v1.Rule{
 			{
 				Claim: "arr_int",
-				Match: "any",
+				Match: "ANY",
 				Value: []string{"1", "2", "3"},
 			},
 		}},
 		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
 			{
 				Claim: "scope",
-				Match: "not",
+				Match: "NOT",
 				Value: []string{"appid_default"},
 			},
 		}},
@@ -127,7 +127,7 @@ func TestTokenValidation(t *testing.T) {
 			},
 			{
 				Claim: "scope",
-				Match: "not",
+				Match: "NOT",
 				Value: []string{"appid_default"},
 			},
 		}},
@@ -262,7 +262,7 @@ func TestClaimValidation(t *testing.T) {
 		},
 		{v1.Rule{
 			Claim: "string",
-			Match: "any",
+			Match: "ANY",
 			Value: []string{},
 		},
 			e.New("token validation error - expected claim `string` to match one of: []"),
@@ -277,21 +277,21 @@ func TestClaimValidation(t *testing.T) {
 		},
 		{v1.Rule{
 			Claim: "string_arr",
-			Match: "any",
+			Match: "ANY",
 			Value: []string{"1"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
-			Match: "not",
+			Match: "NOT",
 			Value: []string{},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
-			Match: "any",
+			Match: "ANY",
 			Value: []string{"6", ""},
 		},
 			e.New("token validation error - expected claim `string_arr` to match one of: [6 ]"),
@@ -305,21 +305,21 @@ func TestClaimValidation(t *testing.T) {
 		},
 		{v1.Rule{
 			Claim: "arr_string",
-			Match: "any",
+			Match: "ANY",
 			Value: []string{"1", "5", "6", "7"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "arr_string",
-			Match: "not",
+			Match: "NOT",
 			Value: []string{"7", "8", "9", "10"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "arr_string",
-			Match: "not",
+			Match: "NOT",
 			Value: []string{"7", "1"},
 		},
 			e.New("token validation error - expected claim `arr_string` to not match any of: [7 1]"),
@@ -333,7 +333,7 @@ func TestClaimValidation(t *testing.T) {
 		},
 		{v1.Rule{
 			Claim: "arr_string",
-			Match: "any",
+			Match: "ANY",
 			Value: []string{"7", "8"},
 		},
 			e.New("token validation error - expected claim `arr_string` to match one of: [7 8]"),

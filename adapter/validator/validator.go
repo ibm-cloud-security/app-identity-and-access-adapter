@@ -15,8 +15,8 @@ import (
 const (
 	kid   = "kid"
 	scope = "scope"
-	not   = "not"
-	any   = "any"
+	not   = "NOT"
+	any   = "ANY"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies
