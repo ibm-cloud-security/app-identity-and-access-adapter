@@ -19,7 +19,7 @@ const (
 	pathToPublicKey = "../../tests/keys/key.pub"
 	// Test keys signed with ../../tests/keys/key.private
 	// Expires year: 2160
-	validAudStrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwic3ViIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxMzcwNzgsInRlbmFudCI6IjcxYjM0ODkwLWE5NGYtNGVmMi1hNGI2LWNlMDk0YWE2ODA5MiIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCIsImFycl9pbnQiOlsxLDIsMyw0LDVdLCJhcnJfYm9vbCI6W3RydWVdLCJib29sIjp0cnVlLCJpbnQiOjEwMCwib2JqZWN0Ijp7fX0.fSECQR7ims0st3w6lsg7sopOqilrH1dlgk-yo7ZtfuIMzbHqTb-DxxlqIOQJjxqggjswMmQV7nyRxbcw1YZD2YU-M1sMbcgjz1hfPRka3UN7P1-_v1KwOHFTfgOl__io3-Wxq-KrcI3IS7BKCGWOQ5AScwh7v91jhd-8aJyid30hDMVM3YF_62PNkVSNm90_zIEpnlRRxeUbIxssW4lw-FO9Y-j9sAtoeP2GEnWx1Ae9Qmvh6H3MJK80oPjq8_eRAXz6A8DMdnPvnjqiJRzqChVVus4bCeguKgCEkCBnVEjQgV5lDfk2vtQVGw1vHSyfHacjtdwXBStMF1sleYal0A"
+	validAudStrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwic3ViIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxMzcwNzgsInRlbmFudCI6IjcxYjM0ODkwLWE5NGYtNGVmMi1hNGI2LWNlMDk0YWE2ODA5MiIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCIsImFycl9pbnQiOlsxLDIsMyw0LDVdLCJhcnJfYm9vbCI6W3RydWVdLCJib29sIjp0cnVlLCJpbnQiOjEwMCwib2JqIjp7InN0ciI6ImhlbGxvIiwiYXJyYXlfc3RyIjpbIjEiLCIyIl0sIm9iaiI6eyJzdHIiOiJ3b3JsZCJ9fX0.lBU2kpcU78aq7VDi3N0AboUjFLs65KH4SJOjG63m7HAnb86QtNc7PiA_YOqo9uCXWUdKv9tGvCGxeEx0rvFW_-LGUO0n88avM2HxBDFSI9OL7lFySSdTsBe7okPWdUuruIOGfbWVDSDDEdkwlJ0DLnFOAUqYhQW1dV8TtyqbYb2xyDv_jCDhIz2uE7dTqQBHa_uZFy_pOsiWAZb83xjoMCoV03bP2c3ZzpFFToF3IJuldo4bCr1XYJAlTp7P6hzG4ELhQp5f5pNGLtTWZaxicx5Qs5Mp0fUtdLjYRPmzuhmOT01qyJBRHDnil3bQ_W1lsHgv3oVdLs_AGn3_D8WF1A"
 	validAudArrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjpbImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyJdLCJzdWIiOiJjMTY5MjBlMy1hNmViLTRiYTUtYjIxYS1lNzJhZmM4NmJhZjMiLCJhbXIiOlsiYXBwaWRfY2xpZW50X2NyZWRlbnRpYWxzIl0sImlhdCI6MTU1NjEzNzA3OCwidGVuYW50IjoiNzFiMzQ4OTAtYTk0Zi00ZWYyLWE0YjYtY2UwOTRhYTY4MDkyIiwic2NvcGUiOiJhcHBpZF9kZWZhdWx0In0.czBqkysqXxq0pkqVVUDmFdu_fsd1D0LSttqOSrcGkTao3W6THcR967NUXr1_DAXwzqDhBWp0tIqE6y3P0IdxC_3zM6S8fgv5HYYOqSPYQQLOM7Dy7lyEVwR0U4OVjLHttXjV6vXJsj7ehgUQ4SbXfm8fotEI1T6uwV6eU6vawOA3NPJgEDbBjTMxnpdIV34LgK5iP06aB7acniqO5mJtRggJYhExU_QoXjpqI8s2wimlCtssdOPVIvQ2l_GqpKJr6bk8BQIaw6qIfOvYwrDyGHPTRytt63Sk6hXLq5fPPCmXUzwRvc4ZKzy7YfhIvVsQ8go_XRMZhGcwnj14mJ21ew"
 	expiredToken     = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.c8J_IzG8aH4eq2vBrhOAv7v4JrugxwC8rrZCtMNp0qFbshfOWbNlWLzXYsBNBA_mCpbkP9ChH77Vb0iVY3tnjvatOXyd5udPqn5ETwlU6jS9f3OAqM5xgGUc78BgujlHGxsWUK-IvM8yNwHc18mj9iRQpIvKLxjLn2asha6UR9QwWCpuDIjfXy_Fnn65-3s6riVJ9dgJnHtKDRYmmvJCICfZYXdDSMQmQXcjxALNd1uuJIar4dhakfzQoiCVQZf7SXkseWye5ghDCdIU0oGBxuFcMypSd6bCUJrOnZHGOeS_F6OBvNPGn20EqpfnL8nCYr5wTugArmaRy65XI-PccQ"
 	noKidToken       = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.OW6Fcew-uhs38Owh7UhnffKJhoaEj0O_hHiZPZl8_O_LpEn6hPhWI_t8D67FzATlIhRd_B8vfBa8oSOhxKzNV99EmkzQPMaqItoyTfaJIZIQssgXiXbINFx01uILzZF1PxLvDm6xiHax5Dm4lDWizEmPLL6Am9pyZZKqcC84cqwBOWpMFDuZ0XiRX3i9lPCic-rZHcoxYREqwn0p8a2MZV5oeE5f-H8Kq5rr-yFGXaofEnLqs1Wm1T0mMRiH9O2nE7JnYMPTYUhDxSkwDLIeKe9JBRG9JwC5_br9lK5aOTv6Wk1ODqu4t7Qrniz1kaDWQgO2Z_dFjIu6Ny53BGM6Rg"
@@ -160,11 +160,36 @@ func TestTokenValidation(t *testing.T) {
 				Claim: "arr_bool",
 				Value: []string{"true", "true"},
 			},
-		}}, // Unknown Types
-		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[]"}, testKeySet, []v1.Rule{
+		}}, // Nested
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "object",
+				Claim: "obj.str",
+				Value: []string{"hello"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `obj.str` to match all of: [not]"}, testKeySet, []v1.Rule{
+			{
+				Claim: "obj.str",
+				Value: []string{"not"},
+			},
+		}}, // Unknown Types
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[string]interface {}"}, testKeySet, []v1.Rule{
+			{
+				Claim: "obj",
 				Value: []string{"{}"},
+			},
+		}}, // Invalid nesting
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `bool.next` does not exist - rule requires: [true]"}, testKeySet, []v1.Rule{
+			{
+				Claim: "bool.next",
+				Value: []string{"true"},
+			},
+		}},
+		// Empty claim
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `` does not exist - rule requires: []"}, testKeySet, []v1.Rule{
+			{
+				Claim: "",
+				Value: []string{""},
 			},
 		}},
 	}
@@ -173,7 +198,7 @@ func TestTokenValidation(t *testing.T) {
 	for _, test := range tests {
 		e := test
 		t.Run("Validate", func(st *testing.T) {
-			st.Parallel()
+			//st.Parallel()
 			oaErr := v.Validate(e.token, e.jwks, e.rules)
 			if e.err != nil {
 				if e.err.Code != "" {

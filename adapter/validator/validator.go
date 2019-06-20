@@ -14,8 +14,9 @@ import (
 
 const (
 	kid   = "kid"
-	aud   = "aud"
 	scope = "scope"
+	NOT   = "NOT"
+	ANY   = "ANY"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies
@@ -142,19 +143,38 @@ func validateClaims(token *jwt.Token, rules []v1.Rule) *errors.OAuthError {
 
 // checkAccessPolicy is used to validate a specific claim with the claims map
 func checkAccessPolicy(rule v1.Rule, claims jwt.MapClaims) error {
-	m, err := convertClaimType(claims[rule.Claim])
+	m, err := convertClaimType(getNestedClaim(rule.Claim, claims))
 	if err != nil {
 		zap.L().Info("Could not convert claim", zap.Error(err), zap.String("claim_name", rule.Claim))
 		return err
 	}
 	switch rule.Match {
-	case "ANY":
+	case ANY:
 		return validateClaimMatchesAny(rule.Claim, m, rule.Value)
-	case "NOT":
+	case NOT:
 		return validateClaimDoesNotMatch(rule.Claim, m, rule.Value)
 	default: // "ALL"
 		return validateClaimMatchesAll(rule.Claim, m, rule.Value)
 	}
+}
+
+func getNestedClaim(claim string, claims jwt.MapClaims) interface{} {
+	tiers := strings.Split(claim, ".")
+	for i, tier := range tiers {
+		if claim, ok := claims[tier]; ok {
+			if i == len(tiers)-1 {
+				return claim
+			}
+			if cast, ok := claim.(map[string]interface{}); ok {
+				claims = cast
+				continue
+			}
+			return nil
+		}
+		return nil
+	}
+
+	return nil
 }
 
 func validateClaimMatchesAny(name string, claims map[string]struct{}, expected []string) error {
@@ -216,12 +236,12 @@ func convertClaimType(value interface{}) (map[string]struct{}, error) {
 			case bool:
 				m[strconv.FormatBool(s2)] = struct{}{}
 			default:
-				return nil, fmt.Errorf("claim is not of a supported type: %s", s2)
+				return nil, fmt.Errorf("claim is not of a supported type: %T", s2)
 			}
 		}
 		return m, nil
 	default:
-		return nil, fmt.Errorf("claim is not of a supported type: %s", t)
+		return nil, fmt.Errorf("claim is not of a supported type: %T", t)
 	}
 }
 
