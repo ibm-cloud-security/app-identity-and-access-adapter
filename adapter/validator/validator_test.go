@@ -2,6 +2,7 @@ package validator
 
 import (
 	"crypto"
+	e "errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"io/ioutil"
 	"testing"
@@ -18,7 +19,7 @@ const (
 	pathToPublicKey = "../../tests/keys/key.pub"
 	// Test keys signed with ../../tests/keys/key.private
 	// Expires year: 2160
-	validAudStrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwic3ViIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxMzcwNzgsInRlbmFudCI6IjcxYjM0ODkwLWE5NGYtNGVmMi1hNGI2LWNlMDk0YWE2ODA5MiIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCJ9.pHm5jijwP7ERxdCbjBhHf_RHaE5QcCbicteonYln3aU9ck-eiFzwxY-Ze8jTbpieCuoXfYUzitIIHHhcqVws0EyRCL2liYm7Oc1tJgtyH3SfWlpJ-65p4KVusrnGjSF0HfCB4NAbZGpvOY88LhEMr_S99nhPSaZrUkEgm5Pdoda7e91yYlOygs3N98WNF4sU548sS4TttTpeeA-fxqJFVI5lG37NveM-Mm2P1TQmKCfOB6CBm9Eibl4zU8kF22aWZ8kbkVdim303-qxhJhknFapdsHzCa6-cDLUsGNHltG8ACePe4o0C9n4m2Eq8XZ50GcocpwLdkB4XItGzuhHrOg"
+	validAudStrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwic3ViIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxMzcwNzgsInRlbmFudCI6IjcxYjM0ODkwLWE5NGYtNGVmMi1hNGI2LWNlMDk0YWE2ODA5MiIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCIsImFycl9pbnQiOlsxLDIsMyw0LDVdLCJhcnJfYm9vbCI6W3RydWVdLCJib29sIjp0cnVlLCJpbnQiOjEwMCwib2JqZWN0Ijp7fX0.fSECQR7ims0st3w6lsg7sopOqilrH1dlgk-yo7ZtfuIMzbHqTb-DxxlqIOQJjxqggjswMmQV7nyRxbcw1YZD2YU-M1sMbcgjz1hfPRka3UN7P1-_v1KwOHFTfgOl__io3-Wxq-KrcI3IS7BKCGWOQ5AScwh7v91jhd-8aJyid30hDMVM3YF_62PNkVSNm90_zIEpnlRRxeUbIxssW4lw-FO9Y-j9sAtoeP2GEnWx1Ae9Qmvh6H3MJK80oPjq8_eRAXz6A8DMdnPvnjqiJRzqChVVus4bCeguKgCEkCBnVEjQgV5lDfk2vtQVGw1vHSyfHacjtdwXBStMF1sleYal0A"
 	validAudArrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjpbImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyJdLCJzdWIiOiJjMTY5MjBlMy1hNmViLTRiYTUtYjIxYS1lNzJhZmM4NmJhZjMiLCJhbXIiOlsiYXBwaWRfY2xpZW50X2NyZWRlbnRpYWxzIl0sImlhdCI6MTU1NjEzNzA3OCwidGVuYW50IjoiNzFiMzQ4OTAtYTk0Zi00ZWYyLWE0YjYtY2UwOTRhYTY4MDkyIiwic2NvcGUiOiJhcHBpZF9kZWZhdWx0In0.czBqkysqXxq0pkqVVUDmFdu_fsd1D0LSttqOSrcGkTao3W6THcR967NUXr1_DAXwzqDhBWp0tIqE6y3P0IdxC_3zM6S8fgv5HYYOqSPYQQLOM7Dy7lyEVwR0U4OVjLHttXjV6vXJsj7ehgUQ4SbXfm8fotEI1T6uwV6eU6vawOA3NPJgEDbBjTMxnpdIV34LgK5iP06aB7acniqO5mJtRggJYhExU_QoXjpqI8s2wimlCtssdOPVIvQ2l_GqpKJr6bk8BQIaw6qIfOvYwrDyGHPTRytt63Sk6hXLq5fPPCmXUzwRvc4ZKzy7YfhIvVsQ8go_XRMZhGcwnj14mJ21ew"
 	expiredToken     = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.c8J_IzG8aH4eq2vBrhOAv7v4JrugxwC8rrZCtMNp0qFbshfOWbNlWLzXYsBNBA_mCpbkP9ChH77Vb0iVY3tnjvatOXyd5udPqn5ETwlU6jS9f3OAqM5xgGUc78BgujlHGxsWUK-IvM8yNwHc18mj9iRQpIvKLxjLn2asha6UR9QwWCpuDIjfXy_Fnn65-3s6riVJ9dgJnHtKDRYmmvJCICfZYXdDSMQmQXcjxALNd1uuJIar4dhakfzQoiCVQZf7SXkseWye5ghDCdIU0oGBxuFcMypSd6bCUJrOnZHGOeS_F6OBvNPGn20EqpfnL8nCYr5wTugArmaRy65XI-PccQ"
 	noKidToken       = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.OW6Fcew-uhs38Owh7UhnffKJhoaEj0O_hHiZPZl8_O_LpEn6hPhWI_t8D67FzATlIhRd_B8vfBa8oSOhxKzNV99EmkzQPMaqItoyTfaJIZIQssgXiXbINFx01uILzZF1PxLvDm6xiHax5Dm4lDWizEmPLL6Am9pyZZKqcC84cqwBOWpMFDuZ0XiRX3i9lPCic-rZHcoxYREqwn0p8a2MZV5oeE5f-H8Kq5rr-yFGXaofEnLqs1Wm1T0mMRiH9O2nE7JnYMPTYUhDxSkwDLIeKe9JBRG9JwC5_br9lK5aOTv6Wk1ODqu4t7Qrniz1kaDWQgO2Z_dFjIu6Ny53BGM6Rg"
@@ -52,7 +53,7 @@ func TestTokenValidation(t *testing.T) {
 		jwks  keyset.KeySet
 		rules []v1.Rule
 	}{
-		/*{"", &errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
+		{"", &errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
 		{validAudArrToken, &errors.OAuthError{Msg: errors.InternalServerError}, nil, emptyRule},
 		{validAudStrToken, nil, testKeySet, emptyRule},
 		{validAudArrToken, nil, testKeySet, emptyRule},
@@ -90,12 +91,80 @@ func TestTokenValidation(t *testing.T) {
 				Claim: "iss",
 				Value: []string{"another value"},
 			},
-		}},*/
+		}},
 		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to not match any of: [" + testAud + " 2]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
 				Match: "NOT",
 				Value: []string{testAud, "2"},
+			},
+		}},
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
+			{
+				Claim: "arr_int",
+				Match: "ANY",
+				Value: []string{"1", "2", "3"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
+			{
+				Claim: "scope",
+				Match: "NOT",
+				Value: []string{"appid_default"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `custom_claim` does not exist - rule requires: [custom]", Scopes: nil}, testKeySet, []v1.Rule{
+			{
+				Claim: "custom_claim",
+				Match: "ALL",
+				Value: []string{"custom"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
+			{
+				Claim: "aud",
+				Value: []string{testAud},
+			},
+			{
+				Claim: "scope",
+				Match: "NOT",
+				Value: []string{"appid_default"},
+			},
+		}},
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
+			{
+				Claim: "int",
+				Value: []string{"100"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `int` to match all of: [1]", Scopes: nil}, testKeySet, []v1.Rule{
+			{
+				Claim: "int",
+				Value: []string{"1"},
+			},
+		}},
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
+			{
+				Claim: "bool",
+				Value: []string{"true"},
+			},
+		}},
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `arr_bool` to match all of: [false]", Scopes: nil}, testKeySet, []v1.Rule{
+			{
+				Claim: "arr_bool",
+				Value: []string{"false"},
+			},
+		}},
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
+			{
+				Claim: "arr_bool",
+				Value: []string{"true", "true"},
+			},
+		}}, // Unknown Types
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[]"}, testKeySet, []v1.Rule{
+			{
+				Claim: "object",
+				Value: []string{"{}"},
 			},
 		}},
 	}
@@ -113,6 +182,9 @@ func TestTokenValidation(t *testing.T) {
 				if e.err.Msg != "" {
 					assert.Equal(st, e.err.Msg, oaErr.Msg)
 				}
+				if e.err.Scopes != nil {
+					assert.ElementsMatch(st, e.err.Scopes, oaErr.Scopes)
+				}
 			} else {
 				assert.Nil(st, oaErr)
 			}
@@ -125,90 +197,126 @@ func TestTokenValidation(t *testing.T) {
 func TestClaimValidation(t *testing.T) {
 	t.Parallel()
 	var tests = []struct {
-		rule        v1.Rule
-		expectErr   bool
-		expectedMsg string
-	}{
+		rule      v1.Rule
+		expectErr error
+	}{ // Strings
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
 			Value: []string{"1"},
 		},
-			false,
-			"",
-		},
-		{v1.Rule{
-			Claim: "string_arr",
-			Match: "ALL",
-			Value: []string{"1", "2", "3", "4"},
-		},
-			false,
-			"",
-		},
-		{v1.Rule{
-			Claim: "string_arr",
-			Match: "ANY",
-			Value: []string{"1"},
-		},
-			false,
-			"",
-		},
-		{v1.Rule{
-			Claim: "string_arr",
-			Match: "NOT",
-			Value: []string{},
-		},
-			false,
-			"",
-		},
-		{v1.Rule{
-			Claim: "string",
-			Match: "ANY",
-			Value: []string{},
-		},
-			true,
-			"token validation error - expected claim `string` to match one of: []",
+			nil,
 		},
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
 			Value: []string{},
 		},
-			true,
-			"token validation error - expected claim `string` to match all of: [], but is empty",
+			e.New("token validation error - expected claim `string` to match all of: [], but is empty"),
 		},
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
 			Value: []string{"6"},
 		},
-			true,
-			"token validation error - expected claim `string` to match all of: [6]",
+			e.New("token validation error - expected claim `string` to match all of: [6]"),
+		},
+		{v1.Rule{
+			Claim: "string",
+			Match: "ANY",
+			Value: []string{},
+		},
+			e.New("token validation error - expected claim `string` to match one of: []"),
+		},
+		// String arrays
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "ALL",
+			Value: []string{"1", "2", "3", "4"},
+		},
+			nil,
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "ANY",
+			Value: []string{"1"},
+		},
+			nil,
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "NOT",
+			Value: []string{},
+		},
+			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
 			Match: "ANY",
 			Value: []string{"6", ""},
 		},
-			true,
-			"token validation error - expected claim `string_arr` to match one of: [6 ]",
+			e.New("token validation error - expected claim `string_arr` to match one of: [6 ]"),
+		}, // Arrays of strings
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "ALL",
+			Value: []string{"1", "2", "3", "4"},
+		},
+			nil,
+		},
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "ANY",
+			Value: []string{"1", "5", "6", "7"},
+		},
+			nil,
+		},
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "NOT",
+			Value: []string{"7", "8", "9", "10"},
+		},
+			nil,
+		},
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "NOT",
+			Value: []string{"7", "1"},
+		},
+			e.New("token validation error - expected claim `arr_string` to not match any of: [7 1]"),
+		},
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "ALL",
+			Value: []string{"7", "1"},
+		},
+			e.New("token validation error - expected claim `arr_string` to match all of: [7 1]"),
+		},
+		{v1.Rule{
+			Claim: "arr_string",
+			Match: "ANY",
+			Value: []string{"7", "8"},
+		},
+			e.New("token validation error - expected claim `arr_string` to match one of: [7 8]"),
 		},
 	}
 
 	var claimMap jwt.MapClaims = make(map[string]interface{})
 	claimMap["string"] = "1"
-	//claimMap["string"] = interface{["1"]}
+	claimMap["arr_string"] = []interface{}{"1", "2", "3", "4", "5"}
 	claimMap["string_arr"] = "1 2 3 4 5"
 	claimMap["int"] = 1
+	claimMap["arr_int"] = []interface{}{1, 2, 3, 4, 5}
 	claimMap["bool"] = true
+	claimMap["bool_int"] = []interface{}{true}
 
 	for _, e := range tests {
 		test := e
 		t.Run("Validate", func(st *testing.T) {
 			st.Parallel()
 			err := checkAccessPolicy(test.rule, claimMap)
-			if test.expectErr {
-				assert.EqualError(st, err, test.expectedMsg)
+			if test.expectErr != nil {
+				assert.EqualError(st, err, test.expectErr.Error())
 			} else {
 				assert.Nil(st, err)
 			}

@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	kid = "kid"
-	aud = "aud"
+	kid   = "kid"
+	aud   = "aud"
+	scope = "scope"
 )
 
 // TokenValidator parses and validates JWT tokens according to policies
@@ -47,7 +48,7 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule)
 
 	if tokenStr == "" {
 		zap.L().Debug("Unauthorized - Token does not exist")
-		return errors.UnauthorizedHTTPException("token not provided", nil)
+		return errors.UnauthorizedHTTPException("token not provided", findRequiredScopes(rules))
 	}
 
 	if jwks == nil {
@@ -56,18 +57,18 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule)
 			Msg: errors.InternalServerError,
 		}
 	}
-	// Parse the access token - validate expiration and signature
+	// Parse the token - validate expiration and signature
 	token, err := validateSignature(tokenStr, jwks)
 	if err != nil {
 		zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
-		return errors.UnauthorizedHTTPException(err.Error(), nil)
+		return errors.UnauthorizedHTTPException(err.Error(), findRequiredScopes(rules))
 	}
 
-	// Validate access token
+	// Validate token
 	claimErr := validateClaims(token, rules)
 	if claimErr != nil {
 		zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
-		return errors.UnauthorizedHTTPException(claimErr.Msg, nil)
+		return errors.UnauthorizedHTTPException(claimErr.Msg, findRequiredScopes(rules))
 	}
 
 	zap.L().Debug("Token has been validated")
@@ -76,6 +77,16 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule)
 }
 
 ////////////////// utils //////////////////////////
+
+// Find scopes returns the required scope rules to return in www-authenticate header
+func findRequiredScopes(rules []v1.Rule) []string {
+	for _, r := range rules {
+		if r.Claim == scope {
+			return r.Value
+		}
+	}
+	return nil
+}
 
 // validateSignature parses the given token and verifies the ExpiresAt, NotBefore, and signature
 func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
@@ -159,6 +170,9 @@ func validateClaimMatchesAll(name string, claims map[string]struct{}, expected [
 	if len(expected) == 0 {
 		return fmt.Errorf("token validation error - expected claim `%s` to match all of: %s, but is empty", name, expected)
 	}
+	if len(claims) == 0 {
+		return fmt.Errorf("token validation error - expected claim `%s` does not exist - rule requires: %s", name, expected)
+	}
 	for _, c := range expected {
 		if _, ok := claims[c]; !ok {
 			return fmt.Errorf("token validation error - expected claim `%s` to match all of: %s", name, expected)
@@ -184,34 +198,21 @@ func convertClaimType(value interface{}) (map[string]struct{}, error) {
 	case bool:
 		m[strconv.FormatBool(t)] = struct{}{}
 		return m, nil
-	case []bool:
-		for _, v := range t {
-			m[strconv.FormatBool(v)] = struct{}{}
-		}
-		return m, nil
-	case int:
-		m[string(t)] = struct{}{}
-		return m, nil
-	case []int:
-		for _, v := range t {
-			m[string(v)] = struct{}{}
-		}
+	case float64:
+		m[strconv.FormatFloat(t, 'f', 0, 64)] = struct{}{}
 		return m, nil
 	case string:
 		for _, v := range strings.Split(t, " ") {
 			m[v] = struct{}{}
 		}
 		return m, nil
-	case []string:
-
-		return m, nil
 	case []interface{}:
 		for _, v := range t {
 			switch s2 := v.(type) {
 			case string:
 				m[s2] = struct{}{}
-			case int:
-				m[string(s2)] = struct{}{}
+			case float64:
+				m[strconv.FormatFloat(s2, 'f', 0, 64)] = struct{}{}
 			case bool:
 				m[strconv.FormatBool(s2)] = struct{}{}
 			default:
