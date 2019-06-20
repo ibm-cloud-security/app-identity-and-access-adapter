@@ -11,7 +11,10 @@ import (
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
 	v1.PathPolicy
+	// KeySet is used on JWT flows
 	KeySet keyset.KeySet
+	// Client is used on OIDC flows
 	Client client.Client
-	Type   policy.Type
+	// Type the policy
+	Type policy.Type
 }
