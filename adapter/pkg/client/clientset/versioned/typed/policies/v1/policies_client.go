@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,16 +21,14 @@ package v1
 import (
 	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/scheme"
-
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
 type AppidV1Interface interface {
 	RESTClient() rest.Interface
-	JwtPoliciesGetter
-	OidcClientsGetter
-	OidcPoliciesGetter
+	JwtConfigsGetter
+	OidcConfigsGetter
+	PoliciesGetter
 }
 
 // AppidV1Client is used to interact with features provided by the appid.cloud.ibm.com group.
@@ -38,16 +36,16 @@ type AppidV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *AppidV1Client) JwtPolicies(namespace string) JwtPolicyInterface {
-	return newJwtPolicies(c, namespace)
+func (c *AppidV1Client) JwtConfigs(namespace string) JwtConfigInterface {
+	return newJwtConfigs(c, namespace)
 }
 
-func (c *AppidV1Client) OidcClients(namespace string) OidcClientInterface {
-	return newOidcClients(c, namespace)
+func (c *AppidV1Client) OidcConfigs(namespace string) OidcConfigInterface {
+	return newOidcConfigs(c, namespace)
 }
 
-func (c *AppidV1Client) OidcPolicies(namespace string) OidcPolicyInterface {
-	return newOidcPolicies(c, namespace)
+func (c *AppidV1Client) Policies(namespace string) PolicyInterface {
+	return newPolicies(c, namespace)
 }
 
 // NewForConfig creates a new AppidV1Client for the given config.
@@ -82,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 	gv := v1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

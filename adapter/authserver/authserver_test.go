@@ -31,7 +31,7 @@ func TestAuthServerNew(t *testing.T) {
 
 	server := New(s.URL)
 	assert.NotNil(t, server)
-	remoteServer := server.(*RemoteServer)
+	remoteServer := server.(*RemoteService)
 	assert.NotNil(t, remoteServer.httpclient)
 	assert.True(t, remoteServer.initialized)
 	assert.Equal(t, publicKeyURL, server.KeySet().PublicKeyURL())
@@ -104,7 +104,7 @@ func TestInitialize(t *testing.T) {
 				w.Write([]byte(test.response))
 			})
 			s := httptest.NewServer(h)
-			server := &RemoteServer{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			server := &RemoteService{discoveryURL: s.URL, httpclient: &networking.HTTPClient{Client: s.Client()}}
 			err := server.initialize()
 			if test.statusCode != 200 {
 				if err == nil {
@@ -123,42 +123,86 @@ func TestInitialize(t *testing.T) {
 func TestGetTokens(t *testing.T) {
 
 	tests := []struct {
+		refresh    string
+		code       string
+		authMethod string
 		statusCode int
 		response   string
 		err        error
 	}{
 		{
+			"",
+			"authcode",
+			"client_post_basic",
 			400,
-			"{}",
-			errors.New("status code: 400"),
+			"{\"error\":\"bad request\"}",
+			errors.New("bad request"),
 		},
 		{
+			"",
+			"authcode",
+			"client_post_basic",
 			200,
 			"{\n  \"access_token\" : \"2YotnFZFEjr1zCsicMWpAA\",\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
 			nil,
 		},
 		{
+			"",
+			"authcode",
+			"client_post_basic",
 			200,
 			"{\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
 			errors.New("invalid token endpoint response: access_token does not exist"),
 		},
+		{
+			"refresh",
+			"",
+			"client_post_basic",
+			200,
+			"{\n  \"access_token\" : \"2YotnFZFEjr1zCsicMWpAA\",\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
+			nil,
+		},
+		{
+			"",
+			"123-567",
+			"client_secret_post",
+			200,
+			"{\n  \"access_token\" : \"2YotnFZFEjr1zCsicMWpAA\",\n  \"token_type\"   : \"bearer\",\n  \"expires_in\"   : 3600,\n  \"scope\"        : \"openid email profile app:read app:write\",\n  \"id_token\"     : \"eyJraWQiOiIxZTlnZGs3IiwiYWxnIjoiUl...\"\n}",
+			nil,
+		},
+		{
+			"",
+			"123-567",
+			"client_secret_post",
+			500,
+			"{\"error\": \"invalid_token\"}",
+			errors.New("invalid_token"),
+		},
 	}
 	for _, ts := range tests {
-		test := ts // When using parallel sub tests we need a local scope
+		test := ts
 		t.Run("TokenResponse", func(t2 *testing.T) {
 			t2.Parallel()
 			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if test.authMethod == "client_secret_post" {
+					assert.Equal(t2, "clientID", req.PostFormValue("client_id"))
+					assert.Equal(t2, "secret", req.PostFormValue("client_secret"))
+				}
+				if test.refresh != "" {
+					assert.Equal(t, test.refresh, req.PostFormValue("refresh_token"))
+					assert.Equal(t2, "refresh_token", req.PostFormValue("grant_type"))
+				}
+				if test.code != "" {
+					assert.Equal(t2, "authorization_code", req.PostFormValue("grant_type"))
+					assert.Equal(t, test.code, req.PostFormValue("code"))
+				}
 				w.WriteHeader(test.statusCode)
 				w.Write([]byte(test.response))
 			})
 			s := httptest.NewServer(h)
-			server := &RemoteServer{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
-			_, err := server.GetTokens("client_post_basic", "clientID", "secret", "authcode", "redirect", "")
-			if test.statusCode != 200 {
-				if err == nil {
-					t2.FailNow()
-				}
-			} else if test.err != nil {
+			server := &RemoteService{DiscoveryConfig: DiscoveryConfig{TokenURL: s.URL}, initialized: true, httpclient: &networking.HTTPClient{Client: s.Client()}}
+			_, err := server.GetTokens(test.authMethod, "clientID", "secret", test.code, "redirect", test.refresh)
+			if test.err != nil {
 				require.EqualError(t2, err, test.err.Error())
 			} else if err != nil {
 				t2.FailNow()

@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// JwtPolicies returns a JwtPolicyInformer.
-	JwtPolicies() JwtPolicyInformer
-	// OidcClients returns a OidcClientInformer.
-	OidcClients() OidcClientInformer
-	// OidcPolicies returns a OidcPolicyInformer.
-	OidcPolicies() OidcPolicyInformer
+	// JwtConfigs returns a JwtConfigInformer.
+	JwtConfigs() JwtConfigInformer
+	// OidcConfigs returns a OidcConfigInformer.
+	OidcConfigs() OidcConfigInformer
+	// Policies returns a PolicyInformer.
+	Policies() PolicyInformer
 }
 
 type version struct {
@@ -43,17 +43,17 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// JwtPolicies returns a JwtPolicyInformer.
-func (v *version) JwtPolicies() JwtPolicyInformer {
-	return &jwtPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// JwtConfigs returns a JwtConfigInformer.
+func (v *version) JwtConfigs() JwtConfigInformer {
+	return &jwtConfigInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// OidcClients returns a OidcClientInformer.
-func (v *version) OidcClients() OidcClientInformer {
-	return &oidcClientInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// OidcConfigs returns a OidcConfigInformer.
+func (v *version) OidcConfigs() OidcConfigInformer {
+	return &oidcConfigInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// OidcPolicies returns a OidcPolicyInformer.
-func (v *version) OidcPolicies() OidcPolicyInformer {
-	return &oidcPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// Policies returns a PolicyInformer.
+func (v *version) Policies() PolicyInformer {
+	return &policyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

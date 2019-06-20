@@ -1,19 +1,21 @@
 package apistrategy
 
 import (
-	"go.uber.org/zap"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	adapter "istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 )
 
 const (
@@ -38,7 +40,7 @@ func New() strategy.Strategy {
 ////////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
-func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	// Parse Authorization Header
 	tokens, err := getAuthTokensFromRequest(r)
@@ -125,7 +127,7 @@ func buildErrorResponse(err *errors.OAuthError) *authnz.HandleAuthnZResponse {
 		Result: &adapter.CheckResult{
 			Status: rpc.Status{
 				Code:    int32(rpc.UNAUTHENTICATED), // Response tells Mixer to reject request
-				Message: err.Error(),
+				Message: err.Msg,
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code:    err.HTTPCode(), // Response Mixer remaps on request
 					Body:    err.ShortDescription(),

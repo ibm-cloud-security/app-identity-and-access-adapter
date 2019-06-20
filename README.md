@@ -160,17 +160,17 @@ Register application endpoints within a `Policy` CRD to validate incoming reques
         namespace: sample-namespace
     spec:
         targets:
-        - service: svc-service-name-123
-            paths: 
+        - service: svc-service-name-123
+            paths: 
             - exact: /web
-             method: GET
-             policies: 
+             method: GET
+             policies: 
             - type: oidc
-               config: <name-OidcConfig-resource>
+               config: <name-OidcConfig-resource>
             - prefix: /api
             policies:
             - type: jwt
-               config: <name-JwtConfig-resource>
+               config: <name-JwtConfig-resource>
     ```
 
     | Service Object | Type | Required | Description   |

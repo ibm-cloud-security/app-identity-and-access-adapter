@@ -2,14 +2,16 @@ package strategy
 
 import (
 	"fmt"
-	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+
 	policy "istio.io/api/policy/v1beta1"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 )
 
 // Strategy defines the entry point to an authentication handler
 type Strategy interface {
-	HandleAuthnZRequest(*authnz.HandleAuthnZRequest, *policyAction.Action) (*authnz.HandleAuthnZResponse, error)
+	HandleAuthnZRequest(*authnz.HandleAuthnZRequest, *engine.Action) (*authnz.HandleAuthnZResponse, error)
 }
 
 // DecodeValueMap decodes gRPC values into string interface

@@ -1,0 +1,27 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind:       Policy
+metadata:
+  name:      samplepolicy
+  namespace: sample-app
+spec:
+  targets:
+    -
+      serviceName: svc-sample-app
+      paths:
+        - exact: /web/home
+          method: ALL
+          policies:
+            - policyType: oidc
+              config: sampleoidcconfig
+              redirectUri: https://myapp.com/home
+              rules:
+                - claim: scope
+                  match: ALL
+                  value:
+                    - appid-default
+        - prefix: /
+          method: ALL
+          policies:
+            -
+              policyType: jwt
+              config: samplejwtconfig

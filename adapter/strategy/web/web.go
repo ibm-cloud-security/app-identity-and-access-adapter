@@ -2,31 +2,34 @@ package webstrategy
 
 import (
 	"errors"
-	"k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
-	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"go.uber.org/zap"
 	"gopkg.in/mgo.v2/bson"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
+	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
+	policiesV1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 )
 
 const (
@@ -54,9 +57,15 @@ type WebStrategy struct {
 	kubeClient kubernetes.Interface
 
 	// mutex protects all fields below
-	mutex        *sync.Mutex
-	secureCookie *securecookie.SecureCookie
-	tokenCache   *sync.Map
+	mutex      *sync.Mutex
+	encrpytor  Encryptor
+	tokenCache *sync.Map
+}
+
+// Encryptor signs and encrypts values. Used for cookie encryption
+type Encryptor interface {
+	Encode(name string, value interface{}) (string, error)
+	Decode(name, value string, dst interface{}) error
 }
 
 // OidcCookie represents a token stored in browser
@@ -86,7 +95,7 @@ func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy 
 }
 
 // HandleAuthnZRequest acts as the entry point to an OAuth 2.0 / OIDC flow. It processes OAuth 2.0 / OIDC requests.
-func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	if strings.HasSuffix(r.Instance.Request.Path, logoutEndpoint) {
 		zap.L().Debug("Received logout request.", zap.String("client_name", action.Client.Name()))
 		return w.handleLogout(r, action)
@@ -116,7 +125,7 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 
 // isAuthorized checks for the existence of valid cookies
 // returns an error in the event of an Internal Server Error
-func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	if action.Client == nil {
 		zap.L().Warn("Internal server error: OIDC client not provided")
 		return nil, errors.New("invalid OIDC configuration")
@@ -151,11 +160,11 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
 			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
 			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
-		} else {
-			zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
-			w.tokenCache.Delete(sessionCookie.Value)
-			return nil, nil
 		}
+
+		zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
+		w.tokenCache.Delete(sessionCookie.Value)
+		return nil, nil
 	}
 
 	zap.L().Debug("User is currently authenticated")
@@ -170,7 +179,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *policyAction.Action) 
 }
 
 // handleRefreshTokens attempts to update an expired session using the refresh token flow
-func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.TokenResponse, c client.Client, rules []policyAction.Rule) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.TokenResponse, c client.Client, rules []policiesV1.Rule) (*authnz.HandleAuthnZResponse, error) {
 	if session.RefreshToken == "" {
 		zap.L().Debug("Refresh token not provided", zap.String("client_name", c.Name()))
 		return nil, nil
@@ -210,7 +219,7 @@ func (w *WebStrategy) handleErrorCallback(err error) (*authnz.HandleAuthnZRespon
 }
 
 // handleLogout processes logout requests by deleting session cookies and returning to the base path
-func (w *WebStrategy) handleLogout(r *authnz.HandleAuthnZRequest, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleLogout(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	header := http.Header{}
 	header.Add("Cookie", r.Instance.Request.Headers.Cookies)
 	request := http.Request{Header: header}
@@ -252,7 +261,7 @@ func (w *WebStrategy) handleLogout(path string, action *engine.Action) (*authnz.
 */
 
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
-func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
 	err := w.validateState(request, action.Client)
 	if err != nil {
@@ -281,11 +290,15 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 
 	zap.L().Debug("OIDC callback: created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))
 
+	if action.RedirectUri != "" {
+		redirectURI = action.RedirectUri
+	}
+
 	return buildSuccessRedirectResponse(redirectURI, []*http.Cookie{cookie}), nil
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
-func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *policyAction.Action) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
 	/// Build and store session state
 	state, stateCookie, err := w.buildStateParam(action.Client)
@@ -313,16 +326,16 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 
 // getSecureCookie retrieves the SecureCookie encryption struct in a
 // thread safe manner.
-func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
+func (w *WebStrategy) getSecureCookie() (Encryptor, error) {
 	// Allow all threads to check if instance already exists
-	if w.secureCookie != nil {
-		return w.secureCookie, nil
+	if w.encrpytor != nil {
+		return w.encrpytor, nil
 	}
 	w.mutex.Lock()
 	// Once this thread has the lock check again to see if it had been set while waiting
-	if w.secureCookie != nil {
+	if w.encrpytor != nil {
 		w.mutex.Unlock()
-		return w.secureCookie, nil
+		return w.encrpytor, nil
 	}
 	// We need to generate a new key set
 	sc, err := w.generateSecureCookie()
@@ -332,7 +345,7 @@ func (w *WebStrategy) getSecureCookie() (*securecookie.SecureCookie, error) {
 
 // generateSecureCookie instantiates a SecureCookie instance using either the preconfigured
 // key secret cookie or a dynamically generated pair.
-func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error) {
+func (w *WebStrategy) generateSecureCookie() (Encryptor, error) {
 	var secret interface{}
 	// Check if key set was already configured. This should occur during helm install
 	secret, err := networking.Retry(3, 1, func() (interface{}, error) {
@@ -350,8 +363,8 @@ func (w *WebStrategy) generateSecureCookie() (*securecookie.SecureCookie, error)
 
 	if s, ok := secret.(*v1.Secret); ok {
 		zap.S().Infof("Synced secret: %v", defaultKeySecret)
-		w.secureCookie = securecookie.New(s.Data[hashKey], s.Data[blockKey])
-		return w.secureCookie, nil
+		w.encrpytor = securecookie.New(s.Data[hashKey], s.Data[blockKey])
+		return w.encrpytor, nil
 	} else {
 		zap.S().Error("Could not convert interface to secret")
 		return nil, errors.New("could not sync signing / encryption secrets")
@@ -484,9 +497,10 @@ func (w *WebStrategy) validateState(request *authnz.RequestMsg, c client.Client)
 		"Cookie": {request.Headers.Cookies},
 	}
 	r := http.Request{Header: header}
-	oidcStateCookie, err := r.Cookie(buildTokenCookieName(sessionCookie, c))
+	name := buildTokenCookieName(sessionCookie, c)
+	oidcStateCookie, err := r.Cookie(name)
 	if err != nil {
-		return err
+		return errors.New("state parameter not provided")
 	}
 
 	// Parse encrypted state cookie

@@ -1,15 +1,18 @@
 package apistrategy
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"testing"
 
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+
 	"github.com/gogo/googleapis/google/rpc"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 )
 
 func TestNew(t *testing.T) {
@@ -20,7 +23,7 @@ func TestNew(t *testing.T) {
 func TestHandleAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req           *authnz.HandleAuthnZRequest
-		action        *policy.Action
+		action        *engine.Action
 		message       string
 		code          int32
 		invalidToken  string
@@ -28,7 +31,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 	}{
 		{
 			generateAuthRequest(""),
-			&policy.Action{},
+			&engine.Action{},
 			"authorization header not provided",
 			int32(16),
 			"",
@@ -36,7 +39,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("bearer"),
-			&policy.Action{},
+			&engine.Action{},
 			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 			int32(16),
 			"",
@@ -44,7 +47,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			&policy.Action{},
+			&engine.Action{},
 			"invalid access token",
 			int32(16),
 			"access",
@@ -52,7 +55,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access"),
-			&policy.Action{},
+			&engine.Action{},
 			"",
 			int32(0),
 			"",
@@ -60,7 +63,7 @@ func TestHandleAuthorizationRequest(t *testing.T) {
 		},
 		{
 			generateAuthRequest("Bearer access id"),
-			&policy.Action{},
+			&engine.Action{},
 			"invalid ID token",
 			int32(16),
 			"id",
@@ -101,22 +104,22 @@ func TestParseRequest(t *testing.T) {
 				},
 			},
 			true,
-			"authorization header not provided",
+			"invalid_token: authorization header not provided",
 		},
 		{
 			generateAuthRequest(""),
 			true,
-			"authorization header not provided",
+			"invalid_token: authorization header not provided",
 		},
 		{
 			generateAuthRequest("bearer"),
 			true,
-			"authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
+			"invalid_token: authorization header malformed - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
 			generateAuthRequest("b access id"),
 			true,
-			"unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
+			"invalid_token: unsupported authorization header format - expected 'Bearer <access_token> <optional id_token>'",
 		},
 		{
 			generateAuthRequest("Bearer access id"),
@@ -130,8 +133,10 @@ func TestParseRequest(t *testing.T) {
 		},
 	}
 
-	for _, e := range tests {
+	for _, test := range tests {
+		e := test
 		t.Run("Parsing Test", func(st *testing.T) {
+			st.Parallel()
 			tokens, err := getAuthTokensFromRequest(e.r)
 			if !e.expectErr && tokens != nil {
 				assert.Equal(st, "access", tokens.Access)
@@ -190,7 +195,7 @@ type MockValidator struct {
 	err          *errors.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []v1.Rule) *errors.OAuthError {
 	if tkn == v.invalidToken {
 		return v.err
 	}

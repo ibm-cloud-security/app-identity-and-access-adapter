@@ -1,0 +1,30 @@
+apiVersion: "appid.cloud.ibm.com/v1"
+kind: Policy
+metadata:
+  name: {{.Name}}
+spec:
+  targets:
+    {{- range .Spec.Target }}
+    -
+      serviceName: {{.ServiceName}}
+      paths:  {{ range .Paths }}
+        -
+          {{- if ne .Exact ""}}
+          exact: {{.Exact}}
+          {{- end }}
+          {{- if ne .Prefix ""}}
+          prefix: {{.Prefix}}
+          {{- end }}
+          {{- if ne .Method ""}}
+          method: {{.Method}}
+          {{- end }}
+          policies: {{ range .Policies }}
+            -
+              policyType:  {{ .PolicyType }}
+              config: {{ .Config }}
+              {{- if ne .RedirectUri ""}}
+              redirectUri: {{ .RedirectUri }}
+              {{- end }}
+            {{- end }}
+        {{- end }}
+    {{- end }}

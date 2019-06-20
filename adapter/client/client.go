@@ -2,9 +2,11 @@ package client
 
 import (
 	"errors"
+
+	"go.uber.org/zap"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"go.uber.org/zap"
 )
 
 // Client encapsulates an authn/z client object
@@ -12,14 +14,14 @@ type Client interface {
 	Name() string
 	ID() string
 	Secret() string
-	AuthorizationServer() authserver.AuthorizationServer
+	AuthorizationServer() authserver.AuthorizationServerService
 	ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error)
 	RefreshToken(refreshToken string) (*authserver.TokenResponse, error)
 }
 
 type remoteClient struct {
-	v1.OidcClientSpec
-	authServer authserver.AuthorizationServer
+	v1.OidcConfigSpec
+	authServer authserver.AuthorizationServerService
 }
 
 func (c *remoteClient) Name() string {
@@ -34,7 +36,7 @@ func (c *remoteClient) Secret() string {
 	return c.ClientSecret
 }
 
-func (c *remoteClient) AuthorizationServer() authserver.AuthorizationServer {
+func (c *remoteClient) AuthorizationServer() authserver.AuthorizationServerService {
 	return c.authServer
 }
 
@@ -55,9 +57,9 @@ func (c *remoteClient) RefreshToken(refreshToken string) (*authserver.TokenRespo
 }
 
 // New creates a new client
-func New(cfg v1.OidcClientSpec, s authserver.AuthorizationServer) Client {
+func New(cfg v1.OidcConfigSpec, s authserver.AuthorizationServerService) Client {
 	return &remoteClient{
-		OidcClientSpec: cfg,
+		OidcConfigSpec: cfg,
 		authServer:     s,
 	}
 }

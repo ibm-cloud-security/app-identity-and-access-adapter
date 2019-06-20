@@ -8,7 +8,7 @@ type TokenResponse struct {
 }
 
 type Client struct {
-	Server        authserver.AuthorizationServer
+	Server        authserver.AuthorizationServerService
 	TokenResponse *TokenResponse
 	ClientName    string
 	ClientID      string
@@ -37,7 +37,7 @@ func (m *Client) Secret() string {
 	return m.ClientSecret
 }
 
-func (m *Client) AuthorizationServer() authserver.AuthorizationServer {
+func (m *Client) AuthorizationServer() authserver.AuthorizationServerService {
 	return m.Server
 }
 

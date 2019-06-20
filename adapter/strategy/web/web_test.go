@@ -2,36 +2,47 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/gogo/protobuf/types"
-	"github.com/gorilla/securecookie"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/types"
+	"github.com/gorilla/securecookie"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
+
+const (
+	defaultHost     = "tests.io"
+	defaultBasePath = "/api"
+	defaultState    = "session"
+)
+
+var defaultHashKey = securecookie.GenerateRandomKey(16)
+var defaultBlockKey = securecookie.GenerateRandomKey(16)
+var defaultSecureCookie = securecookie.New(defaultHashKey, defaultBlockKey)
 
 func TestNew(t *testing.T) {
 	strategy := New(&config.Config{}, k8sfake.NewSimpleClientset())
 	assert.NotNil(t, strategy)
-	assert.NotNil(t, strategy.(*WebStrategy).secureCookie)
+	assert.NotNil(t, strategy.(*WebStrategy).encrpytor)
 }
 
 func TestHandleNewAuthorizationRequest(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		directResponse *v1beta1.DirectHttpResponse
 		message        string
 		code           int32
@@ -39,7 +50,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 	}{
 		{ // Invalid Action Configuration
 			generateAuthnzRequest("", "", "", "", ""),
-			&policy.Action{},
+			&engine.Action{},
 			nil,
 			"invalid OIDC configuration",
 			int32(16),
@@ -47,12 +58,11 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 		},
 		{ // New Authentication
 			generateAuthnzRequest("", "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(nil),
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
-				Body:    "",
 				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
@@ -64,27 +74,16 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 	for _, test := range tests {
 		t.Run("redirect uri test", func(t *testing.T) {
 			api := WebStrategy{
-				secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
-				tokenUtil:    MockValidator{},
+				encrpytor: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
+				tokenUtil: MockValidator{},
 			}
-			r, err := api.HandleAuthnZRequest(test.req, test.action)
+			r, errs := api.HandleAuthnZRequest(test.req, test.action)
 			if test.err != nil {
-				assert.EqualError(t, err, test.err.Error())
+				assert.EqualError(t, errs, test.err.Error())
 			} else {
 				assert.Equal(t, test.code, r.Result.Status.Code)
 				assert.Equal(t, test.message, r.Result.Status.Message)
-				response := &v1beta1.DirectHttpResponse{}
-				for _, detail := range r.Result.Status.Details {
-					if types.UnmarshalAny(detail, response) != nil {
-						continue
-					}
-					assert.Equal(t, test.directResponse.Code, response.Code)
-					if !strings.HasPrefix(response.Headers["location"], test.directResponse.Headers["location"]) {
-						assert.Fail(t, "incorrect location header")
-					}
-					assert.NotNil(t, test.directResponse.Headers["Set-Cookie"])
-					assert.Equal(t, test.directResponse.Body, response.Body)
-				}
+				compareDirectHttpResponses(t, r, test.directResponse)
 			}
 		})
 	}
@@ -93,7 +92,7 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 func TestRefreshTokenFlow(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		sessionId      string
 		session        *authserver.TokenResponse
 		directResponse *v1beta1.DirectHttpResponse
@@ -103,7 +102,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 	}{
 		{ // successful refresh flow
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(&fake.TokenResponse{
 					Res: &authserver.TokenResponse{
 						IdentityToken: "identity",
@@ -112,7 +111,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 					},
 				}),
 			},
-			"session",
+			defaultState,
 			&authserver.TokenResponse{
 				IdentityToken: "Token is expired",
 				RefreshToken:  "refresh",
@@ -125,12 +124,10 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token request fails
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
-				Client: fake.NewClient(&fake.TokenResponse{
-					Err: errors.New("could not retrieve tokens"),
-				}),
+			&engine.Action{
+				Client: fake.NewClient(defaultFailureTokenResponse("could not retrieve tokens")),
 			},
-			"session",
+			defaultState,
 			&authserver.TokenResponse{
 				IdentityToken: "Token is expired",
 				RefreshToken:  "refresh",
@@ -138,7 +135,6 @@ func TestRefreshTokenFlow(t *testing.T) {
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
-				Body:    "",
 				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
@@ -147,18 +143,16 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token is empty
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
+			&engine.Action{
 				Client: fake.NewClient(nil),
 			},
-			"session",
+			defaultState,
 			&authserver.TokenResponse{
 				IdentityToken: "Token is expired",
-				RefreshToken:  "",
 				ExpiresIn:     10,
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
-				Body:    "",
 				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
@@ -167,12 +161,10 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 		{ // Refresh token request fails
 			generateAuthnzRequest(createCookie(), "", "", "", ""),
-			&policy.Action{
-				Client: fake.NewClient(&fake.TokenResponse{
-					Err: errors.New("could not retrieve tokens"),
-				}),
+			&engine.Action{
+				Client: fake.NewClient(defaultFailureTokenResponse("could not retrieve tokens")),
 			},
-			"session",
+			defaultState,
 			&authserver.TokenResponse{
 				IdentityToken: "Token is expired",
 				RefreshToken:  "refresh",
@@ -180,7 +172,6 @@ func TestRefreshTokenFlow(t *testing.T) {
 			},
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
-				Body:    "",
 				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
 			},
 			"Redirecting to identity provider",
@@ -189,51 +180,42 @@ func TestRefreshTokenFlow(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		api := WebStrategy{
-			tokenCache:   new(sync.Map),
-			secureCookie: securecookie.New(securecookie.GenerateRandomKey(16), securecookie.GenerateRandomKey(16)),
-			tokenUtil: MockValidator{
-				validate: func(tkn string) *err.OAuthError {
-					if !(tkn == "access" || tkn == "identity") {
-						return &err.OAuthError{
-							Msg: tkn,
+	for _, ts := range tests {
+		test := ts
+		t.Run("refresh", func(t *testing.T) {
+			t.Parallel()
+			api := WebStrategy{
+				tokenCache: new(sync.Map),
+				encrpytor:  defaultSecureCookie,
+				tokenUtil: MockValidator{
+					validate: func(tkn string) *err.OAuthError {
+						if !(tkn == "access" || tkn == "identity") {
+							return &err.OAuthError{
+								Msg: tkn,
+							}
 						}
-					}
-					return nil
+						return nil
+					},
 				},
-			},
-		}
-
-		api.tokenCache.Store(test.sessionId, test.session)
-		r, err := api.HandleAuthnZRequest(test.req, test.action)
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
-		} else {
-			assert.Equal(t, test.code, r.Result.Status.Code)
-			assert.Equal(t, test.message, r.Result.Status.Message)
-			if test.directResponse != nil {
-				response := &v1beta1.DirectHttpResponse{}
-				for _, detail := range r.Result.Status.Details {
-					if types.UnmarshalAny(detail, response) != nil {
-						continue
-					}
-					assert.Equal(t, test.directResponse.Code, response.Code)
-					if !strings.HasPrefix(response.Headers["location"], test.directResponse.Headers["location"]) {
-						assert.Fail(t, "incorrect location header")
-					}
-					assert.NotNil(t, test.directResponse.Headers["Set-Cookie"])
-					assert.Equal(t, test.directResponse.Body, response.Body)
-				}
 			}
-		}
+
+			api.tokenCache.Store(test.sessionId, test.session)
+			r, errs := api.HandleAuthnZRequest(test.req, test.action)
+			if test.err != nil {
+				assert.EqualError(t, errs, test.err.Error())
+			} else {
+				assert.Equal(t, test.code, r.Result.Status.Code)
+				assert.Equal(t, test.message, r.Result.Status.Message)
+				compareDirectHttpResponses(t, r, test.directResponse)
+			}
+		})
 	}
 }
 
 func TestErrCallback(t *testing.T) {
 	var tests = []struct {
 		req            *authnz.HandleAuthnZRequest
-		action         *policy.Action
+		action         *engine.Action
 		directResponse *v1beta1.DirectHttpResponse
 		message        string
 		code           int32
@@ -241,7 +223,7 @@ func TestErrCallback(t *testing.T) {
 	}{
 		{ // Err callback with cookies
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
-			&policy.Action{
+			&engine.Action{
 				Client: &fake.Client{
 					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
@@ -253,7 +235,7 @@ func TestErrCallback(t *testing.T) {
 		},
 		{ // Err callback
 			generateAuthnzRequest("", "", "An err occurred", callbackEndpoint, ""),
-			&policy.Action{
+			&engine.Action{
 				Client: &fake.Client{
 					Server: &fake.AuthServer{Keys: &fake.KeySet{}},
 				},
@@ -280,60 +262,154 @@ func TestErrCallback(t *testing.T) {
 }
 
 func TestCodeCallback(t *testing.T) {
-	var tests = []struct {
-		req            *authnz.HandleAuthnZRequest
-		directResponse *v1beta1.DirectHttpResponse
-		message        string
-		code           int32
-		err            error
-		tokenResponse  *fake.TokenResponse
-	}{
-		{ // missing state
-			generateAuthnzRequest("", "mycode", "", callbackEndpoint, ""),
-			nil,
-			"http: named cookie not present",
-			int32(16),
-			nil,
-			&fake.TokenResponse{
-				Err: errors.New("http: named cookie not present"),
-			},
-		},
-		{ // missing state
-			generateAuthnzRequest("", "mycode", "", callbackEndpoint, "hello"),
-			nil,
-			"http: named cookie not present",
-			int32(16),
-			nil,
-			&fake.TokenResponse{
-				Err: errors.New("http: named cookie not present"),
-			},
+	// Test strategy
+	api := New(config.NewConfig(), k8sfake.NewSimpleClientset()).(*WebStrategy)
+	api.encrpytor = defaultSecureCookie
+	api.tokenUtil = MockValidator{
+		func(s string) *err.OAuthError {
+			if s == "invalid_token" {
+				return &err.OAuthError{
+					Code: err.InvalidToken,
+				}
+			}
+			return nil
 		},
 	}
 
-	for _, test := range tests {
-		// Test action
-		action := &policy.Action{
-			Client: &fake.Client{
-				TokenResponse: test.tokenResponse,
-				Server: &fake.AuthServer{
-					Keys: &fake.KeySet{},
+	encryptCookie := func(c *OidcCookie) string {
+		cookie, _ := api.generateEncryptedCookie("oidc-cookie-id", c)
+		return cookie.String()
+	}
+
+	var tests = []struct {
+		redirectUri    string
+		tokenRes       *fake.TokenResponse
+		req            *authnz.HandleAuthnZRequest
+		directResponse *v1beta1.DirectHttpResponse
+		message        string
+		err            error
+	}{
+		{ // missing state cookie
+			"",
+			nil,
+			generateAuthnzRequest("", "code", "", callbackEndpoint, ""),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"state parameter not provided",
+			nil,
+		},
+		{ // invalid state - missing
+			"",
+			nil,
+			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: ""}), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"missing state parameter",
+			nil,
+		},
+		{ // invalid state - missing expiration
+			"",
+			nil,
+			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: defaultState}), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"missing state parameter",
+			nil,
+		},
+		{ // invalid state - mismatch
+			"",
+			nil,
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, "session2"),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"invalid state parameter",
+			nil,
+		},
+		{ // state not returned from IdP
+			"",
+			nil,
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, ""),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"missing state parameter from callback",
+			nil,
+		},
+		{ // could not exchange grant code
+			"",
+			defaultFailureTokenResponse("problem getting tokens"),
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"problem getting tokens",
+			nil,
+		},
+		{ // invalid tokens
+			"",
+			&fake.TokenResponse{
+				Res: &authserver.TokenResponse{
+					IdentityToken: "invalid_token",
 				},
 			},
-		}
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 401,
+			},
+			"invalid_token",
+			nil,
+		},
+		{ // success
+			"",
+			defaultSuccessTokenResponse(),
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 302,
+				Headers: map[string]string{
+					"location": "https://" + defaultHost + defaultBasePath,
+					setCookie:  "oidc-test-id",
+				},
+			},
+			"Successfully authenticated : redirecting to original URL",
+			nil,
+		},
+		{ // success w/new redirect
+			"https://" + defaultHost + "/another_path",
+			defaultSuccessTokenResponse(),
+			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			&v1beta1.DirectHttpResponse{
+				Code: 302,
+				Headers: map[string]string{
+					"location": "https://" + defaultHost + "/another_path",
+					setCookie:  "oidc-test-id",
+				},
+			},
+			"Successfully authenticated : redirecting to original URL",
+			nil,
+		},
+	}
 
-		// Test strategy
-		api := WebStrategy{
-			tokenUtil: MockValidator{},
-		}
+	for _, ts := range tests {
+		test := ts
+		t.Run("callback", func(t *testing.T) {
+			t.Parallel()
+			action := &engine.Action{}
+			action.Client = fake.NewClient(test.tokenRes)
+			action.RedirectUri = test.redirectUri
 
-		// Test
-		r, err := api.HandleAuthnZRequest(test.req, action)
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
-		} else {
-			assert.Equal(t, test.code, r.Result.Status.Code)
-			assert.Equal(t, test.message, r.Result.Status.Message)
-		}
+			r, errs := api.HandleAuthnZRequest(test.req, action)
+			if test.err != nil {
+				assert.EqualError(t, errs, test.err.Error())
+			} else {
+				assert.Equal(t, int32(16), r.Result.Status.Code)
+				assert.Equal(t, test.message, r.Result.Status.Message)
+				compareDirectHttpResponses(t, r, test.directResponse)
+			}
+		})
 	}
 }
 
@@ -357,26 +433,64 @@ func TestLogout(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		action := &policy.Action{
-			Client: &fake.Client{
-				TokenResponse: test.tokenResponse,
-				Server: &fake.AuthServer{
-					Keys: &fake.KeySet{},
-				},
-			},
+		action := &engine.Action{
+			Client: fake.NewClient(test.tokenResponse),
 		}
 
 		api := WebStrategy{
 			tokenUtil: MockValidator{},
 		}
 
-		r, err := api.HandleAuthnZRequest(test.req, action)
+		r, errs := api.HandleAuthnZRequest(test.req, action)
 		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error())
+			assert.EqualError(t, errs, test.err.Error())
 		} else {
 			assert.Equal(t, test.code, r.Result.Status.Code)
 			assert.Equal(t, test.message, r.Result.Status.Message)
 		}
+	}
+}
+
+func compareDirectHttpResponses(t *testing.T, r *authnz.HandleAuthnZResponse, expected *v1beta1.DirectHttpResponse) {
+	if expected == nil {
+		return
+	}
+	response := &v1beta1.DirectHttpResponse{}
+	for _, detail := range r.Result.Status.Details {
+		if types.UnmarshalAny(detail, response) != nil {
+			continue
+		}
+		assert.Equal(t, expected.Code, response.Code)
+		for key, value := range expected.Headers {
+			if key == setCookie {
+				assert.NotEmpty(t, response.Headers[setCookie])
+				continue
+			}
+			if !strings.HasPrefix(response.Headers[key], value) {
+				assert.Fail(t, "incorrect header value: '"+key+"'\n found: "+value+"\n expected:"+response.Headers[key])
+			}
+		}
+
+		assert.Equal(t, expected.Body, response.Body)
+	}
+}
+func defaultSessionOidcCookie() *OidcCookie {
+	return &OidcCookie{
+		Value:      defaultState,
+		Expiration: time.Now().Add(time.Hour),
+	}
+}
+func defaultSuccessTokenResponse() *fake.TokenResponse {
+	return &fake.TokenResponse{
+		Res: &authserver.TokenResponse{
+			IdentityToken: "identity",
+		},
+	}
+}
+
+func defaultFailureTokenResponse(msg string) *fake.TokenResponse {
+	return &fake.TokenResponse{
+		Err: errors.New(msg),
 	}
 }
 
@@ -385,8 +499,8 @@ func generateAuthnzRequest(cookies string, code string, err string, path string,
 		Instance: &authnz.InstanceMsg{
 			Request: &authnz.RequestMsg{
 				Scheme: "https",
-				Host:   "tests.io",
-				Path:   "/api" + path,
+				Host:   defaultHost,
+				Path:   defaultBasePath + path,
 				Headers: &authnz.HeadersMsg{
 					Cookies: cookies,
 				},
@@ -399,7 +513,7 @@ func generateAuthnzRequest(cookies string, code string, err string, path string,
 			Target: &authnz.TargetMsg{
 				Service:   "service",
 				Namespace: "namespace",
-				Path:      "/api" + path,
+				Path:      defaultBasePath + path,
 				Method:    "GET",
 			},
 		},
@@ -410,7 +524,7 @@ type MockValidator struct {
 	validate func(string) *err.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []v1.Rule) *err.OAuthError {
 	if v.validate == nil {
 		return nil
 	}
@@ -420,7 +534,7 @@ func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rul
 func createCookie() string {
 	c := &http.Cookie{
 		Name:     "oidc-cookie-id",
-		Value:    "session",
+		Value:    defaultState,
 		Path:     "/",
 		Secure:   false, // TODO: replace on release
 		HttpOnly: false,

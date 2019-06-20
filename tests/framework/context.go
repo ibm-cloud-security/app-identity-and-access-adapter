@@ -11,6 +11,13 @@ const (
 	kubeConfig  = "KUBECONFIG"
 )
 
+const (
+	templatesDir       = "../templates"
+	JwtConfigTemplate  = templatesDir + "/jwtconfig.yaml"
+	OidcConfigTemplate = templatesDir + "/oidcconfig.yaml"
+	PolicyTemplate     = templatesDir + "/policy.yaml"
+)
+
 // Env models the kubernetes environment
 type Env struct {
 	ClusterRoot string

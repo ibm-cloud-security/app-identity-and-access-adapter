@@ -1,12 +1,14 @@
 package adapter
 
-/*
 // Disable tests until framework can read kubeconfig
 import (
 	"context"
+	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	"testing"
 
 	"github.com/gogo/googleapis/google/rpc"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -15,7 +17,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	server, err := NewAppIDAdapter("")
+	server, err := NewAppIDAdapter(config.NewConfig())
 	defer server.Close()
 	assert.Nil(t, err)
 	s := server.(*AppidAdapter)
@@ -27,7 +29,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestHandleAuthorization(t *testing.T) {
-	server, err := NewAppIDAdapter("")
+	server, err := NewAppIDAdapter(config.NewConfig())
 	defer server.Close()
 	assert.Nil(t, err)
 	mock := &mockEngine{}
@@ -42,41 +44,65 @@ func TestHandleAuthorization(t *testing.T) {
 		err    error
 	}{
 		{
-			req:    generateAuthRequest(""),
+			req:    &authnz.HandleAuthnZRequest{},
+			status: status.OK,
+			action: &engine.Action{Type: policy.NONE},
+			err:    errors.New("invalid *authnz.HandleAuthnZRequest instance format"),
+		},
+		{
+			req: &authnz.HandleAuthnZRequest{
+				Instance: &authnz.InstanceMsg{
+					Request: &authnz.RequestMsg{},
+					Target:  &authnz.TargetMsg{},
+				},
+			},
+			status: status.OK,
+			action: &engine.Action{Type: policy.NONE},
+			err:    errors.New("invalid *authnz.HandleAuthnZRequest instance format"),
+		},
+		{
+			req:    generateAuthRequest("", "/hello/"),
 			status: status.OK,
 			action: &engine.Action{Type: policy.NONE},
 			err:    nil,
 		},
 		{
-			req:    generateAuthRequest("bearer token1 token2"),
-			status: status.OK,
+			req:    generateAuthRequest("bearer token1 token2", "/"),
+			status: status.New(16),
 			action: &engine.Action{Type: policy.JWT},
 			err:    nil,
 		},
 		{
-			req:    generateAuthRequest(""),
-			status: status.OK,
-			action: &engine.Action{Type: policy.OIDC},
-			err:    nil,
+			req:    generateAuthRequest("", "/"),
+			status: status.New(16),
+			action: &engine.Action{
+				Type:   policy.OIDC,
+				Client: fake.NewClient(nil),
+			},
+			err: nil,
 		},
 		{
-			req:    generateAuthRequest(""),
-			status: status.OK,
+			req:    generateAuthRequest("", "/"),
+			status: status.New(16),
 			action: nil,
 			err:    errors.New(""),
 		},
 	}
 
-	for _, tests := range tests {
-		mock.action = tests.action
-		mock.err = tests.err
-		result, err := s.HandleAuthnZ(context.Background(), tests.req)
-		if tests.err != nil {
-			assert.Equal(t, err, tests.err)
-		} else {
-			assert.Nil(t, err)
-			assert.Equal(t, result.Result.Status, tests.status)
-		}
+	for _, ts := range tests {
+		test := ts
+		t.Run("adapter", func(t *testing.T) {
+			t.Parallel()
+			mock.action = test.action
+			mock.err = test.err
+			result, err := s.HandleAuthnZ(context.Background(), test.req)
+			if test.err != nil {
+				assert.EqualError(t, test.err, err.Error())
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, test.status.Code, result.Result.Status.Code)
+			}
+		})
 	}
 }
 
@@ -89,7 +115,7 @@ func (m *mockEngine) Evaluate(msg *authnz.TargetMsg) (*engine.Action, error) {
 	return m.action, m.err
 }
 
-func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
+func generateAuthRequest(header string, path string) *authnz.HandleAuthnZRequest {
 	return &authnz.HandleAuthnZRequest{
 		Instance: &authnz.InstanceMsg{
 			Request: &authnz.RequestMsg{
@@ -101,9 +127,9 @@ func generateAuthRequest(header string) *authnz.HandleAuthnZRequest {
 					Code:  "",
 				},
 			},
-			Target: &authnz.TargetMsg{},
+			Target: &authnz.TargetMsg{
+				Path: path,
+			},
 		},
 	}
 }
-
-*/

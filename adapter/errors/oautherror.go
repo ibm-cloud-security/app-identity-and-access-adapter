@@ -2,6 +2,7 @@
 package errors
 
 import (
+	"errors"
 	"strings"
 
 	"istio.io/api/policy/v1beta1"
@@ -28,15 +29,17 @@ const (
 
 // OAuthError - oauth error
 type OAuthError struct {
-	Msg    string
-	Code   string
-	Scopes []string
+	Code   string   `json:"error"`
+	Msg    string   `json:"error_description"`
+	URI    string   `json:"error_uri"`
+	Scopes []string `json:"scopes"`
 }
 
 // ExpiredTokenError creates a new expired token error
 func ExpiredTokenError() *OAuthError {
 	return &OAuthError{
-		Msg: ExpiredToken,
+		Code: InvalidToken,
+		Msg:  ExpiredToken,
 	}
 }
 
@@ -58,13 +61,21 @@ func BadRequestHTTPException(msg string) *OAuthError {
 	}
 }
 
-func (o *OAuthError) Error() string {
-	return o.Msg
+func (e *OAuthError) Error() string {
+	if e.Code == "" && e.Msg == "" {
+		return "an error occurred"
+	} else if e.Code == "" {
+		return e.Msg
+	} else if e.Msg == "" {
+		return e.Code
+	} else {
+		return e.Code + ": " + e.Msg
+	}
 }
 
 // ShortDescription returns the prettified HTTP Errors
-func (o *OAuthError) ShortDescription() string {
-	switch o.Code {
+func (e *OAuthError) ShortDescription() string {
+	switch e.Code {
 	case InvalidRequest:
 		return BadRequest
 	case InvalidToken:
@@ -72,21 +83,21 @@ func (o *OAuthError) ShortDescription() string {
 	case InsufficientScope:
 		return Forbidden
 	default:
-		return InternalServerError
+		return e.Code
 	}
 }
 
 // ScopeStr returns a scopes as a whitespace separated list
-func (o *OAuthError) ScopeStr() string {
-	if o.Scopes == nil || len(o.Scopes) == 0 {
+func (e *OAuthError) ScopeStr() string {
+	if e.Scopes == nil || len(e.Scopes) == 0 {
 		return ""
 	}
-	return strings.Join(o.Scopes, " ")
+	return strings.Join(e.Scopes, " ")
 }
 
 // HTTPCode returns Istio compliant HTTPStatusCode
-func (o *OAuthError) HTTPCode() v1beta1.HttpStatusCode {
-	switch o.Code {
+func (e *OAuthError) HTTPCode() v1beta1.HttpStatusCode {
+	switch e.Code {
 	case InvalidRequest:
 		return v1beta1.BadRequest
 	case InvalidToken:
@@ -96,4 +107,12 @@ func (o *OAuthError) HTTPCode() v1beta1.HttpStatusCode {
 	default:
 		return v1beta1.InternalServerError
 	}
+}
+
+// HTTPCode returns Istio compliant HTTPStatusCode
+func (e *OAuthError) OK() error {
+	if e.Code == "" {
+		return errors.New("invalid OAuth 2.0 Error: `error` field does not exist")
+	}
+	return nil
 }

@@ -1,17 +1,21 @@
 package initializer
 
 import (
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/zap"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+
+	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
 	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
 	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
@@ -37,7 +41,7 @@ func (pi *PolicyInitializer) GetHandler() handler.PolicyHandler {
 	return pi.Handler
 }
 
-func New(store store.PolicyStore) (Initializer, error) {
+func New(store policy.PolicyStore) (Initializer, error) {
 	client, myresourceClient, err := getKubernetesClient()
 	if err != nil {
 		return nil, err
@@ -46,9 +50,10 @@ func New(store store.PolicyStore) (Initializer, error) {
 	handler := handler.New(store, client)
 	policyInitializer := &PolicyInitializer{Handler: handler, KubeClient: client}
 	informerlist := policiesInformer.NewSharedInformerFactory(myresourceClient, 0)
-	go initPolicyController(informerlist.Appid().V1().JwtPolicies().Informer(), client, policyInitializer.Handler)
-	go initPolicyController(informerlist.Appid().V1().OidcPolicies().Informer(), client, policyInitializer.Handler)
-	go initPolicyController(informerlist.Appid().V1().OidcClients().Informer(), client, policyInitializer.Handler)
+
+	go initPolicyController(informerlist.Appid().V1().JwtConfigs().Informer(), client, policyInitializer.Handler, v1.JWTCONFIG)
+	go initPolicyController(informerlist.Appid().V1().OidcConfigs().Informer(), client, policyInitializer.Handler, v1.OIDCCONFIG)
+	go initPolicyController(informerlist.Appid().V1().Policies().Informer(), client, policyInitializer.Handler, v1.POLICY)
 
 	return policyInitializer, nil
 }
@@ -62,8 +67,13 @@ func getKubeConfig() (*rest.Config, error) {
 		zap.L().Warn("Error creating an in-cluster config. Attempting local config...", zap.Error(err))
 
 		// attempt to create a local config client
-		zap.L().Info(("HOME : " + os.Getenv("HOME")))
-		kubeConfigPath := os.Getenv("HOME") + "/.kube/config"
+		kubeConfigPath := os.Getenv("KUBECONFIG")
+		if kubeConfigPath != "" {
+			zap.L().Info("Using KubeConfig : " + kubeConfigPath)
+		} else {
+			zap.L().Info("Attempting to use minikube : " + os.Getenv("HOME"))
+			kubeConfigPath = os.Getenv("HOME") + "/.kube/config"
+		}
 
 		// create the config from the path
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
@@ -102,7 +112,7 @@ func getKubernetesClient() (kubernetes.Interface, policiesClientSet.Interface, e
 	return client, policiesClient, nil
 }
 
-func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyHandler handler.PolicyHandler) {
+func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.Interface, policyHandler handler.PolicyHandler, crdType v1.CrdType) {
 	// create a new queue so that when the informer gets a resource that is either
 	// a result of listing or watching, we can add an idenfitying key to the queue
 	// so that it can be handled in the handler
@@ -148,6 +158,7 @@ func initPolicyController(informer cache.SharedIndexInformer, client kubernetes.
 	// handle logging, connections, informing (listing and watching), the queue,
 	// and the handler
 	controller := policyController.Controller{
+		CrdType:   crdType,
 		Clientset: client,
 		Informer:  informer,
 		Queue:     queue,
