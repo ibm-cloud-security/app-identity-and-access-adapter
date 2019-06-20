@@ -13,6 +13,5 @@ type Action struct {
 	v1.PathPolicy
 	KeySet keyset.KeySet
 	Client client.Client
-	Rules  []policy.Rule
 	Type   policy.Type
 }

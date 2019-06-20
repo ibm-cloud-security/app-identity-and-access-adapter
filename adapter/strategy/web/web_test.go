@@ -2,6 +2,7 @@ package webstrategy
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
@@ -524,7 +524,7 @@ type MockValidator struct {
 	validate func(string) *err.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *err.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []v1.Rule) *err.OAuthError {
 	if v.validate == nil {
 		return nil
 	}

@@ -2,13 +2,13 @@ package validator
 
 import (
 	"crypto"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"io/ioutil"
 	"testing"
 
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +41,7 @@ func (k *localKeySet) PublicKey(kid string) crypto.PublicKey {
 
 var testKeySet = &localKeySet{url: "https://keys.com/publickeys"}
 
-var emptyRule = []policy.Rule{}
+var emptyRule = []v1.Rule{}
 
 /////// Token Validation ///////
 
@@ -50,9 +50,9 @@ func TestTokenValidation(t *testing.T) {
 		token string
 		err   *errors.OAuthError
 		jwks  keyset.KeySet
-		rules []policy.Rule
+		rules []v1.Rule
 	}{
-		{"", &errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
+		/*{"", &errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
 		{validAudArrToken, &errors.OAuthError{Msg: errors.InternalServerError}, nil, emptyRule},
 		{validAudStrToken, nil, testKeySet, emptyRule},
 		{validAudArrToken, nil, testKeySet, emptyRule},
@@ -61,34 +61,41 @@ func TestTokenValidation(t *testing.T) {
 		{noKidToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - kid is missing"}, testKeySet, emptyRule},
 		{diffKidToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - key not found :: other"}, testKeySet, emptyRule},
 		{"p1.p2", &errors.OAuthError{Code: errors.InvalidToken, Msg: "token contains an invalid number of segments"}, testKeySet, emptyRule},
-		{validAudStrToken, nil, testKeySet, []policy.Rule{
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
 			{
-				Key:   "iss",
-				Value: "localhost:6002",
+				Claim: "iss",
+				Value: []string{"localhost:6002"},
 			},
 		}},
-		{validAudStrToken, nil, testKeySet, []policy.Rule{
+		{validAudStrToken, nil, testKeySet, []v1.Rule{
 			{
-				Key:   "aud",
-				Value: testAud,
+				Claim: "aud",
+				Value: []string{testAud},
 			},
 		}},
-		{validAudArrToken, nil, testKeySet, []policy.Rule{
+		{validAudArrToken, nil, testKeySet, []v1.Rule{
 			{
-				Key:   "aud",
-				Value: testAud,
+				Claim: "aud",
+				Value: []string{testAud},
 			},
 		}},
-		{validAudArrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to be another audience"}, testKeySet, []policy.Rule{
+		{validAudArrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to match all of: [another audience]"}, testKeySet, []v1.Rule{
 			{
-				Key:   "aud",
-				Value: "another audience",
+				Claim: "aud",
+				Value: []string{"another audience"},
 			},
 		}},
-		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to equal another value, but found localhost:6002"}, testKeySet, []policy.Rule{
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to match all of: [another value]"}, testKeySet, []v1.Rule{
 			{
-				Key:   "iss",
-				Value: "another value",
+				Claim: "iss",
+				Value: []string{"another value"},
+			},
+		}},*/
+		{validAudStrToken, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to not match any of: [" + testAud + " 2]"}, testKeySet, []v1.Rule{
+			{
+				Claim: "aud",
+				Match: "NOT",
+				Value: []string{testAud, "2"},
 			},
 		}},
 	}
@@ -118,24 +125,90 @@ func TestTokenValidation(t *testing.T) {
 func TestClaimValidation(t *testing.T) {
 	t.Parallel()
 	var tests = []struct {
-		claimName   string
+		rule        v1.Rule
 		expectErr   bool
-		expectedVal string
 		expectedMsg string
 	}{
-		{"tenant", false, "1234", ""},
-		{"tenant", true, "12345", "token validation error - expected claim `tenant` to equal 12345, but found 1234"},
-		{"tenant2", true, "", "token validation error - expected claim `tenant2` to exist"},
+		{v1.Rule{
+			Claim: "string",
+			Match: "ALL",
+			Value: []string{"1"},
+		},
+			false,
+			"",
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "ALL",
+			Value: []string{"1", "2", "3", "4"},
+		},
+			false,
+			"",
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "ANY",
+			Value: []string{"1"},
+		},
+			false,
+			"",
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "NOT",
+			Value: []string{},
+		},
+			false,
+			"",
+		},
+		{v1.Rule{
+			Claim: "string",
+			Match: "ANY",
+			Value: []string{},
+		},
+			true,
+			"token validation error - expected claim `string` to match one of: []",
+		},
+		{v1.Rule{
+			Claim: "string",
+			Match: "ALL",
+			Value: []string{},
+		},
+			true,
+			"token validation error - expected claim `string` to match all of: [], but is empty",
+		},
+		{v1.Rule{
+			Claim: "string",
+			Match: "ALL",
+			Value: []string{"6"},
+		},
+			true,
+			"token validation error - expected claim `string` to match all of: [6]",
+		},
+		{v1.Rule{
+			Claim: "string_arr",
+			Match: "ANY",
+			Value: []string{"6", ""},
+		},
+			true,
+			"token validation error - expected claim `string_arr` to match one of: [6 ]",
+		},
 	}
 
 	var claimMap jwt.MapClaims = make(map[string]interface{})
-	claimMap["tenant"] = "1234"
+	claimMap["string"] = "1"
+	//claimMap["string"] = interface{["1"]}
+	claimMap["string_arr"] = "1 2 3 4 5"
+	claimMap["int"] = 1
+	claimMap["bool"] = true
 
 	for _, e := range tests {
+		test := e
 		t.Run("Validate", func(st *testing.T) {
-			err := validateClaim(e.claimName, e.expectedVal, claimMap)
-			if e.expectErr {
-				assert.Equal(st, err.Error(), e.expectedMsg)
+			st.Parallel()
+			err := checkAccessPolicy(test.rule, claimMap)
+			if test.expectErr {
+				assert.EqualError(st, err, test.expectedMsg)
 			} else {
 				assert.Nil(st, err)
 			}
@@ -147,7 +220,7 @@ func TestValidateClaims(t *testing.T) {
 	err := validateClaims(nil, nil)
 	assert.Equal(t, "Internal Server Error", err.Error())
 
-	err = validateClaims(&jwt.Token{}, []policy.Rule{})
+	err = validateClaims(&jwt.Token{}, []v1.Rule{})
 	assert.Equal(t, err.Msg, errors.InvalidToken)
 }
 

@@ -1,11 +1,11 @@
 package apistrategy
 
 import (
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"testing"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -195,7 +195,7 @@ type MockValidator struct {
 	err          *errors.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []policy.Rule) *errors.OAuthError {
+func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []v1.Rule) *errors.OAuthError {
 	if tkn == v.invalidToken {
 		return v.err
 	}

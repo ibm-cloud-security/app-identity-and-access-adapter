@@ -3,6 +3,7 @@ package engine
 
 import (
 	"errors"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"strings"
 
 	"go.uber.org/zap"
@@ -143,17 +144,18 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 }
 
 // createDefaultRules generates the default JWT validation rules for the given client
-func createDefaultRules(action Action) []policy.Rule {
+func createDefaultRules(action Action) []v1.Rule {
 	switch action.Type {
 	case policy.OIDC:
-		return []policy.Rule{
+		return []v1.Rule{
 			{
-				Key:   aud,
-				Value: action.Client.ID(),
+				Claim: aud,
+				Match: "ANY",
+				Value: []string{action.Client.ID()},
 			},
 		}
 	default:
-		return []policy.Rule{}
+		return []v1.Rule{}
 	}
 }
 

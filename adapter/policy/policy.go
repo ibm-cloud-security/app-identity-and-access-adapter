@@ -29,14 +29,8 @@ type Endpoint struct {
 
 // CrdKey represents a CustomResourceDefinition ID
 type CrdKey struct {
-	Id string
+	Id      string
 	CrdType v1.CrdType
-}
-
-// Rule represents a policy validation rule
-type Rule struct {
-	Key   string
-	Value string
 }
 
 // PolicyMapping captures information of created endpoints by policy
@@ -47,13 +41,13 @@ type PolicyMapping struct {
 
 type RoutePolicy struct {
 	PolicyReference string
-	Actions  []v1.PathPolicy
+	Actions         []v1.PathPolicy
 }
 
-func NewRoutePolicy() RoutePolicy{
+func NewRoutePolicy() RoutePolicy {
 	return RoutePolicy{
 		PolicyReference: "",
-		Actions: make([]v1.PathPolicy,0),
+		Actions:         make([]v1.PathPolicy, 0),
 	}
 }
 

@@ -25,7 +25,7 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	policyAction "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	policiesV1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
@@ -179,7 +179,7 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 }
 
 // handleRefreshTokens attempts to update an expired session using the refresh token flow
-func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.TokenResponse, c client.Client, rules []policyAction.Rule) (*authnz.HandleAuthnZResponse, error) {
+func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.TokenResponse, c client.Client, rules []policiesV1.Rule) (*authnz.HandleAuthnZResponse, error) {
 	if session.RefreshToken == "" {
 		zap.L().Debug("Refresh token not provided", zap.String("client_name", c.Name()))
 		return nil, nil
