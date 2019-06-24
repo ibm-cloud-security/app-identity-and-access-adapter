@@ -24,6 +24,7 @@ const handler = (req, res) => {
 // Frontend
 app.get('/web/home', handler);
 app.get('/web/home/:id', handler);
+app.get('/web/user', handler);
 
 // API
 app.get('/api/headers', handler);

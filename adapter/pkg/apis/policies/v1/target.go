@@ -21,6 +21,6 @@ type PathPolicy struct {
 
 type Rule struct {
 	Claim string   `json:"claim"`
-	Value []string `json:"value"`
+	Value []string `json:"values"`
 	Match string   `json:"match"`
 }

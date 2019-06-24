@@ -52,7 +52,7 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=appid.cloud.ibm.com, Version=v1
+	// Group=security.cloud.ibm.com, Version=v1
 	case v1.SchemeGroupVersion.WithResource("jwtconfigs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Appid().V1().JwtConfigs().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("oidcconfigs"):
