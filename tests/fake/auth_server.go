@@ -11,6 +11,7 @@ type AuthServer struct {
 	JwksURL      string
 	TknEndpoint  string
 	AuthEndpoint string
+	UserInfoURL  string
 }
 
 func NewAuthServer() *AuthServer {
@@ -18,6 +19,7 @@ func NewAuthServer() *AuthServer {
 		JwksURL:      "https://auth.com/publickeys",
 		TknEndpoint:  "https://auth.com/token",
 		AuthEndpoint: "https://auth.com/authorization",
+		UserInfoURL:  "https://auth.com/userinfo",
 		Keys:         &KeySet{},
 	}
 }
@@ -31,6 +33,10 @@ func (m *AuthServer) TokenEndpoint() string {
 
 func (m *AuthServer) AuthorizationEndpoint() string {
 	return m.AuthEndpoint
+}
+
+func (m *AuthServer) UserInfoEndpoint() string {
+	return m.UserInfoURL
 }
 
 func (m *AuthServer) KeySet() keyset.KeySet {

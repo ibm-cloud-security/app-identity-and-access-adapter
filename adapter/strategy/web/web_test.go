@@ -2,15 +2,21 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
+	"github.com/stretchr/testify/assert"
+	"istio.io/api/policy/v1beta1"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
@@ -18,9 +24,6 @@ import (
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
-	"github.com/stretchr/testify/assert"
-	"istio.io/api/policy/v1beta1"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -101,10 +104,11 @@ func TestRefreshTokenFlow(t *testing.T) {
 		err            error
 	}{
 		{ // successful refresh flow
-			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			generateAuthnzRequest(createCookie().String(), "", "", "", ""),
 			&engine.Action{
 				Client: fake.NewClient(&fake.TokenResponse{
 					Res: &authserver.TokenResponse{
+						AccessToken:   "access",
 						IdentityToken: "identity",
 						RefreshToken:  "refresh",
 						ExpiresIn:     10,
@@ -113,6 +117,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 			},
 			defaultState,
 			&authserver.TokenResponse{
+				AccessToken:   "access",
 				IdentityToken: "Token is expired",
 				RefreshToken:  "refresh",
 				ExpiresIn:     10,
@@ -123,7 +128,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 			nil,
 		},
 		{ // Refresh token request fails
-			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			generateAuthnzRequest(createCookie().String(), "", "", "", ""),
 			&engine.Action{
 				Client: fake.NewClient(defaultFailureTokenResponse("could not retrieve tokens")),
 			},
@@ -142,7 +147,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 			nil,
 		},
 		{ // Refresh token is empty
-			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			generateAuthnzRequest(createCookie().String(), "", "", "", ""),
 			&engine.Action{
 				Client: fake.NewClient(nil),
 			},
@@ -160,7 +165,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 			nil,
 		},
 		{ // Refresh token request fails
-			generateAuthnzRequest(createCookie(), "", "", "", ""),
+			generateAuthnzRequest(createCookie().String(), "", "", "", ""),
 			&engine.Action{
 				Client: fake.NewClient(defaultFailureTokenResponse("could not retrieve tokens")),
 			},
@@ -474,12 +479,14 @@ func compareDirectHttpResponses(t *testing.T, r *authnz.HandleAuthnZResponse, ex
 		assert.Equal(t, expected.Body, response.Body)
 	}
 }
+
 func defaultSessionOidcCookie() *OidcCookie {
 	return &OidcCookie{
 		Value:      defaultState,
 		Expiration: time.Now().Add(time.Hour),
 	}
 }
+
 func defaultSuccessTokenResponse() *fake.TokenResponse {
 	return &fake.TokenResponse{
 		Res: &authserver.TokenResponse{
@@ -524,15 +531,15 @@ type MockValidator struct {
 	validate func(string) *err.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, ks keyset.KeySet, rules []v1.Rule) *err.OAuthError {
+func (v MockValidator) Validate(tkn string, tokenType validator.Token, ks keyset.KeySet, rules []v1.Rule) *err.OAuthError {
 	if v.validate == nil {
 		return nil
 	}
 	return v.validate(tkn)
 }
 
-func createCookie() string {
-	c := &http.Cookie{
+func createCookie() *http.Cookie {
+	return &http.Cookie{
 		Name:     "oidc-cookie-id",
 		Value:    defaultState,
 		Path:     "/",
@@ -540,5 +547,4 @@ func createCookie() string {
 		HttpOnly: false,
 		Expires:  time.Now().Add(time.Hour * time.Duration(2160)),
 	}
-	return c.String()
 }

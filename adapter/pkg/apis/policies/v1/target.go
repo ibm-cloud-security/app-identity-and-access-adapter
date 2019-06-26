@@ -20,7 +20,8 @@ type PathPolicy struct {
 }
 
 type Rule struct {
-	Claim string   `json:"claim"`
-	Value []string `json:"values"`
-	Match string   `json:"match"`
+	Claim  string   `json:"claim"`
+	Value  []string `json:"values"`
+	Match  string   `json:"match"`
+	Source string   `json:"source"`
 }

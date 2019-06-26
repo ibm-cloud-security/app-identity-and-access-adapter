@@ -46,6 +46,7 @@ type AuthorizationServerService interface {
 	JwksEndpoint() string
 	TokenEndpoint() string
 	AuthorizationEndpoint() string
+	UserInfoEndpoint() string
 	KeySet() keyset.KeySet
 	SetKeySet(keyset.KeySet)
 	GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error)
@@ -109,6 +110,12 @@ func (s *RemoteService) TokenEndpoint() string {
 func (s *RemoteService) AuthorizationEndpoint() string {
 	_ = s.initialize()
 	return s.AuthURL
+}
+
+// UserInfoEndpoint returns the /userinfo endpoint of the OAuth server
+func (s *RemoteService) UserInfoEndpoint() string {
+	_ = s.initialize()
+	return s.UserInfoURL
 }
 
 // GetTokens performs a request to the token endpoint

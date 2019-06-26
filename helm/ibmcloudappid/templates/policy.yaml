@@ -75,11 +75,16 @@ spec:
                                                                     type:   object
                                                                     required:
                                                                         - claim
-                                                                        - value
+                                                                        - values
                                                                     properties:
                                                                         claim:
                                                                             type:      string
                                                                             minLength: 1
+                                                                        source:
+                                                                            type:      string
+                                                                            enum:
+                                                                                - access_token
+                                                                                - id_token
                                                                         match:
                                                                             type: string
                                                                             enum:

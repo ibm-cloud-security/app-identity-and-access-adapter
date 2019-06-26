@@ -4,4 +4,4 @@ metadata:
   name:      samplejwtconfig
   namespace: sample-app
 spec:
-  jwksUrl: https://appid-oauth.stage1.eu-gb.bluemix.net/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys
+  jwksUrl: https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/a9d75222-f70c-4ad3-97a5-60fdfde4df9f/publickeys

@@ -1,8 +1,9 @@
 package apistrategy
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"strings"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 
 	"go.uber.org/zap"
 
@@ -50,7 +51,7 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 	}
 
 	// Validate Access Value
-	err = s.tokenUtil.Validate(tokens.Access, action.KeySet, action.Rules)
+	err = s.tokenUtil.Validate(tokens.Access, validator.Access, action.KeySet, action.Rules)
 	if err != nil {
 		zap.L().Debug("Invalid access token", zap.Error(err))
 		err.Msg = "invalid access token"
@@ -59,7 +60,7 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 
 	// Validate ID Value
 	if tokens.ID != "" {
-		err = s.tokenUtil.Validate(tokens.ID, action.KeySet, action.Rules)
+		err = s.tokenUtil.Validate(tokens.ID, validator.ID, action.KeySet, action.Rules)
 		if err != nil {
 			zap.L().Debug("Invalid ID token", zap.Error(err))
 			err.Msg = "invalid ID token"

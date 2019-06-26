@@ -156,7 +156,18 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 
 	// Validate session
 	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	if validationErr := w.tokenUtil.Validate(session.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules); validationErr != nil {
+	if validationErr := w.tokenUtil.Validate(session.AccessToken, validator.Access, action.Client.AuthorizationServer().KeySet(), action.Rules); validationErr != nil {
+		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
+			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
+			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
+		}
+
+		zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
+		w.tokenCache.Delete(sessionCookie.Value)
+		return nil, nil
+	}
+
+	if validationErr := w.tokenUtil.Validate(session.IdentityToken, validator.ID, action.Client.AuthorizationServer().KeySet(), action.Rules); validationErr != nil {
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
 			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
 			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
@@ -187,7 +198,7 @@ func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.
 	if tokens, err := c.RefreshToken(session.RefreshToken); err != nil {
 		zap.L().Info("Could not retrieve tokens using the refresh token", zap.String("client_name", c.Name()), zap.Error(err))
 		return nil, nil
-	} else if validationErr := w.tokenUtil.Validate(tokens.IdentityToken, c.AuthorizationServer().KeySet(), rules); validationErr != nil {
+	} else if validationErr := w.tokenUtil.Validate(tokens.IdentityToken, validator.ID,c.AuthorizationServer().KeySet(), rules); validationErr != nil {
 		zap.L().Debug("Could not validate refreshed tokens. Beginning a new session.", zap.String("client_name", c.Name()), zap.String("session_id", sessionID), zap.Error(validationErr))
 		return nil, nil
 	} else {
@@ -279,7 +290,12 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	}
 
 	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	validationErr := w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	validationErr := w.tokenUtil.Validate(response.AccessToken, validator.Access, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	if validationErr != nil {
+		zap.L().Info("OIDC callback: Access token failed validation", zap.Error(validationErr), zap.String("client_name", action.Client.Name()))
+		return w.handleErrorCallback(validationErr)
+	}
+	validationErr = w.tokenUtil.Validate(response.IdentityToken, validator.ID, action.Client.AuthorizationServer().KeySet(), action.Rules)
 	if validationErr != nil {
 		zap.L().Info("OIDC callback: ID token failed validation", zap.Error(validationErr), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(validationErr)
