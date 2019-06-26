@@ -74,7 +74,6 @@ func (*Validator) Validate(tokenStr string, tokenType Token, jwks keyset.KeySet,
 			return err
 		}
 	}
-	zap.S().Infof("printing token string : `%s`", tokenStr)
 	// Parse the token - validate expiration and signature
 	token, err := validateSignature(tokenStr, jwks)
 	if err != nil {
@@ -129,7 +128,7 @@ func validateAccessTokenString(userInfoEndpoint string, tokenStr string, rules [
 func findRequiredScopes(rules []v1.Rule) []string {
 	for _, r := range rules {
 		if r.Claim == scope {
-			return r.Value
+			return r.Values
 		}
 	}
 	return nil
@@ -170,16 +169,13 @@ func validateClaims(token *jwt.Token, tokenType Token, rules []v1.Rule) *errors.
 
 	// Retrieve claims map from token
 	claims, err := getClaims(token)
-	zap.S().Infof("printing token claims `%v`", claims)
 	if err != nil {
 		zap.L().Warn("Token validation error - error obtaining claims from token")
 		return err
 	}
 
 	for _, rule := range rules {
-		zap.L().Debug("Compare : ", zap.String("rule.src", rule.Source), zap.String("tokenType.String()", tokenType.String()), zap.String("break", "\n"))
 		if (rule.Source == tokenType.String()) || (rule.Source == "" && Access.String() == tokenType.String()) {
-			zap.S().Infof("Compare if: rule : %v claims : %v",rule, claims)
 			if err := checkAccessPolicy(rule, claims); err != nil {
 				return errors.UnauthorizedHTTPException(err.Error(), nil)
 			}
@@ -192,18 +188,17 @@ func validateClaims(token *jwt.Token, tokenType Token, rules []v1.Rule) *errors.
 // checkAccessPolicy is used to validate a specific claim with the claims map
 func checkAccessPolicy(rule v1.Rule, claims jwt.MapClaims) error {
 	m, err := convertClaimType(getNestedClaim(rule.Claim, claims))
-	zap.S().Infof("printing convertClaimType claims `%v`", m)
 	if err != nil {
 		zap.L().Info("Could not convert claim", zap.Error(err), zap.String("claim_name", rule.Claim))
 		return err
 	}
 	switch rule.Match {
 	case ANY:
-		return validateClaimMatchesAny(rule.Claim, m, rule.Value)
+		return validateClaimMatchesAny(rule.Claim, m, rule.Values)
 	case NOT:
-		return validateClaimDoesNotMatch(rule.Claim, m, rule.Value)
+		return validateClaimDoesNotMatch(rule.Claim, m, rule.Values)
 	default: // "ALL"
-		return validateClaimMatchesAll(rule.Claim, m, rule.Value)
+		return validateClaimMatchesAll(rule.Claim, m, rule.Values)
 	}
 }
 
@@ -229,7 +224,6 @@ func getNestedClaim(claim string, claims jwt.MapClaims) interface{} {
 }
 
 func validateClaimMatchesAny(name string, claims map[string]struct{}, expected []string) error {
-	zap.S().Infof("Input validateClaimMatchesAny `%v` :  `%v`", claims, expected)
 	for _, c := range expected {
 		if _, ok := claims[c]; ok {
 			return nil
@@ -239,7 +233,6 @@ func validateClaimMatchesAny(name string, claims map[string]struct{}, expected [
 }
 
 func validateClaimMatchesAll(name string, claims map[string]struct{}, expected []string) error {
-	zap.S().Infof("Input validateClaimMatchesAll `%v` :  `%v`", claims, expected)
 	if len(expected) == 0 {
 		return fmt.Errorf("token validation error - expected claim `%s` to match all of: %s, but is empty", name, expected)
 	}
@@ -255,7 +248,6 @@ func validateClaimMatchesAll(name string, claims map[string]struct{}, expected [
 }
 
 func validateClaimDoesNotMatch(name string, claims map[string]struct{}, expected []string) error {
-	zap.S().Infof("Input validateClaimDoesNotMatch `%v` :  `%v`", claims, expected)
 	for _, c := range expected {
 		if _, ok := claims[c]; ok {
 			return fmt.Errorf("token validation error - expected claim `%s` to not match any of: %s", name, expected)

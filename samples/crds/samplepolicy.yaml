@@ -13,7 +13,6 @@ spec:
           policies:
             - policyType: oidc
               config: sampleoidcconfig
-              redirectUri: https://myapp.com/home
               rules:
                 - claim: scope
                   match: ALL
@@ -33,6 +32,7 @@ spec:
           policies:
             - policyType: oidc
               config: sampleoidcconfigwithsecretref
+              redirectUri: https://github.com/ibm-cloud-security/policy-enforcer-mixer-adapter
         - prefix: /
           method: ALL
           policies:

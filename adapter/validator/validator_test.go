@@ -79,32 +79,32 @@ func TestTokenValidation(t *testing.T) {
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "iss",
-				Value: []string{"localhost:6002"},
+				Values: []string{"localhost:6002"},
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
-				Value: []string{testAud},
+				Values: []string{testAud},
 			},
 		}},
 		{validAudArrToken,ID, nil, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
-				Value: []string{testAud},
+				Values: []string{testAud},
 			},
 		}},
 		{validAudArrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to match all of: [another audience]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
-				Value: []string{"another audience"},
+				Values: []string{"another audience"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to match all of: [another value]"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to match all of: [another Values]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "iss",
-				Value: []string{"another value"},
+				Values: []string{"another Values"},
 				Source: ID.String(),
 			},
 		}},
@@ -112,7 +112,7 @@ func TestTokenValidation(t *testing.T) {
 			{
 				Claim: "aud",
 				Match: "NOT",
-				Value: []string{testAud, "2"},
+				Values: []string{testAud, "2"},
 				Source: ID.String(),
 			},
 		}},
@@ -120,7 +120,7 @@ func TestTokenValidation(t *testing.T) {
 			{
 				Claim: "arr_int",
 				Match: "ANY",
-				Value: []string{"1", "2", "3"},
+				Values: []string{"1", "2", "3"},
 				Source: ID.String(),
 			},
 		}},
@@ -128,7 +128,7 @@ func TestTokenValidation(t *testing.T) {
 			{
 				Claim: "scope",
 				Match: "NOT",
-				Value: []string{"appid_default"},
+				Values: []string{"appid_default"},
 				Source: ID.String(),
 			},
 		}},
@@ -136,76 +136,76 @@ func TestTokenValidation(t *testing.T) {
 			{
 				Claim: "custom_claim",
 				Match: "ALL",
-				Value: []string{"custom"},
+				Values: []string{"custom"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
 			{
 				Claim: "aud",
-				Value: []string{testAud},
+				Values: []string{testAud},
 				Source: ID.String(),
 			},
 			{
 				Claim: "scope",
 				Match: "NOT",
-				Value: []string{"appid_default"},
+				Values: []string{"appid_default"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "int",
-				Value: []string{"100"},
+				Values: []string{"100"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `int` to match all of: [1]", Scopes: nil}, testKeySet, []v1.Rule{
 			{
 				Claim: "int",
-				Value: []string{"1"},
+				Values: []string{"1"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "bool",
-				Value: []string{"true"},
+				Values: []string{"true"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `arr_bool` to match all of: [false]", Scopes: nil}, testKeySet, []v1.Rule{
 			{
 				Claim: "arr_bool",
-				Value: []string{"false"},
+				Values: []string{"false"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "arr_bool",
-				Value: []string{"true", "true"},
+				Values: []string{"true", "true"},
 				Source: ID.String(),
 			},
 		}}, // Nested
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "obj.str",
-				Value: []string{"hello"},
+				Values: []string{"hello"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "obj.array_str",
-				Value: []string{"1","2"},
+				Values: []string{"1","2"},
 				Source: ID.String(),
 			},
 		}},
 		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
 			{
 				Claim: "obj.array_str",
-				Value: []string{"1"},
+				Values: []string{"1"},
 				Source: ID.String(),
 				Match: "ANY",
 			},
@@ -213,21 +213,21 @@ func TestTokenValidation(t *testing.T) {
 		{validAudStrToken,ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `obj.str` to match all of: [not]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "obj.str",
-				Value: []string{"not"},
+				Values: []string{"not"},
 				Source: ID.String(),
 			},
 		}}, // Unknown Types
 		{validAudStrToken,ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[string]interface {}"}, testKeySet, []v1.Rule{
 			{
 				Claim: "obj",
-				Value: []string{"{}"},
+				Values: []string{"{}"},
 				Source: ID.String(),
 			},
 		}}, // Invalid nesting
 		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `bool.next` does not exist - rule requires: [true]"}, testKeySet, []v1.Rule{
 			{
 				Claim: "bool.next",
-				Value: []string{"true"},
+				Values: []string{"true"},
 				Source: ID.String(),
 			},
 		}},
@@ -235,7 +235,7 @@ func TestTokenValidation(t *testing.T) {
 		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `` does not exist - rule requires: []"}, testKeySet, []v1.Rule{
 			{
 				Claim: "",
-				Value: []string{""},
+				Values: []string{""},
 				Source: ID.String(),
 			},
 		}},
@@ -273,28 +273,28 @@ func TestClaimValidation(t *testing.T) {
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
-			Value: []string{"1"},
+			Values: []string{"1"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
-			Value: []string{},
+			Values: []string{},
 		},
 			e.New("token validation error - expected claim `string` to match all of: [], but is empty"),
 		},
 		{v1.Rule{
 			Claim: "string",
 			Match: "ALL",
-			Value: []string{"6"},
+			Values: []string{"6"},
 		},
 			e.New("token validation error - expected claim `string` to match all of: [6]"),
 		},
 		{v1.Rule{
 			Claim: "string",
 			Match: "ANY",
-			Value: []string{},
+			Values: []string{},
 		},
 			e.New("token validation error - expected claim `string` to match one of: []"),
 		},
@@ -302,70 +302,70 @@ func TestClaimValidation(t *testing.T) {
 		{v1.Rule{
 			Claim: "string_arr",
 			Match: "ALL",
-			Value: []string{"1", "2", "3", "4"},
+			Values: []string{"1", "2", "3", "4"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
 			Match: "ANY",
-			Value: []string{"1"},
+			Values: []string{"1"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
 			Match: "NOT",
-			Value: []string{},
+			Values: []string{},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "string_arr",
 			Match: "ANY",
-			Value: []string{"6", ""},
+			Values: []string{"6", ""},
 		},
 			e.New("token validation error - expected claim `string_arr` to match one of: [6 ]"),
 		}, // Arrays of strings
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "ALL",
-			Value: []string{"1", "2", "3", "4"},
+			Values: []string{"1", "2", "3", "4"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "ANY",
-			Value: []string{"1", "5", "6", "7"},
+			Values: []string{"1", "5", "6", "7"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "NOT",
-			Value: []string{"7", "8", "9", "10"},
+			Values: []string{"7", "8", "9", "10"},
 		},
 			nil,
 		},
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "NOT",
-			Value: []string{"7", "1"},
+			Values: []string{"7", "1"},
 		},
 			e.New("token validation error - expected claim `arr_string` to not match any of: [7 1]"),
 		},
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "ALL",
-			Value: []string{"7", "1"},
+			Values: []string{"7", "1"},
 		},
 			e.New("token validation error - expected claim `arr_string` to match all of: [7 1]"),
 		},
 		{v1.Rule{
 			Claim: "arr_string",
 			Match: "ANY",
-			Value: []string{"7", "8"},
+			Values: []string{"7", "8"},
 		},
 			e.New("token validation error - expected claim `arr_string` to match one of: [7 8]"),
 		},
@@ -431,7 +431,7 @@ func TestValidateAccessTokenString(t *testing.T) {
 			rules: []v1.Rule{
 				{
 					Claim: "int",
-					Value: []string{"100"},
+					Values: []string{"100"},
 					Source: Access.String(),
 				},
 			},

@@ -151,7 +151,7 @@ func createDefaultRules(action Action) []v1.Rule {
 			{
 				Claim: aud,
 				Match: "ANY",
-				Value: []string{action.Client.ID()},
+				Values: []string{action.Client.ID()},
 			},
 		}
 	default:
