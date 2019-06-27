@@ -5,7 +5,6 @@
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
 [![Coveralls][img-coveralls-master]][url-coveralls-master]
-[![Codacy][img-codacy]][url-codacy]
 
 [![GithubWatch][img-github-watchers]][url-github-watchers]
 [![GithubStars][img-github-stars]][url-github-stars]
@@ -255,5 +254,3 @@ This package contains code licensed under the Apache License, Version 2.0 (the "
 
 [img-coveralls-master]: https://coveralls.io/repos/github/ibm-cloud-security/app-identity-and-access-adapter/badge.svg
 [url-coveralls-master]: https://coveralls.io/github/ibm-cloud-security/app-identity-and-access-adapter
-[img-codacy]: https://api.codacy.com/project/badge/Grade/2dd243b5b9f64431bf03bf0a9a470833?branch=master
-[url-codacy]: https://app.codacy.com/app/ibm-cloud-security/app-identity-and-access-adapter?utm_source=github.com&utm_medium=referral&utm_content=ibm-cloud-security/app-identity-and-access-adapter&utm_campaign=Badge_Grade_Dashboard

@@ -4,4 +4,4 @@ metadata:
   name:      samplejwtconfig
   namespace: sample-app
 spec:
-  jwksUrl: https://eu-gb.appid.test.cloud.ibm.com/oauth/v4/a9d75222-f70c-4ad3-97a5-60fdfde4df9f/publickeys
+  jwksUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/a9d75222-f70c-4ad3-97a5-60fdfde4df9f/publickeys

@@ -58,8 +58,8 @@ function buildAndDeploy() {
 }
 
 
-IMAGE_REGISTRY_NAMESPACE=ishangulhane
-APP_NAME=istio-adapter-ibmcloudappid
+IMAGE_REGISTRY_NAMESPACE=ibmcloudsecurity
+APP_NAME=app-identity-and-access-adapter
 TAG=$(buildTag $1)
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${TAG}
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"

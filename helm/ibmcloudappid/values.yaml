@@ -14,7 +14,7 @@ replicaCount: 1
 ## The image provides the docker source of the cloud adapter
 image:
   ## This is the source of the adapter docker image
-  repository: ishangulhane/istio-adapter-ibmcloudappid
+  repository: ibmcloudsecurity/app-identity-and-access-adapter
   ## The image version to pull. Tag "latest" always contains
   ## the most up-to-date image. To avoid breaking changes during
   ## installs, it is recommended to use a tag.
