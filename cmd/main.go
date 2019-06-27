@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
 )
 
 // GetCmd returns the cobra command-tree.

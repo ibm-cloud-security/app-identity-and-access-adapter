@@ -14,6 +14,7 @@ import (
 	"istio.io/istio/mixer/pkg/status"
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	adapterPolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
@@ -29,16 +30,16 @@ type APIStrategy struct {
 	tokenUtil validator.TokenValidator
 }
 
-////////////////// constructor //////////////////
+// //////////////// constructor //////////////////
 
 // New constructs a new APIStrategy used to handle API Requests
 func New() strategy.Strategy {
 	return &APIStrategy{
-		tokenUtil: validator.New(),
+		tokenUtil: validator.NewTokenValidator(adapterPolicy.JWT),
 	}
 }
 
-////////////////// interface methods //////////////////
+// //////////////// interface methods //////////////////
 
 // HandleAuthorizationRequest parses and validates requests using the API Strategy
 func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
@@ -50,21 +51,23 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 		return buildErrorResponse(err), nil
 	}
 
-	// Validate Access Value
-	err = s.tokenUtil.Validate(tokens.Access, validator.Access, action.KeySet, action.Rules)
-	if err != nil {
-		zap.L().Debug("Invalid access token", zap.Error(err))
-		err.Msg = "invalid access token"
+	validationError := func(err *errors.OAuthError, message string) (*authnz.HandleAuthnZResponse, error) {
+		zap.L().Debug(message, zap.Error(err))
+		err.Msg = message
 		return buildErrorResponse(err), nil
+	}
+
+	// Validate Access Value
+	err = s.tokenUtil.Validate(tokens.Access, validator.Access, action.KeySet, action.Rules, "")
+	if err != nil {
+		return validationError(err, "invalid access token")
 	}
 
 	// Validate ID Value
 	if tokens.ID != "" {
-		err = s.tokenUtil.Validate(tokens.ID, validator.ID, action.KeySet, action.Rules)
+		err = s.tokenUtil.Validate(tokens.ID, validator.ID, action.KeySet, action.Rules, "")
 		if err != nil {
-			zap.L().Debug("Invalid ID token", zap.Error(err))
-			err.Msg = "invalid ID token"
-			return buildErrorResponse(err), nil
+			return validationError(err, "invalid ID token")
 		}
 	}
 
@@ -75,7 +78,7 @@ func (s *APIStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 	}, nil
 }
 
-////////////////// utilities //////////////////
+// //////////////// utilities //////////////////
 
 // Parse authorization header from gRPC props
 func getAuthTokensFromRequest(r *authnz.HandleAuthnZRequest) (*validator.RawTokens, *errors.OAuthError) {

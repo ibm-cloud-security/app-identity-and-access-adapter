@@ -197,7 +197,7 @@ type MockValidator struct {
 	err          *errors.OAuthError
 }
 
-func (v MockValidator) Validate(tkn string, tokenType validator.Token,ks keyset.KeySet, rules []v1.Rule) *errors.OAuthError {
+func (v MockValidator) Validate(tkn string, tokenType validator.Token, ks keyset.KeySet, rules []v1.Rule, userInfoEndpoint string) *errors.OAuthError {
 	if tkn == v.invalidToken {
 		return v.err
 	}

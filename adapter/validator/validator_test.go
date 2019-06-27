@@ -13,6 +13,7 @@ import (
 
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ const (
 	testKid         = "appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497"
 	pathToPublicKey = "../../tests/keys/key.pub"
 	validToken      = "valid"
-	userinfo         =  "/userinfo"
+	userinfo        = "/userinfo"
 	// Test keys signed with ../../tests/keys/key.private
 	// Expires year: 2160
 	validAudStrToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJhcHBJZC03MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTItMjAxOC0wOC0wMlQxMTo1MzozNi40OTciLCJ2ZXIiOjN9.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6NTk5OTk5OTk5OSwiYXVkIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwic3ViIjoiYzE2OTIwZTMtYTZlYi00YmE1LWIyMWEtZTcyYWZjODZiYWYzIiwiYW1yIjpbImFwcGlkX2NsaWVudF9jcmVkZW50aWFscyJdLCJpYXQiOjE1NTYxMzcwNzgsInRlbmFudCI6IjcxYjM0ODkwLWE5NGYtNGVmMi1hNGI2LWNlMDk0YWE2ODA5MiIsInNjb3BlIjoiYXBwaWRfZGVmYXVsdCIsImFycl9pbnQiOlsxLDIsMyw0LDVdLCJhcnJfYm9vbCI6W3RydWVdLCJib29sIjp0cnVlLCJpbnQiOjEwMCwib2JqIjp7InN0ciI6ImhlbGxvIiwiYXJyYXlfc3RyIjpbIjEiLCIyIl0sIm9iaiI6eyJzdHIiOiJ3b3JsZCJ9fX0.lBU2kpcU78aq7VDi3N0AboUjFLs65KH4SJOjG63m7HAnb86QtNc7PiA_YOqo9uCXWUdKv9tGvCGxeEx0rvFW_-LGUO0n88avM2HxBDFSI9OL7lFySSdTsBe7okPWdUuruIOGfbWVDSDDEdkwlJ0DLnFOAUqYhQW1dV8TtyqbYb2xyDv_jCDhIz2uE7dTqQBHa_uZFy_pOsiWAZb83xjoMCoV03bP2c3ZzpFFToF3IJuldo4bCr1XYJAlTp7P6hzG4ELhQp5f5pNGLtTWZaxicx5Qs5Mp0fUtdLjYRPmzuhmOT01qyJBRHDnil3bQ_W1lsHgv3oVdLs_AGn3_D8WF1A"
@@ -36,7 +37,7 @@ const (
 	diffKidToken     = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpPU0UiLCJraWQiOiJvdGhlciIsInZlciI6M30.eyJpc3MiOiJsb2NhbGhvc3Q6NjAwMiIsImV4cCI6MTAwMDAwMDAsImF1ZCI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsInN1YiI6ImMxNjkyMGUzLWE2ZWItNGJhNS1iMjFhLWU3MmFmYzg2YmFmMyIsImFtciI6WyJhcHBpZF9jbGllbnRfY3JlZGVudGlhbHMiXSwiaWF0IjoxNTU2MTM3MDc4LCJ0ZW5hbnQiOiI3MWIzNDg5MC1hOTRmLTRlZjItYTRiNi1jZTA5NGFhNjgwOTIiLCJzY29wZSI6ImFwcGlkX2RlZmF1bHQifQ.Gyan705Sy_HC_1iHSdyBhFepysB4Gf8WeJmxgf-WQeytaZa8dXjv_VdZrTaX-OtVfRPZEn-FGLr-KKRbEad8jl-of-A6fc6U10JBA8zT5tx5yYTBeCWxBOrJAN4bYZIUKdcRX24-iMoyrm1wt3jCuA3Z3fGnncBq4ndwIhVUqpf_hrivcQlhXk9JEYMzwxydYaWI_ZRhQT21lAC8H1DaLwNbMe_0AfBGhyO4Yk3boa68Mhd3uhYFZQ_NIemXa2oXI3R_gWLdM43qrNkBs_7YFEWIa6hI6A3Yyzz95ZbiZv23lFEym_lAFoqkCt9MAcWhitnG1Gg-IWEr_C-uPTNknw"
 )
 
-////// Mocks /////
+// //// Mocks /////
 
 type localKeySet struct{ url string }
 
@@ -54,215 +55,218 @@ var testKeySet = &localKeySet{url: "https://keys.com/publickeys"}
 
 var emptyRule = []v1.Rule{}
 
-/////// Token Validation ///////
+// ///// Token Validation ///////
 
 func TestTokenValidation(t *testing.T) {
 	var tests = []struct {
-		token string
+		token     string
 		tokenType Token
-		err   *errors.OAuthError
-		jwks  keyset.KeySet
-		rules []v1.Rule
+		err       *errors.OAuthError
+		jwks      keyset.KeySet
+		rules     []v1.Rule
 	}{
-		{"", Access,&errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
-		{"token", Access,&errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
-		{"p1.p2.p3", Access,&errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
-		{"token", ID,&errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
-		{validAudArrToken, ID,&errors.OAuthError{Msg: errors.InternalServerError}, nil, emptyRule},
-		{validAudStrToken, ID,nil, testKeySet, emptyRule},
-		{validAudArrToken, ID,nil, testKeySet, emptyRule},
-		{expiredToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "Token is expired"}, testKeySet, emptyRule},
-		{validAudArrToken + "other", ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "crypto/rsa: verification error"}, testKeySet, emptyRule},
-		{noKidToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - kid is missing"}, testKeySet, emptyRule},
-		{diffKidToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - key not found :: other"}, testKeySet, emptyRule},
-		{"p1.p2", ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token contains an invalid number of segments"}, testKeySet, emptyRule},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{"", Access, &errors.OAuthError{Code: errors.InvalidToken}, nil, emptyRule},
+		{"token", Access, &errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
+		{"p1.p2.p3", Access, &errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
+		{"token", ID, &errors.OAuthError{Code: errors.InvalidToken}, testKeySet, emptyRule},
+		{validAudArrToken, ID, &errors.OAuthError{Msg: errors.InternalServerError}, nil, emptyRule},
+		{validAudStrToken, ID, nil, testKeySet, emptyRule},
+		{validAudArrToken, ID, nil, testKeySet, emptyRule},
+		{expiredToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "Token is expired"}, testKeySet, emptyRule},
+		{validAudArrToken + "other", ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "crypto/rsa: verification error"}, testKeySet, emptyRule},
+		{noKidToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - kid is missing"}, testKeySet, emptyRule},
+		{diffKidToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - key not found :: other"}, testKeySet, emptyRule},
+		{"p1.p2", ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token contains an invalid number of segments"}, testKeySet, emptyRule},
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "iss",
+				Claim:  "iss",
 				Values: []string{"localhost:6002"},
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "aud",
+				Claim:  "aud",
 				Values: []string{testAud},
 			},
 		}},
-		{validAudArrToken,ID, nil, testKeySet, []v1.Rule{
+		{validAudArrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "aud",
+				Claim:  "aud",
 				Values: []string{testAud},
 			},
 		}},
-		{validAudArrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to match all of: [another audience]"}, testKeySet, []v1.Rule{
+		{validAudArrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to match all of: [another audience]"}, testKeySet, []v1.Rule{
 			{
-				Claim: "aud",
+				Claim:  "aud",
 				Values: []string{"another audience"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to match all of: [another Values]"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `iss` to match all of: [another Values]"}, testKeySet, []v1.Rule{
 			{
-				Claim: "iss",
+				Claim:  "iss",
 				Values: []string{"another Values"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to not match any of: [" + testAud + " 2]"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `aud` to not match any of: [" + testAud + " 2]"}, testKeySet, []v1.Rule{
 			{
-				Claim: "aud",
-				Match: "NOT",
+				Claim:  "aud",
+				Match:  "NOT",
 				Values: []string{testAud, "2"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "arr_int",
-				Match: "ANY",
+				Claim:  "arr_int",
+				Match:  "ANY",
 				Values: []string{"1", "2", "3"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
 			{
-				Claim: "scope",
-				Match: "NOT",
+				Claim:  "scope",
+				Match:  "NOT",
 				Values: []string{"appid_default"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `custom_claim` does not exist - rule requires: [custom]", Scopes: nil}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `custom_claim` does not exist - rule requires: [custom]", Scopes: nil}, testKeySet, []v1.Rule{
 			{
-				Claim: "custom_claim",
-				Match: "ALL",
+				Claim:  "custom_claim",
+				Match:  "ALL",
 				Values: []string{"custom"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `scope` to not match any of: [appid_default]", Scopes: []string{"appid_default"}}, testKeySet, []v1.Rule{
 			{
-				Claim: "aud",
+				Claim:  "aud",
 				Values: []string{testAud},
 				Source: ID.String(),
 			},
 			{
-				Claim: "scope",
-				Match: "NOT",
+				Claim:  "scope",
+				Match:  "NOT",
 				Values: []string{"appid_default"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "int",
+				Claim:  "int",
 				Values: []string{"100"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `int` to match all of: [1]", Scopes: nil}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `int` to match all of: [1]", Scopes: nil}, testKeySet, []v1.Rule{
 			{
-				Claim: "int",
+				Claim:  "int",
 				Values: []string{"1"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "bool",
+				Claim:  "bool",
 				Values: []string{"true"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `arr_bool` to match all of: [false]", Scopes: nil}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `arr_bool` to match all of: [false]", Scopes: nil}, testKeySet, []v1.Rule{
 			{
-				Claim: "arr_bool",
+				Claim:  "arr_bool",
 				Values: []string{"false"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "arr_bool",
+				Claim:  "arr_bool",
 				Values: []string{"true", "true"},
 				Source: ID.String(),
 			},
 		}}, // Nested
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "obj.str",
+				Claim:  "obj.str",
 				Values: []string{"hello"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "obj.array_str",
-				Values: []string{"1","2"},
+				Claim:  "obj.array_str",
+				Values: []string{"1", "2"},
 				Source: ID.String(),
 			},
 		}},
-		{validAudStrToken, ID,nil, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, nil, testKeySet, []v1.Rule{
 			{
-				Claim: "obj.array_str",
+				Claim:  "obj.array_str",
 				Values: []string{"1"},
 				Source: ID.String(),
-				Match: "ANY",
+				Match:  "ANY",
 			},
 		}},
-		{validAudStrToken,ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `obj.str` to match all of: [not]"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `obj.str` to match all of: [not]"}, testKeySet, []v1.Rule{
 			{
-				Claim: "obj.str",
+				Claim:  "obj.str",
 				Values: []string{"not"},
 				Source: ID.String(),
 			},
 		}}, // Unknown Types
-		{validAudStrToken,ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[string]interface {}"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "claim is not of a supported type: map[string]interface {}"}, testKeySet, []v1.Rule{
 			{
-				Claim: "obj",
+				Claim:  "obj",
 				Values: []string{"{}"},
 				Source: ID.String(),
 			},
 		}}, // Invalid nesting
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `bool.next` does not exist - rule requires: [true]"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `bool.next` does not exist - rule requires: [true]"}, testKeySet, []v1.Rule{
 			{
-				Claim: "bool.next",
+				Claim:  "bool.next",
 				Values: []string{"true"},
 				Source: ID.String(),
 			},
 		}},
 		// Empty claim
-		{validAudStrToken, ID,&errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `` does not exist - rule requires: []"}, testKeySet, []v1.Rule{
+		{validAudStrToken, ID, &errors.OAuthError{Code: errors.InvalidToken, Msg: "token validation error - expected claim `` does not exist - rule requires: []"}, testKeySet, []v1.Rule{
 			{
-				Claim: "",
+				Claim:  "",
 				Values: []string{""},
 				Source: ID.String(),
 			},
 		}},
 	}
-	v := New()
 	for _, e := range tests {
 		t.Run("Validate", func(st *testing.T) {
-			// st.Parallel()
-			oaErr := v.Validate(e.token, e.tokenType, e.jwks, e.rules)
-			if e.err != nil {
-				if e.err.Code != "" {
-					assert.Equal(st, e.err.Code, oaErr.Code)
+			st.Parallel()
+			runTest := func(v TokenValidator) {
+				oaErr := v.Validate(e.token, e.tokenType, e.jwks, e.rules, userinfo)
+				if e.err != nil {
+					if e.err.Code != "" {
+						assert.Equal(st, e.err.Code, oaErr.Code)
+					}
+					if e.err.Msg != "" {
+						assert.Equal(st, e.err.Msg, oaErr.Msg)
+					}
+					if e.err.Scopes != nil {
+						assert.ElementsMatch(st, e.err.Scopes, oaErr.Scopes)
+					}
+				} else {
+					assert.Nil(st, oaErr)
 				}
-				if e.err.Msg != "" {
-					assert.Equal(st, e.err.Msg, oaErr.Msg)
-				}
-				if e.err.Scopes != nil {
-					assert.ElementsMatch(st, e.err.Scopes, oaErr.Scopes)
-				}
-			} else {
-				assert.Nil(st, oaErr)
 			}
+			runTest(NewTokenValidator(policy.OIDC))
+			runTest(NewTokenValidator(policy.JWT))
 		})
 	}
 }
 
-/////// Claim Validation //////
+// ///// Claim Validation //////
 
 func TestClaimValidation(t *testing.T) {
 	t.Parallel()
@@ -271,100 +275,100 @@ func TestClaimValidation(t *testing.T) {
 		expectErr error
 	}{ // Strings
 		{v1.Rule{
-			Claim: "string",
-			Match: "ALL",
+			Claim:  "string",
+			Match:  "ALL",
 			Values: []string{"1"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "string",
-			Match: "ALL",
+			Claim:  "string",
+			Match:  "ALL",
 			Values: []string{},
 		},
 			e.New("token validation error - expected claim `string` to match all of: [], but is empty"),
 		},
 		{v1.Rule{
-			Claim: "string",
-			Match: "ALL",
+			Claim:  "string",
+			Match:  "ALL",
 			Values: []string{"6"},
 		},
 			e.New("token validation error - expected claim `string` to match all of: [6]"),
 		},
 		{v1.Rule{
-			Claim: "string",
-			Match: "ANY",
+			Claim:  "string",
+			Match:  "ANY",
 			Values: []string{},
 		},
 			e.New("token validation error - expected claim `string` to match one of: []"),
 		},
 		// String arrays
 		{v1.Rule{
-			Claim: "string_arr",
-			Match: "ALL",
+			Claim:  "string_arr",
+			Match:  "ALL",
 			Values: []string{"1", "2", "3", "4"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "string_arr",
-			Match: "ANY",
+			Claim:  "string_arr",
+			Match:  "ANY",
 			Values: []string{"1"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "string_arr",
-			Match: "NOT",
+			Claim:  "string_arr",
+			Match:  "NOT",
 			Values: []string{},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "string_arr",
-			Match: "ANY",
+			Claim:  "string_arr",
+			Match:  "ANY",
 			Values: []string{"6", ""},
 		},
 			e.New("token validation error - expected claim `string_arr` to match one of: [6 ]"),
 		}, // Arrays of strings
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "ALL",
+			Claim:  "arr_string",
+			Match:  "ALL",
 			Values: []string{"1", "2", "3", "4"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "ANY",
+			Claim:  "arr_string",
+			Match:  "ANY",
 			Values: []string{"1", "5", "6", "7"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "NOT",
+			Claim:  "arr_string",
+			Match:  "NOT",
 			Values: []string{"7", "8", "9", "10"},
 		},
 			nil,
 		},
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "NOT",
+			Claim:  "arr_string",
+			Match:  "NOT",
 			Values: []string{"7", "1"},
 		},
 			e.New("token validation error - expected claim `arr_string` to not match any of: [7 1]"),
 		},
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "ALL",
+			Claim:  "arr_string",
+			Match:  "ALL",
 			Values: []string{"7", "1"},
 		},
 			e.New("token validation error - expected claim `arr_string` to match all of: [7 1]"),
 		},
 		{v1.Rule{
-			Claim: "arr_string",
-			Match: "ANY",
+			Claim:  "arr_string",
+			Match:  "ANY",
 			Values: []string{"7", "8"},
 		},
 			e.New("token validation error - expected claim `arr_string` to match one of: [7 8]"),
@@ -401,7 +405,7 @@ func TestValidateClaims(t *testing.T) {
 	err := validateClaims(nil, Access, nil)
 	assert.Equal(t, "Internal Server Error", err.Error())
 
-	err = validateClaims(&jwt.Token{}, Access,[]v1.Rule{})
+	err = validateClaims(&jwt.Token{}, Access, []v1.Rule{})
 	assert.Equal(t, err.Msg, errors.InvalidToken)
 }
 
@@ -416,21 +420,21 @@ func TestValidateAccessTokenString(t *testing.T) {
 	var tests = []struct {
 		tokenUrl string
 		tokenStr string
-		rules []v1.Rule
-		err   *errors.OAuthError
+		rules    []v1.Rule
+		err      *errors.OAuthError
 	}{
 		{
 			tokenUrl: userinfo,
 			tokenStr: validToken,
-			rules: emptyRule,
-			err: nil,
+			rules:    emptyRule,
+			err:      nil,
 		},
 		{
 			tokenUrl: userinfo,
 			tokenStr: validToken,
 			rules: []v1.Rule{
 				{
-					Claim: "int",
+					Claim:  "int",
 					Values: []string{"100"},
 					Source: Access.String(),
 				},
@@ -444,7 +448,7 @@ func TestValidateAccessTokenString(t *testing.T) {
 			// st.Parallel()
 			// Overwrite Http req handler
 			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				if req.Header.Get("Authorization") == "Basic " + validToken {
+				if req.Header.Get("Authorization") == "Basic "+validToken {
 					w.WriteHeader(200)
 				} else {
 					w.WriteHeader(401)
