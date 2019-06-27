@@ -39,7 +39,7 @@ Protobuf templates define the gRPC communication interface between Mixer and our
 
 Version 0.0.0 uses a custom template defining its input and output.
 
-You can see the template at `github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template/template.proto`.
+You can see the template at `github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template/template.proto`.
 
 Whenever you want the adapter to take in or output new parameters, you will have to rebuild template using Istio's bundled script.
 
@@ -53,7 +53,7 @@ bin/mixer_codegen.sh -t ./path/to/config/template/template.proto
 
 To implement an adapter for the updated template, you will need to updates its configuration. 
 
-Modify the file `github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/adapter/config.proto` with the following content:
+Modify the file `github.com/ibm-cloud-security/app-identity-and-access-adapter/config/adapter/config.proto` with the following content:
 
 Run the following command to generate the adapter definition:
 
@@ -70,7 +70,7 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
 1. Start the Istio Mixer
 
     ```
-    $GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/test/testdata --log_output_level=attributes:debug
+    $GOPATH/out/darwin_amd64/release/mixs server --configStoreURL=fs://$GOPATH/src/github.com/ibm-cloud-security/app-identity-and-access-adapter/test/testdata --log_output_level=attributes:debug
     ```
 
 2. Start the adapter

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
 
 	"github.com/gogo/protobuf/types"
 	"github.com/gorilla/securecookie"
@@ -17,13 +17,13 @@ import (
 	"istio.io/api/policy/v1beta1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
-	err "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config"
+	err "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
 )
 
 const (

@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

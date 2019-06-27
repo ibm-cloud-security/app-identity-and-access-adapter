@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
 )
 
 func getPathConfig(exact string, prefix string, method string, policies []v1.PathPolicy) v1.PathConfig {

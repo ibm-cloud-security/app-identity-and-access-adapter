@@ -3,9 +3,9 @@ package crdeventhandler
 import (
 	"go.uber.org/zap"
 
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	storepolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	storepolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
 )
 
 type DeleteEventHandler interface {

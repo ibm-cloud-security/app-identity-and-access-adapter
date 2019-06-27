@@ -10,8 +10,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (

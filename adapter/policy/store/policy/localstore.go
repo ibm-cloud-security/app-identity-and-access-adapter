@@ -1,10 +1,10 @@
 package policy
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/pathtrie"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/pathtrie"
 )
 
 // LocalStore is responsible for storing and managing policy/client data

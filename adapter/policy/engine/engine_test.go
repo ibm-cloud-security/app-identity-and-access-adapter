@@ -2,16 +2,17 @@ package engine
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"testing"
 
-	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+
+	policy2 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 func TestNew(t *testing.T) {

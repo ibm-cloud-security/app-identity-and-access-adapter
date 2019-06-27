@@ -2,7 +2,7 @@ package framework
 
 import (
 	"fmt"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/framework/utils"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
 	"math/rand"
 	"os"
 	"strings"

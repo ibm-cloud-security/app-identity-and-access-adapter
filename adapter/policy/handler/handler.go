@@ -5,9 +5,9 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler/crdeventhandler"
-	policystore "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/handler/crdeventhandler"
+	policystore "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
 )
 
 // PolicyHandler is responsible for storing and managing policy/client data

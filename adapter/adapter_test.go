@@ -4,16 +4,18 @@ package adapter
 import (
 	"context"
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
 	"testing"
 
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
+
 	"github.com/gogo/googleapis/google/rpc"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"github.com/stretchr/testify/assert"
 	"istio.io/istio/mixer/pkg/status"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 func TestNew(t *testing.T) {

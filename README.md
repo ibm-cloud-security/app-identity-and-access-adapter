@@ -1,6 +1,6 @@
 # IBM Cloud App ID Istio Adapter
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/ibm-cloud-security/policy-enforcer-mixer-adapter)](https://goreportcard.com/report/github.com/ibm-cloud-security/policy-enforcer-mixer-adapter)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ibm-cloud-security/app-identity-and-access-adapter)](https://goreportcard.com/report/github.com/ibm-cloud-security/app-identity-and-access-adapter)
 
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
@@ -243,17 +243,17 @@ This package contains code licensed under the Apache License, Version 2.0 (the "
 [img-license]: https://img.shields.io/npm/l/ibmcloud-appid.svg
 [img-version]: https://img.shields.io/npm/v/ibmcloud-appid.svg
 
-[img-github-watchers]: https://img.shields.io/github/watchers/ibm-cloud-security/policy-enforcer-mixer-adapter.svg?style=social&label=Watch
-[url-github-watchers]: https://github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/watchers
-[img-github-stars]: https://img.shields.io/github/stars/ibm-cloud-security/appid-serversdk-nodejs.svg?style=social&label=Star
-[url-github-stars]: https://github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/stargazers
-[img-github-forks]: https://img.shields.io/github/forks/ibm-cloud-security/policy-enforcer-mixer-adapter.svg?style=social&label=Fork
-[url-github-forks]: https://github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/network
+[img-github-watchers]: https://img.shields.io/github/watchers/ibm-cloud-security/app-identity-and-access-adapter.svg?style=social&label=Watch
+[url-github-watchers]: https://github.com/ibm-cloud-security/app-identity-and-access-adapter/watchers
+[img-github-stars]: https://img.shields.io/github/stars/ibm-cloud-security/app-identity-and-access-adapter.svg?style=social&label=Star
+[url-github-stars]: https://github.com/ibm-cloud-security/app-identity-and-access-adapter/stargazers
+[img-github-forks]: https://img.shields.io/github/forks/ibm-cloud-security/app-identity-and-access-adapter.svg?style=social&label=Fork
+[url-github-forks]: https://github.com/ibm-cloud-security/app-identity-and-access-adapter/network
 
-[img-travis-master]: https://travis-ci.org/ibm-cloud-security/policy-enforcer-mixer-adapter.svg?branch=development
-[url-travis-master]: https://travis-ci.org/ibm-cloud-security/policy-enforcer-mixer-adapter
+[img-travis-master]: https://travis-ci.org/ibm-cloud-security/app-identity-and-access-adapter.svg?branch=development
+[url-travis-master]: https://travis-ci.org/ibm-cloud-security/app-identity-and-access-adapter
 
-[img-coveralls-master]: https://coveralls.io/repos/github/ibm-cloud-security/policy-enforcer-mixer-adapter/badge.svg
-[url-coveralls-master]: https://coveralls.io/github/ibm-cloud-security/policy-enforcer-mixer-adapter
+[img-coveralls-master]: https://coveralls.io/repos/github/ibm-cloud-security/app-identity-and-access-adapter/badge.svg
+[url-coveralls-master]: https://coveralls.io/github/ibm-cloud-security/app-identity-and-access-adapter
 [img-codacy]: https://api.codacy.com/project/badge/Grade/2dd243b5b9f64431bf03bf0a9a470833?branch=master
-[url-codacy]: https://app.codacy.com/app/sandmman/policy-enforcer-mixer-adapter?utm_source=github.com&utm_medium=referral&utm_content=ibm-cloud-security/policy-enforcer-mixer-adapter&utm_campaign=Badge_Grade_Dashboard
+[url-codacy]: https://app.codacy.com/app/ibm-cloud-security/app-identity-and-access-adapter?utm_source=github.com&utm_medium=referral&utm_content=ibm-cloud-security/app-identity-and-access-adapter&utm_campaign=Badge_Grade_Dashboard

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"io/ioutil"

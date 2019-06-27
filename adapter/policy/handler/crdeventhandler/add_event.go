@@ -4,12 +4,12 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	storepolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	storepolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
 )
 
 type AddUpdateEventHandler interface {

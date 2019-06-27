@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
-	policies "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/policies"
+	versioned "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
+	policies "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/informers/externalversions/policies"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

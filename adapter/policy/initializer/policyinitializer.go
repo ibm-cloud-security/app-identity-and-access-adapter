@@ -7,19 +7,20 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
 
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	policiesClientSet "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
-	policiesInformer "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions"
-	policyController "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/controller"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/handler"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
+
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	policiesClientSet "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned"
+	policiesInformer "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/informers/externalversions"
+	policyController "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/controller"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/handler"
 )
 
 // Initializer interface contains the methods that are required

@@ -10,10 +10,10 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 	"go.uber.org/zap"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
 )
 
 const (

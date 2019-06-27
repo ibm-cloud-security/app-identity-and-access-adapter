@@ -58,7 +58,7 @@ function buildAndDeploy() {
 }
 
 
-IMAGE_REGISTRY_NAMESPACE=aliberat1
+IMAGE_REGISTRY_NAMESPACE=ishangulhane
 APP_NAME=istio-adapter-ibmcloudappid
 TAG=$(buildTag $1)
 IMAGE_TAG=${IMAGE_REGISTRY_NAMESPACE}/${APP_NAME}:${TAG}

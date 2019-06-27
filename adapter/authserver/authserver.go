@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/golang/groupcache/singleflight"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	cstmErrs "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"go.uber.org/zap"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	cstmErrs "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/networking"
 )
 
 const (

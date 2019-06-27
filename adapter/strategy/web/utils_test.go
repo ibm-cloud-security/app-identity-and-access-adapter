@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/tests/fake"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
 )
 
 func TestRandString(t *testing.T) {

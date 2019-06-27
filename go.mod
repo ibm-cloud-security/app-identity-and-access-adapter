@@ -1,4 +1,4 @@
-module github.com/ibm-cloud-security/policy-enforcer-mixer-adapter
+module github.com/ibm-cloud-security/app-identity-and-access-adapter
 
 go 1.12
 

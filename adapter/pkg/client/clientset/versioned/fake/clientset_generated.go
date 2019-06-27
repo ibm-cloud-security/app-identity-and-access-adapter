@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
-	appidv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1"
-	fakeappidv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1/fake"
+	clientset "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned"
+	appidv1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1"
+	fakeappidv1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned/typed/policies/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

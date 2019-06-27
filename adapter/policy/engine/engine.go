@@ -3,14 +3,15 @@ package engine
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
 	"strings"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 
 	"go.uber.org/zap"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	policy2 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (

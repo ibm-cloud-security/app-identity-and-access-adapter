@@ -21,10 +21,10 @@ package v1
 import (
 	time "time"
 
-	policiesv1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	versioned "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/client/listers/policies/v1"
+	policiesv1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	versioned "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/client/listers/policies/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

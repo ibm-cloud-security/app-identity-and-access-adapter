@@ -3,7 +3,7 @@ package apistrategy
 import (
 	"strings"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
 
 	"go.uber.org/zap"
 
@@ -13,11 +13,11 @@ import (
 	policy "istio.io/api/policy/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	adapterPolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
+	adapterPolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (

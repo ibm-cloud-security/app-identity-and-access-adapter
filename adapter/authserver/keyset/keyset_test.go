@@ -2,13 +2,14 @@ package keyset
 
 import (
 	"context"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/networking"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -1,20 +1,20 @@
 package apistrategy
 
 import (
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
 
 	"testing"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver/keyset"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
 	"istio.io/api/policy/v1beta1"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
 )
 
 func TestNew(t *testing.T) {

@@ -20,17 +20,17 @@ import (
 	"istio.io/istio/mixer/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
-	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
-	policiesV1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	adapterPolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config"
+	oAuthError "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/networking"
+	policiesV1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	adapterPolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (

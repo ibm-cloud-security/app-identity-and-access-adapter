@@ -14,11 +14,11 @@ replicaCount: 1
 ## The image provides the docker source of the cloud adapter
 image:
   ## This is the source of the adapter docker image
-  repository: aliberat1/istio-adapter-ibmcloudappid
+  repository: ishangulhane/istio-adapter-ibmcloudappid
   ## The image version to pull. Tag "latest" always contains
   ## the most up-to-date image. To avoid breaking changes during
   ## installs, it is recommended to use a tag.
-  tag: AaronLiberatore
+  tag: 0.4.0
   ## The pullPolicy defines when the adapter image needs to be re-pulled
   ## from the source repository. Set to Always when using "latest."
   pullPolicy: Always
@@ -56,4 +56,4 @@ logging:
   ## voluminous logging, use DEBUG (-1). Logging can be configured
   ## from -1 to 7
   ## See zapcore: https://godoc.org/go.uber.org/zap/zapcore#Level
-  level: -1
+  level: 0

@@ -1,7 +1,7 @@
 // nolint:lll
 // Generates the appidadpater's resource yaml. It contains the adapter's configuration, name, supported template
 // names (metric in this case), and whether it is session or no-session based.
-//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config/config.proto -x "-s=false -n ibmcloudappid -t authorization"
+//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config/config.proto -x "-s=false -n ibmcloudappid -t authorization"
 
 package adapter
 
@@ -12,19 +12,20 @@ import (
 	"net"
 	"strings"
 
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/config"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/initializer"
-	policy2 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/store/policy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/api"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy/web"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"istio.io/api/mixer/adapter/model/v1beta1"
 	"istio.io/istio/mixer/pkg/status"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/initializer"
+	storePolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/api"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/web"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 type (
@@ -115,7 +116,7 @@ func NewAppIDAdapter(cfg *config.Config) (Server, error) {
 		return nil, err
 	}
 
-	localStore := policy2.New()
+	localStore := storePolicy.New()
 
 	// Initialize Kubernetes
 	init, err := initializer.New(localStore)
