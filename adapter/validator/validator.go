@@ -3,13 +3,17 @@ package validator
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/dgrijalva/jwt-go/v4"
+	"go.uber.org/zap"
+
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/authserver/keyset"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
-	"go.uber.org/zap"
-	"strconv"
-	"strings"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 )
 
 const (
@@ -21,11 +25,17 @@ const (
 
 // TokenValidator parses and validates JWT tokens according to policies
 type TokenValidator interface {
-	Validate(token string, jwks keyset.KeySet, rules []v1.Rule) *errors.OAuthError
+	Validate(token string, tokenType Token, jwks keyset.KeySet, rules []v1.Rule, userInfoEndpoint string) *errors.OAuthError
 }
 
 // Validator implements the TokenValidator
 type Validator struct{}
+
+// OidcTokenValidator implements the TokenValidator
+type OidcTokenValidator struct{}
+
+// JwtTokenValidator implements the TokenValidator
+type JwtTokenValidator struct{}
 
 // RawTokens - holds references to raw access and id tokens
 // empty tokens are represented with ""
@@ -34,18 +44,25 @@ type RawTokens struct {
 	ID     string
 }
 
-////////////////// constructor //////////////////
+// //////////////// constructor //////////////////
 
 // New creates a New TokenValidator
-func New() TokenValidator {
-	return &Validator{}
+func NewTokenValidator(policyType policy.Type) TokenValidator {
+	switch policyType {
+	case policy.OIDC:
+		return &OidcTokenValidator{}
+	case policy.JWT:
+		return &JwtTokenValidator{}
+	default:
+		return nil
+	}
 }
 
-////////////////// interface //////////////////////////
+// //////////////// interface //////////////////////////
 
 // Validate validates tokens according to the specified policies.
 // If any policy fails, the entire request should be rejected
-func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule) *errors.OAuthError {
+func (o *OidcTokenValidator) Validate(tokenStr string, tokenType Token, jwks keyset.KeySet, rules []v1.Rule, userInfoEndpoint string) *errors.OAuthError {
 
 	if tokenStr == "" {
 		zap.L().Debug("Unauthorized - Token does not exist")
@@ -58,6 +75,56 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule)
 			Msg: errors.InternalServerError,
 		}
 	}
+
+	if jwtFormat := checkJwtFormat(tokenStr); !jwtFormat {
+		// token contains an invalid number of segments
+		if tokenType == Access {
+			return validateAccessTokenString(userInfoEndpoint, tokenStr, rules)
+		} else {
+			err := errors.UnauthorizedHTTPException("token contains an invalid number of segments", findRequiredScopes(rules))
+			zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
+			return err
+		}
+	}
+
+	// Parse the token - validate expiration and signature
+	token, err := validateSignature(tokenStr, jwks)
+	if err != nil {
+		if tokenType != Access {
+			zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
+			return errors.UnauthorizedHTTPException(err.Error(), findRequiredScopes(rules))
+		}
+		// if access token plain contains of 3 dots
+		return validateAccessTokenString(userInfoEndpoint, tokenStr, rules)
+	}
+
+	// Validate token
+	claimErr := validateClaims(token, tokenType, rules)
+	if claimErr != nil {
+		zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
+		return errors.UnauthorizedHTTPException(claimErr.Msg, findRequiredScopes(rules))
+	}
+	zap.L().Debug("Token has been validated")
+
+	return nil
+}
+
+// Validate validates tokens according to the specified policies.
+// If any policy fails, the entire request should be rejected
+func (*JwtTokenValidator) Validate(tokenStr string, tokenType Token, jwks keyset.KeySet, rules []v1.Rule, userInfoEndpoint string) *errors.OAuthError {
+
+	if tokenStr == "" {
+		zap.L().Debug("Unauthorized - Token does not exist")
+		return errors.UnauthorizedHTTPException("token not provided", findRequiredScopes(rules))
+	}
+
+	if jwks == nil {
+		zap.L().Debug("Unauthorized - JWKS not provided")
+		return &errors.OAuthError{
+			Msg: errors.InternalServerError,
+		}
+	}
+
 	// Parse the token - validate expiration and signature
 	token, err := validateSignature(tokenStr, jwks)
 	if err != nil {
@@ -66,24 +133,49 @@ func (*Validator) Validate(tokenStr string, jwks keyset.KeySet, rules []v1.Rule)
 	}
 
 	// Validate token
-	claimErr := validateClaims(token, rules)
+	claimErr := validateClaims(token, tokenType, rules)
 	if claimErr != nil {
 		zap.L().Debug("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
 		return errors.UnauthorizedHTTPException(claimErr.Msg, findRequiredScopes(rules))
 	}
-
 	zap.L().Debug("Token has been validated")
 
 	return nil
 }
 
-////////////////// utils //////////////////////////
+// //////////////// utilities //////////////////
+
+// validateAccessTokenString validates the access token string
+func validateAccessTokenString(userInfoEndpoint string, tokenStr string, rules []v1.Rule) *errors.OAuthError {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", userInfoEndpoint, nil)
+
+	if err != nil {
+		zap.L().Warn("Failed to get the userinfo", zap.String("url", userInfoEndpoint))
+		return errors.BadRequestHTTPException(err.Error())
+	}
+
+	req.Header.Set("Authorization", "Basic "+tokenStr)
+	if res, err := client.Do(req); err != nil || res.StatusCode != http.StatusOK {
+		zap.L().Warn("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
+		return errors.UnauthorizedHTTPException(err.Error(), findRequiredScopes(rules))
+	}
+
+	for _, rule := range rules {
+		if rule.Source == Access.String() {
+			zap.L().Warn("Unauthorized - rules configured for opaque access token")
+			return errors.BadRequestHTTPException("Unauthorized - rules configured for opaque access token")
+		}
+	}
+
+	return nil
+}
 
 // Find scopes returns the required scope rules to return in www-authenticate header
 func findRequiredScopes(rules []v1.Rule) []string {
 	for _, r := range rules {
 		if r.Claim == scope {
-			return r.Value
+			return r.Values
 		}
 	}
 	return nil
@@ -116,7 +208,7 @@ func validateSignature(token string, jwks keyset.KeySet) (*jwt.Token, error) {
 }
 
 // validateClaims validates claims based on policies
-func validateClaims(token *jwt.Token, rules []v1.Rule) *errors.OAuthError {
+func validateClaims(token *jwt.Token, tokenType Token, rules []v1.Rule) *errors.OAuthError {
 	if token == nil {
 		zap.L().Error("Unexpectedly received nil token during validation")
 		return &errors.OAuthError{Msg: errors.InternalServerError}
@@ -130,10 +222,9 @@ func validateClaims(token *jwt.Token, rules []v1.Rule) *errors.OAuthError {
 	}
 
 	for _, rule := range rules {
-		if err := checkAccessPolicy(rule, claims); err != nil {
-			return &errors.OAuthError{
-				Code: errors.InvalidToken,
-				Msg:  err.Error(),
+		if (rule.Source == tokenType.String()) || (rule.Source == "" && Access.String() == tokenType.String()) {
+			if err := checkAccessPolicy(rule, claims); err != nil {
+				return errors.UnauthorizedHTTPException(err.Error(), nil)
 			}
 		}
 	}
@@ -150,11 +241,11 @@ func checkAccessPolicy(rule v1.Rule, claims jwt.MapClaims) error {
 	}
 	switch rule.Match {
 	case ANY:
-		return validateClaimMatchesAny(rule.Claim, m, rule.Value)
+		return validateClaimMatchesAny(rule.Claim, m, rule.Values)
 	case NOT:
-		return validateClaimDoesNotMatch(rule.Claim, m, rule.Value)
+		return validateClaimDoesNotMatch(rule.Claim, m, rule.Values)
 	default: // "ALL"
-		return validateClaimMatchesAll(rule.Claim, m, rule.Value)
+		return validateClaimMatchesAll(rule.Claim, m, rule.Values)
 	}
 }
 
@@ -165,6 +256,7 @@ func getNestedClaim(claim string, claims jwt.MapClaims) interface{} {
 			if i == len(tiers)-1 {
 				return claim
 			}
+
 			if cast, ok := claim.(map[string]interface{}); ok {
 				claims = cast
 				continue
@@ -253,5 +345,11 @@ func getClaims(token *jwt.Token) (jwt.MapClaims, *errors.OAuthError) {
 		}
 	}
 	zap.L().Debug("Token validation error - invalid JWT token")
-	return nil, &errors.OAuthError{Msg: errors.InvalidToken}
+	return nil, errors.UnauthorizedHTTPException(errors.InvalidToken, nil)
+}
+
+// checkJwtFormat : checks the token string for valid jwt format
+func checkJwtFormat(token string) bool {
+	tokenParts := strings.Split(token, ".")
+	return len(tokenParts) == 3
 }

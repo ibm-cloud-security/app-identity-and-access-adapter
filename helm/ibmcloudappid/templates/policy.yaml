@@ -1,9 +1,9 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind:       CustomResourceDefinition
 metadata:
-    name: policies.appid.cloud.ibm.com
+    name: policies.security.cloud.ibm.com
 spec:
-    group: appid.cloud.ibm.com
+    group: security.cloud.ibm.com
     versions:
         - name:    v1
           served:  true
@@ -75,18 +75,23 @@ spec:
                                                                     type:   object
                                                                     required:
                                                                         - claim
-                                                                        - value
+                                                                        - values
                                                                     properties:
                                                                         claim:
                                                                             type:      string
                                                                             minLength: 1
+                                                                        source:
+                                                                            type:      string
+                                                                            enum:
+                                                                                - access_token
+                                                                                - id_token
                                                                         match:
                                                                             type: string
                                                                             enum:
                                                                                 - ALL
                                                                                 - ANY
                                                                                 - NOT
-                                                                        value:
+                                                                        values:
                                                                             type:      array
                                                                             items:
                                                                                 type: string

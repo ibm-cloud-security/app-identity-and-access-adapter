@@ -31,7 +31,7 @@ type AppidV1Interface interface {
 	PoliciesGetter
 }
 
-// AppidV1Client is used to interact with features provided by the appid.cloud.ibm.com group.
+// AppidV1Client is used to interact with features provided by the security.cloud.ibm.com group.
 type AppidV1Client struct {
 	restClient rest.Interface
 }

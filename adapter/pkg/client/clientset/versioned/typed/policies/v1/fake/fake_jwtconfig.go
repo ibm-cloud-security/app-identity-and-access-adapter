@@ -34,9 +34,9 @@ type FakeJwtConfigs struct {
 	ns   string
 }
 
-var jwtconfigsResource = schema.GroupVersionResource{Group: "appid.cloud.ibm.com", Version: "v1", Resource: "jwtconfigs"}
+var jwtconfigsResource = schema.GroupVersionResource{Group: "security.cloud.ibm.com", Version: "v1", Resource: "jwtconfigs"}
 
-var jwtconfigsKind = schema.GroupVersionKind{Group: "appid.cloud.ibm.com", Version: "v1", Kind: "JwtConfig"}
+var jwtconfigsKind = schema.GroupVersionKind{Group: "security.cloud.ibm.com", Version: "v1", Kind: "JwtConfig"}
 
 // Get takes name of the jwtConfig, and returns the corresponding jwtConfig object, and an error if there is any.
 func (c *FakeJwtConfigs) Get(name string, options v1.GetOptions) (result *policiesv1.JwtConfig, err error) {

@@ -114,7 +114,7 @@ Depending on whether you're protecting frontend or backend applications, create 
 * For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which is used to validate token signatures.
 
     ```
-    apiVersion: "appid.cloud.ibm.com/v1"
+    apiVersion: "security.cloud.ibm.com/v1"
     kind: JwtConfig
     metadata:
         name: samplejwtpolicy

@@ -57,7 +57,7 @@ spec:
     spec:
       containers:
         - name: sample-app
-          image: aliberat1/demo:latest
+          image: ishangulhane/demo:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

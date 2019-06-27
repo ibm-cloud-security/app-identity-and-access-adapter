@@ -26,6 +26,7 @@ import (
 	oAuthError "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/networking"
 	policiesV1 "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/pkg/apis/policies/v1"
+	adapterPolicy "github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/validator"
@@ -78,7 +79,7 @@ type OidcCookie struct {
 func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy {
 	w := &WebStrategy{
 		ctx:        ctx,
-		tokenUtil:  validator.New(),
+		tokenUtil:  validator.NewTokenValidator(adapterPolicy.OIDC),
 		kubeClient: kubeClient,
 		mutex:      &sync.Mutex{},
 		tokenCache: new(sync.Map),
@@ -155,8 +156,10 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 	zap.L().Debug("Found active session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value))
 
 	// Validate session
-	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	if validationErr := w.tokenUtil.Validate(session.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules); validationErr != nil {
+	userInfoEndpoint := action.Client.AuthorizationServer().UserInfoEndpoint()
+	keySet := action.Client.AuthorizationServer().KeySet()
+
+	handleTokenValidationError := func(validationErr *oAuthError.OAuthError) (*authnz.HandleAuthnZResponse, error) {
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
 			zap.L().Debug("Tokens have expired", zap.String("client_name", action.Client.Name()))
 			return w.handleRefreshTokens(sessionCookie.Value, session, action.Client, action.Rules)
@@ -165,6 +168,14 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 		zap.L().Debug("Tokens are invalid - starting a new session", zap.String("client_name", action.Client.Name()), zap.String("session_id", sessionCookie.Value), zap.Error(validationErr))
 		w.tokenCache.Delete(sessionCookie.Value)
 		return nil, nil
+	}
+
+	if validationErr := w.tokenUtil.Validate(session.AccessToken, validator.Access, keySet, action.Rules, userInfoEndpoint); validationErr != nil {
+		return handleTokenValidationError(validationErr)
+	}
+
+	if validationErr := w.tokenUtil.Validate(session.IdentityToken, validator.ID, keySet, action.Rules, userInfoEndpoint); validationErr != nil {
+		return handleTokenValidationError(validationErr)
 	}
 
 	zap.L().Debug("User is currently authenticated")
@@ -184,11 +195,17 @@ func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.
 		zap.L().Debug("Refresh token not provided", zap.String("client_name", c.Name()))
 		return nil, nil
 	}
+	userInfoEndpoint := c.AuthorizationServer().UserInfoEndpoint()
+	keySet := c.AuthorizationServer().KeySet()
+
 	if tokens, err := c.RefreshToken(session.RefreshToken); err != nil {
 		zap.L().Info("Could not retrieve tokens using the refresh token", zap.String("client_name", c.Name()), zap.Error(err))
 		return nil, nil
-	} else if validationErr := w.tokenUtil.Validate(tokens.IdentityToken, c.AuthorizationServer().KeySet(), rules); validationErr != nil {
-		zap.L().Debug("Could not validate refreshed tokens. Beginning a new session.", zap.String("client_name", c.Name()), zap.String("session_id", sessionID), zap.Error(validationErr))
+	} else if validationErr := w.tokenUtil.Validate(tokens.AccessToken, validator.Access, keySet, rules, userInfoEndpoint); validationErr != nil {
+		zap.L().Debug("Could not validate Access tokens. Beginning a new session.", zap.String("client_name", c.Name()), zap.String("session_id", sessionID), zap.Error(validationErr))
+		return nil, nil
+	} else if validationErr := w.tokenUtil.Validate(tokens.IdentityToken, validator.ID, keySet, rules, userInfoEndpoint); validationErr != nil {
+		zap.L().Debug("Could not validate Id tokens. Beginning a new session.", zap.String("client_name", c.Name()), zap.String("session_id", sessionID), zap.Error(validationErr))
 		return nil, nil
 	} else {
 		zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", c.Name()), zap.String("session_id", sessionID))
@@ -278,8 +295,16 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return w.handleErrorCallback(err)
 	}
 
-	// Todo :: access tokens are generally opaque and do not need to be validate: check this!
-	validationErr := w.tokenUtil.Validate(response.IdentityToken, action.Client.AuthorizationServer().KeySet(), action.Rules)
+	userInfoEndpoint := action.Client.AuthorizationServer().UserInfoEndpoint()
+	keySet := action.Client.AuthorizationServer().KeySet()
+
+	validationErr := w.tokenUtil.Validate(response.AccessToken, validator.Access, keySet, action.Rules, userInfoEndpoint)
+	if validationErr != nil {
+		zap.L().Info("OIDC callback: Access token failed validation", zap.Error(validationErr), zap.String("client_name", action.Client.Name()))
+		return w.handleErrorCallback(validationErr)
+	}
+
+	validationErr = w.tokenUtil.Validate(response.IdentityToken, validator.ID, keySet, action.Rules, userInfoEndpoint)
 	if validationErr != nil {
 		zap.L().Info("OIDC callback: ID token failed validation", zap.Error(validationErr), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(validationErr)
@@ -300,7 +325,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 	redirectURI := buildRequestURL(request) + callbackEndpoint
-	/// Build and store session state
+	// / Build and store session state
 	state, stateCookie, err := w.buildStateParam(action.Client)
 	if err != nil {
 		zap.L().Info("Could not generate state parameter", zap.Error(err), zap.String("client_name", action.Client.Name()))

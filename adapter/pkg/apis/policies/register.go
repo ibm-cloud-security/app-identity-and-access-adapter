@@ -1,3 +1,3 @@
 package policies
 
-const GroupName = "appid.cloud.ibm.com"
+const GroupName = "security.cloud.ibm.com"

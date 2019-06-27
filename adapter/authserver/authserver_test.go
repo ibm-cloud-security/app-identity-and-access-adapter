@@ -15,6 +15,7 @@ const (
 	authURL           = "https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/authorization"
 	tokenURL          = "https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/token"
 	publicKeyURL      = "https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys"
+	userInfoUrl       = "https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/userinfo"
 	discoveryResponse = "{\"issuer\": \"https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092\",\"authorization_endpoint\": \"https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/authorization\",\"token_endpoint\": \"https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/token\",\"jwks_uri\": \"https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/publickeys\",\"subject_types_supported\": [\"public\"], \"id_token_signing_alg_values_supported\": [\"RS256\"], \"userinfo_endpoint\": \"https://eu-gb.appid.cloud.ibm.com/oauth/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092/userinfo\",\"scopes_supported\": [\"openid\"], \"response_types_supported\": [\"code\"], \"claims_supported\": [\"iss\",\"aud\",\"exp\",\"tenant\",\"iat\",\"sub\",\"nonce\",\"amr\",\"oauth_client\"], \"grant_types_supported\": [\"authorization_code\",\"password\",\"refresh_token\",\"client_credentials\",\"urn:ietf:params:oauth:grant-type:jwt-bearer\"], \"profiles_endpoint\": \"https://eu-gb.appid.cloud.ibm.com\",\"management_endpoint\": \"https://eu-gb.appid.cloud.ibm.com/management/v4/71b34890-a94f-4ef2-a4b6-ce094aa68092\",\"service_documentation\": \"https://console.bluemix.net/docs/services/appid/index.html\"}"
 )
 
@@ -38,6 +39,7 @@ func TestAuthServerNew(t *testing.T) {
 	assert.Equal(t, publicKeyURL, server.JwksEndpoint())
 	assert.Equal(t, tokenURL, server.TokenEndpoint())
 	assert.Equal(t, authURL, server.AuthorizationEndpoint())
+	assert.Equal(t, userInfoUrl, server.UserInfoEndpoint())
 }
 
 func TestSetKeySet(t *testing.T) {

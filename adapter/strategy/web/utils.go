@@ -2,14 +2,16 @@ package webstrategy
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
-	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
-	"go.uber.org/zap"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
 	"unsafe"
+
+	"go.uber.org/zap"
+
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/adapter/client"
+	"github.com/ibm-cloud-security/policy-enforcer-mixer-adapter/config/template"
 )
 
 const (

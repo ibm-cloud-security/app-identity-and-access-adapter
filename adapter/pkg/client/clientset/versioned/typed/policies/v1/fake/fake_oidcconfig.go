@@ -34,9 +34,9 @@ type FakeOidcConfigs struct {
 	ns   string
 }
 
-var oidcconfigsResource = schema.GroupVersionResource{Group: "appid.cloud.ibm.com", Version: "v1", Resource: "oidcconfigs"}
+var oidcconfigsResource = schema.GroupVersionResource{Group: "security.cloud.ibm.com", Version: "v1", Resource: "oidcconfigs"}
 
-var oidcconfigsKind = schema.GroupVersionKind{Group: "appid.cloud.ibm.com", Version: "v1", Kind: "OidcConfig"}
+var oidcconfigsKind = schema.GroupVersionKind{Group: "security.cloud.ibm.com", Version: "v1", Kind: "OidcConfig"}
 
 // Get takes name of the oidcConfig, and returns the corresponding oidcConfig object, and an error if there is any.
 func (c *FakeOidcConfigs) Get(name string, options v1.GetOptions) (result *policiesv1.OidcConfig, err error) {
