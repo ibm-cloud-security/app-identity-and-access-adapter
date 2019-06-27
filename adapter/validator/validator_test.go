@@ -243,7 +243,6 @@ func TestTokenValidation(t *testing.T) {
 	}
 	for _, e := range tests {
 		t.Run("Validate", func(st *testing.T) {
-			st.Parallel()
 			runTest := func(v TokenValidator) {
 				oaErr := v.Validate(e.token, e.tokenType, e.jwks, e.rules, userinfo)
 				if e.err != nil {
@@ -390,7 +389,7 @@ func TestClaimValidation(t *testing.T) {
 	for _, e := range tests {
 		test := e
 		t.Run("Validate", func(st *testing.T) {
-			st.Parallel()
+			// st.Parallel()
 			err := checkAccessPolicy(test.rule, claimMap)
 			if test.expectErr != nil {
 				assert.EqualError(st, err, test.expectErr.Error())
@@ -445,7 +444,6 @@ func TestValidateAccessTokenString(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("ValidateAccessTokenString", func(st *testing.T) {
-			// st.Parallel()
 			// Overwrite Http req handler
 			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				if req.Header.Get("Authorization") == "Basic "+validToken {
@@ -479,6 +477,32 @@ func TestValidateAccessTokenString(t *testing.T) {
 
 			// cleanup
 			server.Close()
+		})
+	}
+}
+
+func TestNewTokenValidator(t *testing.T) {
+	tests := []struct {
+		tokenType policy.Type
+		expected TokenValidator
+	}{
+		{
+			tokenType: policy.JWT,
+			expected: &JwtTokenValidator{},
+		},
+		{
+			tokenType: policy.OIDC,
+			expected: &OidcTokenValidator{},
+		},
+		{
+			tokenType: policy.NONE,
+			expected: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("NewTokenValidator", func(st *testing.T) {
+			assert.Equal(t, NewTokenValidator(test.tokenType), test.expected)
 		})
 	}
 }
