@@ -155,10 +155,16 @@ func validateAccessTokenString(userInfoEndpoint string, tokenStr string, rules [
 		return errors.BadRequestHTTPException(err.Error())
 	}
 
-	req.Header.Set("Authorization", "Basic "+tokenStr)
-	if res, err := client.Do(req); err != nil || res.StatusCode != http.StatusOK {
+	req.Header.Set("Authorization", "Bearer " + tokenStr)
+	res, err := client.Do(req)
+	if err != nil {
 		zap.L().Warn("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Error(err))
 		return errors.UnauthorizedHTTPException(err.Error(), findRequiredScopes(rules))
+	}
+
+	if res.StatusCode != http.StatusOK {
+		zap.L().Warn("Unauthorized - invalid token", zap.String("token", tokenStr), zap.Int("res.StatusCode", res.StatusCode))
+		return errors.UnauthorizedHTTPException("Unauthorized - invalid token", findRequiredScopes(rules))
 	}
 
 	for _, rule := range rules {

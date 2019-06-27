@@ -27,6 +27,7 @@ const (
 	testKid         = "appId-71b34890-a94f-4ef2-a4b6-ce094aa68092-2018-08-02T11:53:36.497"
 	pathToPublicKey = "../../tests/keys/key.pub"
 	validToken      = "valid"
+	inValidToken    = "invalid"
 	userinfo        = "/userinfo"
 	// Test keys signed with ../../tests/keys/key.private
 	// Expires year: 2160
@@ -430,6 +431,12 @@ func TestValidateAccessTokenString(t *testing.T) {
 		},
 		{
 			tokenUrl: userinfo,
+			tokenStr: inValidToken,
+			rules:    emptyRule,
+			err:      errors.UnauthorizedHTTPException("Unauthorized - invalid token", nil),
+		},
+		{
+			tokenUrl: userinfo,
 			tokenStr: validToken,
 			rules: []v1.Rule{
 				{
@@ -446,7 +453,7 @@ func TestValidateAccessTokenString(t *testing.T) {
 		t.Run("ValidateAccessTokenString", func(st *testing.T) {
 			// Overwrite Http req handler
 			h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				if req.Header.Get("Authorization") == "Basic "+validToken {
+				if req.Header.Get("Authorization") == "Bearer "+validToken {
 					w.WriteHeader(200)
 				} else {
 					w.WriteHeader(401)
@@ -484,19 +491,19 @@ func TestValidateAccessTokenString(t *testing.T) {
 func TestNewTokenValidator(t *testing.T) {
 	tests := []struct {
 		tokenType policy.Type
-		expected TokenValidator
+		expected  TokenValidator
 	}{
 		{
 			tokenType: policy.JWT,
-			expected: &JwtTokenValidator{},
+			expected:  &JwtTokenValidator{},
 		},
 		{
 			tokenType: policy.OIDC,
-			expected: &OidcTokenValidator{},
+			expected:  &OidcTokenValidator{},
 		},
 		{
 			tokenType: policy.NONE,
-			expected: nil,
+			expected:  nil,
 		},
 	}
 

@@ -6,5 +6,5 @@ metadata:
 spec:
   authMethod:   client_secret_basic
   clientId:     clientid
-  discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/a9d75222-f70c-4ad3-97a5-60fdfde4df9f/.well-known/openid-configuration
+  discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/<<Tenant Id>>/.well-known/openid-configuration
   clientSecret: clientSecret
