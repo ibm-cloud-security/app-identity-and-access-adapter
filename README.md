@@ -29,36 +29,36 @@ Due to an Istio limitation, the App Identity and Access adapter currently stores
 
 Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic, also known as telemetry, that is sent to the Istio component called Mixer to enforce policy decisions. The App Identity and Access adapter extends the Mixer functionality by analyzing the telemetry (attributes) against custom policies to control identity and access management into and across the service mesh. The access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. For more information about policies and telemetry, see the [Istio documentation](https://istio.io/docs/concepts/policies-and-telemetry/). 
 
+### Protecting frontend apps
 
+If you're using a browser based application, you can use the [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html) / OAuth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL.
 
-
-### API Protection
-
-The App ID Adapter can be used in collaboration with the OAuth 2.0 Authorization Bearer flow to protect service APIs by validating JWT Bearer tokens. The Bearer flow expects a request to contain an Authorization header with a valid access token and optionally, an identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an `HTTP 401` response with an optional error component identifying the case of the error `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
-
-
-For more information about tokens and how they're used, see the App ID documentation. For information, on configuring the OAuth 2.0 Authorization Bearer for the adapter, see [Protecting APIs](#protecting-apis).
-
-
-### Frontend Protection
-
-If you're using a browser based application, you can use the OIDC / Auth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. 
-
-To view the user session information, including the session tokens, you can look in the `Authorization` header.
+To view the user session information including the session tokens, you can look in the `Authorization` header.
 
 ```
 Authorization: Bearer <access_token> <id_token>
 ```
+{: screen}
 
-You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `/oidc/logout` appended as shown in the following example, they are logged out from their current session.
+You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `oidc/logout` appended as shown in the following example, they are logged out.
 
 ```
 https://myhost/path/oidc/logout
 ```
+{: screen}
 
 If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
 
-Due to a bug within Istio, the adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, users should limit their workloads to a single replica until the bug is addressed in the next release.
+
+### Protecting backend apps
+{: #istio-backend}
+
+The adapter can be used in collaboration with the OAuth 2.0 [JWT Bearer flow](https://tools.ietf.org/html/rfc6750) to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component that says `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
+
+
+For more information about tokens and how they're used, see [understanding tokens](https://cloud.ibm.com/docs/services/appid?topic=appid-tokens).
+
+
 
 
 
@@ -72,25 +72,34 @@ You can install the Adapter by using the accompanying Helm chart. You can config
 Before you get started, be sure you have the following prerequisites installed.
 
 - [Kubernetes Cluster](https://kubernetes.io/)
-- [Istio v1.1](https://istio.io/docs/setup/kubernetes/install/)
 - [Helm](https://helm.sh/)
+- [Istio v1.1](https://istio.io/docs/setup/kubernetes/install/)
+
+>> You can also use the [IBM Cloud Kubernetes Service Managed Istio](https://cloud.ibm.com/docs/containers?topic=containers-istio).
 
 
-### Adapter Installation
+
+
+### Installing the Adapter
 
 To install the chart, initialize Helm in your cluster, define the options that you want to use, and then run the install command.
 
-1. If you haven't already, install Helm in your cluster.
+1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluter.
+
+2. Install Helm in your cluster.
+
     ```bash
-    $ helm init
+    helm init
     ```
 
-2. Update the [Helm chart](./helm/values.yaml) with your custom configuration.
+>>You might want to configure Helm to use `--tls` mode. For help with enabling TLS, check out the [Helm repository](https://github.com/helm/helm/blob/master/docs/tiller_ssl.md){: external}. If you enable TLS, be sure to append `--tls` to every Helm command that you run. For more information about using Helm with IBM Cloud Kubernetes Service, see [Adding services by using Helm Charts](/docs/containers?topic=containers-helm#public_helm_install).
 
 3. Install the chart.
+
     ```bash
-    $ helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter
+    helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter
     ```
+
 
 ## Applying an authorization and authentication policy
 
