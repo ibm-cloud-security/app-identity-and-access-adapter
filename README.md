@@ -21,7 +21,7 @@ A multicloud computing environment combines multiple cloud and/ or private compu
 ![App Identity and Access adapter architecture diagram](images/istio-adapter.png)
 Figure. Multicloud deployment achieved with the App Identity and Access adapter.
 
-Due to an Istio limitation, the App Identity and Access adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, limit your workloads to a single replica until the limitation is addressed.
+>> Note: Due to an Istio limitation, the App Identity and Access adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, limit your workloads to a single replica until the limitation is addressed.
 
 ## Understanding Istio and the adapter
 
