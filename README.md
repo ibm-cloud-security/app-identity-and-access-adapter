@@ -11,30 +11,24 @@
 [![GithubForks][img-github-forks]][url-github-forks]
 
 
-With the App Identity and Access Adapter for Istio Mixer, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
+By using the App Identity and Access adapter, you can centralize all of your identity management with a single instance of IBM Cloud App ID. Because enterprises use clouds from multiple providers or a combination of on and off-premise solutions, heterogenous deployment models can help you to preserve existing infrastructure and avoid vendor lock-in. The adapter can be configured to work with any OIDC compliant identity provider, which enables it to control authentication and authorization policies in all environments including frontend and backend applications. And, it does it all without any change to your code or the need to redeploy your application.
 
 
-## Architecture
+## Multicloud Architecture
 
-Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The App Identity and Access adapter analyzes these attributes against custom policies to control identity and access management into and across the service mesh. These access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. Using the adapter, these policies can be created, updated, and deleted without redeploying applications or changing your code in any way.
+A multicloud computing environment combines multiple cloud and/ or private computing environments into a single network architecture. By distributing workloads across multiple environments, you might find improved resiliency, flexibility, and greater cost-effificiency. To achieve the benefits, it's common to use a container-based applications with an orchestration layer, such as Kubernetes.
 
-The App ID adapter provides support for two different access control flows that correspond to the frontend and backend of your apps respectively. 
+![App Identity and Access adapter architecture diagram](images/istio-adapter.png)
+Figure. Multicloud deployment achieved with the App Identity and Access adapter.
 
-1. [OAuth 2.0 Authorization Bearer](https://tools.ietf.org/html/rfc6750)
+Due to an Istio limitation, the App Identity and Access adapter currently stores user session information internally and does *not* persist the information across replicas or over failover configurations. When using the adapter, limit your workloads to a single replica until the limitation is addressed.
 
-2. [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html)
+## Understanding Istio and the adapter
 
-For more information about configuring OIDC and OAuth 2.0, see [Policy configuration](#Defining-a-Configuration). To see how App ID fits into the Istio architecture, check out the following diagram.
+[Istio](https://istio.io) is an open source service mesh that layers transparently onto existing distributed applications that can integrate with Kubernetes. To reduce the complexity of deployments Istio provides behavioral insights and operational control over the service mesh as a whole. When App ID is combined with Istio, it becomes a scalable, integrated identity solution for multicloud architectures that does not require any custom application code changes. For more information, check out ["What is Istio?"](https://www.ibm.com/cloud/learn/istio?cm_mmc=OSocial_Youtube-_-Hybrid+Cloud_Cloud+Platform+Digital-_-WW_WW-_-IstioYTDescription&cm_mmca1=000023UA&cm_mmca2=10010608).
 
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic, also known as telemetry, that is sent to the Istio component called Mixer to enforce policy decisions. The App Identity and Access adapter extends the Mixer functionality by analyzing the telemetry (attributes) against custom policies to control identity and access management into and across the service mesh. The access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. For more information about policies and telemetry, see the [Istio documentation](https://istio.io/docs/concepts/policies-and-telemetry/). 
 
-![Istio Mixer Architecture](https://istio.io/docs/concepts/policies-and-telemetry/topology-without-cache.svg "Istio Mixer Architecture")
-
-* The Envoy sidecar "proxy" sits in front of your application and calls the Mixer with telemetry before each request.
-* The Mixer dispatches the telemetry to the App ID authentication/ access management Adapter.
-* The Adapter evaulates the authentication and authorization policies on the request telemetry and returns response - access granted or denied.
-* The proxy responds:
-    * When successful, the proxy forwards the request to the service or application.
-    * On failure, the proxy returns a failure check response to the calling client - the user or another app.
 
 
 
