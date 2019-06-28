@@ -92,7 +92,7 @@ To install the chart, initialize Helm in your cluster, define the options that y
     helm init
     ```
 
->>You might want to configure Helm to use `--tls` mode. For help with enabling TLS, check out the [Helm repository](https://github.com/helm/helm/blob/master/docs/tiller_ssl.md){: external}. If you enable TLS, be sure to append `--tls` to every Helm command that you run. For more information about using Helm with IBM Cloud Kubernetes Service, see [Adding services by using Helm Charts](/docs/containers?topic=containers-helm#public_helm_install).
+>>You might want to configure Helm to use `--tls` mode. For help with enabling TLS, check out the [Helm repository](https://github.com/helm/helm/blob/master/docs/tiller_ssl.md). If you enable TLS, be sure to append `--tls` to every Helm command that you run. For more information about using Helm with IBM Cloud Kubernetes Service, see [Adding services by using Helm Charts](https://cloud.ibm.com/docs/docs/containers?topic=containers-helm#public_helm_install).
 
 3. Install the chart.
 
@@ -229,8 +229,6 @@ spec:
 
 
 
-
-
 ## Deleting the adapter
 
 To remove the adapter and all of the associated CRDs, you must delete the Helm chart and the associated signing and encryption keys.
@@ -242,10 +240,10 @@ kubectl delete secret appidentityandaccessadapter-keys -n istio-system
 
 ## FAQ and troubleshooting
 
-If you encounter an issue while working with the App Identity and Access adapter, consider the following FAQ's and troubleshooting techniques. For more help, You can ask questions through a forum or open a support ticket. When you are using the forums to ask a question, tag your question so that it is seen by the {{site.data.keyword.appid_short_notm}} development team.
+If you encounter an issue while working with the App Identity and Access adapter, consider the following FAQ's and troubleshooting techniques. For more help, You can ask questions through a forum or open a support ticket. When you are using the forums to ask a question, tag your question so that it is seen by the App ID development team.
 
-  * If you have technical questions about {{site.data.keyword.appid_short_notm}}, post your question on <a href="https://stackoverflow.com/" target="_blank">Stack Overflow <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> and tag your question with "ibm-appid".
-  * For questions about the service and getting started instructions, use the <a href="https://developer.ibm.com/" target="_blank">dW Answers <img src="../../icons/launch-glyph.svg" alt="External link icon"></a> forum. Include the `appid` tag.
+  * If you have technical questions about App ID, post your question on [Stack Overflow](https://stackoverflow.com/) and tag your question with "ibm-appid".
+  * For questions about the service and getting started instructions, use the [dW Answers](https://developer.ibm.com/) forum. Include the `appid` tag.
 
 For more information about getting support, see [how do I get the support that I need](https://cloud.ibm.com/docs/get-support?topic=get-support-getting-customer-support#getting-customer-support).
 
