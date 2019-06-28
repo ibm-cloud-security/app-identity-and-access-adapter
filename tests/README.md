@@ -58,10 +58,10 @@ Modify the file `github.com/ibm-cloud-security/app-identity-and-access-adapter/c
 Run the following command to generate the adapter definition:
 
 ```bash
-bin/mixer_codegen.sh -a ./path/to/config/adapter/config.proto -x "-s=false -n ibmcloudappid -t authnZ"
+bin/mixer_codegen.sh -a ./path/to/config/adapter/config.proto -x "-s=false -n appidentityandaccessadapter -t authnZ"
 ```
 
-This command produces a session-less adapter called `ibmcloudappid` that implements the template `authnZ`.
+This command produces a session-less adapter called `appidentityandaccessadapter` that implements the template `authnZ`.
 
 ### Testing outside of a cluster
 
@@ -110,7 +110,7 @@ This command produces a session-less adapter called `ibmcloudappid` that impleme
 
 ```
 // Follow adapter logs
-export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=appidentityandaccessadapter -o jsonpath='{.items[0].metadata.name}')
 
 // Follow mixer logs
 export mixer_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer

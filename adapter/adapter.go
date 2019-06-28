@@ -1,7 +1,7 @@
 // nolint:lll
 // Generates the appidadpater's resource yaml. It contains the adapter's configuration, name, supported template
 // names (metric in this case), and whether it is session or no-session based.
-//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config/config.proto -x "-s=false -n ibmcloudappid -t authorization"
+//go:generate $GOPATH/src/istio.io/istio/bin/mixer_codegen.sh -a mixer/adapter/github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config/config.proto -x "-s=false -n appidentityandaccessadapter -t authorization"
 
 package adapter
 

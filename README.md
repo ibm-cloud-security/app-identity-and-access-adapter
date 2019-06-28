@@ -1,4 +1,4 @@
-# IBM Cloud App ID Istio Adapter
+# App Identity and Access Adapter for Istio Mixer
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/ibm-cloud-security/app-identity-and-access-adapter)](https://goreportcard.com/report/github.com/ibm-cloud-security/app-identity-and-access-adapter)
 
@@ -11,13 +11,13 @@
 [![GithubForks][img-github-forks]][url-github-forks]
 
 
-With the [IBM Cloud App ID](https://cloud.ibm.com/services/appid) Istio Mixer Adapter, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
+With the App Identity and Access Adapter for Istio Mixer, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
 {: shortdesc}
 
 
 ## Architecture
 
-Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The IBM Cloud App ID adapter analyzes these attributes against custom policies to control identity and access management into and across the service mesh. These access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. Using the adapter, these policies can be created, updated, and deleted without redeploying applications or changing your code in any way. 
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic behavior that can then be sent to the Mixer to enforce policy decisions. The App Identity and Access adapter analyzes these attributes against custom policies to control identity and access management into and across the service mesh. These access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. Using the adapter, these policies can be created, updated, and deleted without redeploying applications or changing your code in any way.
 
 The App ID adapter provides support for two different access control flows that correspond to the frontend and backend of your apps respectively. 
 
@@ -96,7 +96,7 @@ To install the chart, initialize Helm in your cluster, define the options that y
 
 3. Install the chart.
     ```bash
-    $ helm install ./helm/ibmcloudappid --name ibmcloudappid
+    $ helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter
     ```
 
 ## Applying an authorization and authentication policy
@@ -195,8 +195,8 @@ Register application endpoints within a `Policy` CRD to validate incoming reques
 To remove the Adapter and all of the associated CRDs, you can delete the Helm chart and the associated signing + encrpytion keys.
 
 ```bash
-$ helm delete --purge ibmcloudappid
-$ kubectl delete secret ibmcloudappid-keys -n istio-system
+$ helm delete --purge appidentityandaccessadapter
+$ kubectl delete secret appidentityandaccessadapter-keys -n istio-system
 ```
 
 ## FAQ and troubleshooting
@@ -217,10 +217,10 @@ By default, logs are styled as JSON and provided at an `info` visbility level to
 
 **Adapter**
 
-To see the Adapter logs, you can use `kubectl` or access the pod from the `ibmcloudappid` pod from the Kubernetes console.
+To see the Adapter logs, you can use `kubectl` or access the pod from the `appidentityandaccessadapter` pod from the Kubernetes console.
 
 ```bash
-$ export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=ibmcloudappid -o jsonpath='{.items[0].metadata.name}')
+$ export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=appidentityandaccessadapter -o jsonpath='{.items[0].metadata.name}')
 $ adapter_logs | jq
 ```
 

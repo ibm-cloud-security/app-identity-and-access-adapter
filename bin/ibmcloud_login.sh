@@ -21,7 +21,7 @@ dataCenter="dal10"
 clusterName="appid-istio-dev-dal10"
 
 # Adapter information
-adapterName="ibmcloudappid"
+adapterName="appidentityandaccessadapter"
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"
 
 

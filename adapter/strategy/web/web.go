@@ -43,12 +43,12 @@ const (
 	hashKey          = "HASH_KEY"
 	blockKey         = "BLOCK_KEY"
 	defaultNamespace = "istio-system"
-	defaultKeySecret = "ibmcloudappid-cookie-sig-enc-keys"
+	defaultKeySecret = "appidentityandaccessadapter-cookie-sig-enc-keys"
 
 	// Cookies to use when we revert to statelessness
-	// accessTokenCookie = "ibmcloudappid-access-cookie"
-	// idTokenCookie     = "ibmcloudappid-identity-cookie"
-	// refreshTokenCookie     = "ibmcloudappid-identity-cookie"
+	// accessTokenCookie = "appidentityandaccessadapter-access-cookie"
+	// idTokenCookie     = "appidentityandaccessadapter-identity-cookie"
+	// refreshTokenCookie     = "appidentityandaccessadapter-identity-cookie"
 )
 
 // WebStrategy handles OAuth 2.0 / OIDC flows

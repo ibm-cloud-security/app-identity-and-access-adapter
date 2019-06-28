@@ -1,0 +1,1 @@
+App Identity and Access Adapter installed successfully!

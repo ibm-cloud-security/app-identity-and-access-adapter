@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-// Configuration for ibmcloudappid Istio Mixer Adapter
-package adapter.ibmcloudappid.config;
+// Configuration for appidentityandaccessadapter Istio Mixer Adapter
+package adapter.appidentityandaccessadapter.config;
 
 import "gogoproto/gogo.proto";
 
 option go_package="config";
 
-// Configure the ibmcloudappid Istio Mixer Adapter with below parameters
+// Configure the appidentityandaccessadapter Istio Mixer Adapter with below parameters
 message Params {
 
 }

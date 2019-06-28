@@ -5,7 +5,7 @@
 ## but may be changed to better suit the use-case
 #
 
-appName: ibmcloudappid
+appName: appidentityandaccessadapter
 
 ## Denotes the number of adapter replicas as part of the deployment. WARNING: due to 
 ## current limitations, workloads using OIDC policies should not increment this number

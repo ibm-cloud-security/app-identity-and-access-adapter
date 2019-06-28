@@ -1,10 +1,10 @@
-# handler for ibmcloudappid adapter
+# handler for appidentityandaccessadapter adapter
 apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
   name: handler-{{ .Values.appName }}
   namespace: istio-system
 spec:
-  adapter: ibmcloudappid
+  adapter: appidentityandaccessadapter
   connection:
     address: svc-{{ .Values.appName }}:{{ .Values.service.port }}

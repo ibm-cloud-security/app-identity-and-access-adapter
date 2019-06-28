@@ -16,7 +16,7 @@
 #
 
 # Adapter information
-adapterName="ibmcloudappid"
+adapterName="appidentityandaccessadapter"
 sourceDir="$(dirname "${BASH_SOURCE[0]}")"
 sampleAppNamespace="sample-app"
 sampleAppDeploymentName="dpl-sample-app"

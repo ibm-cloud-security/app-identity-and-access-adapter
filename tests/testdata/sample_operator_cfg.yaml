@@ -1,11 +1,11 @@
-# handler for adapter ibmcloudappid
+# handler for adapter appidentityandaccessadapter
 apiVersion: "config.istio.io/v1alpha2"
 kind: handler
 metadata:
-  name: handler-ibmcloudappid
+  name: handler-appidentityandaccessadapter
   namespace: istio-system
 spec:
-  adapter: ibmcloudappid
+  adapter: appidentityandaccessadapter
   connection:
     address: "[::]:47304"
 ---
@@ -13,7 +13,7 @@ spec:
 apiVersion: "config.istio.io/v1alpha2"
 kind: instance
 metadata:
-  name: instance-ibmcloudappid
+  name: instance-appidentityandaccessadapter
   namespace: istio-system
 spec:
   template: authnz
@@ -39,13 +39,13 @@ spec:
 apiVersion: "config.istio.io/v1alpha2"
 kind: rule
 metadata:
-  name: rule-ibmcloudappid
+  name: rule-appidentityandaccessadapter
   namespace: istio-system
 spec:
   actions:
-    - handler: handler-ibmcloudappid.istio-system
+    - handler: handler-appidentityandaccessadapter.istio-system
       instances:
-        - instance-ibmcloudappid
+        - instance-appidentityandaccessadapter
       name: a1
   requestHeaderOperations:
     - name: Authorization

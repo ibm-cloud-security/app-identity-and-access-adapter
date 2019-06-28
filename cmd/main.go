@@ -16,8 +16,8 @@ import (
 func getCmd() *cobra.Command {
 	sa := config.NewConfig()
 	cmd := &cobra.Command{
-		Use:   "Starts the IBM Cloud App ID out-of-process Mixer adapter",
-		Short: "Starts the IBM Cloud App ID out-of-process Mixer adapter",
+		Use:   "Starts the App Identity and Access out-of-process Mixer adapter",
+		Short: "Starts the App Identity and Access out-of-process Mixer adapter",
 		Run: func(cmd *cobra.Command, args []string) {
 			runServer(sa)
 		},
@@ -42,7 +42,7 @@ func getCmd() *cobra.Command {
 func configureLogger(args *config.Config) {
 	config := zap.NewProductionConfig()
 	config.Level = zap.NewAtomicLevelAt(zapcore.Level(args.Level))
-	config.InitialFields = map[string]interface{}{"source": "ibmcloudappid-adapter"}
+	config.InitialFields = map[string]interface{}{"source": "appidentityandaccessadapter-adapter"}
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	if !args.Json {
 		config.Encoding = "console"
@@ -57,7 +57,7 @@ func runServer(args *config.Config) {
 	// Configure Adapter
 	s, err := adapter.NewAppIDAdapter(args)
 	if err != nil {
-		zap.L().Fatal("Failed to create ibmcloudappid.NewAppIDAdapter: %s", zap.Error(err))
+		zap.L().Fatal("Failed to create appidentityandaccessadapter.NewAppIDAdapter: %s", zap.Error(err))
 	}
 
 	shutdown := make(chan error, 1)

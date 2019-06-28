@@ -24,7 +24,7 @@ func TestMain(t *testing.M) {
 
 func TestHelmInstall(t *testing.T) {
 	/*
-		err := utils.HelmInstall("../../../helm/ibmcloudappid", "ibmcloudappid", "../../../helm/ibmcloudappid/values.yaml", "istio-system", "")
+		err := utils.HelmInstall("../../../helm/appidentityandaccessadapter", "appidentityandaccessadapter", "../../../helm/appidentityandaccessadapter/values.yaml", "istio-system", "")
 		if err != nil {
 			println(err.Error())
 			t.Fail()

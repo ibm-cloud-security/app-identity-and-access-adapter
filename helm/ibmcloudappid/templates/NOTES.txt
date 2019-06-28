@@ -1,1 +1,0 @@
-IBM Cloud App ID Istio Adapter installed successfully! 

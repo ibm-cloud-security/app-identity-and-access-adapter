@@ -3,7 +3,7 @@
 apiVersion: "config.istio.io/v1alpha2"
 kind: adapter
 metadata:
-  name: ibmcloudappid
+  name: appidentityandaccessadapter
   namespace: istio-system
 spec:
   description: 

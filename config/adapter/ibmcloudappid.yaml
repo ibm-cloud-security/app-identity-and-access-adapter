@@ -1,9 +1,9 @@
 # this config is created through command
-# mixgen adapter -c $GOPATH/src/istio.io/istio/./adapter-config/adapter/config.proto_descriptor -o $GOPATH/src/istio.io/istio/./adapter-config/adapter -s=false -n ibmcloudappid -t authnZ
+# mixgen adapter -c $GOPATH/src/istio.io/istio/./adapter-config/adapter/config.proto_descriptor -o $GOPATH/src/istio.io/istio/./adapter-config/adapter -s=false -n appidentityandaccessadapter -t authnZ
 apiVersion: "config.istio.io/v1alpha2"
 kind: adapter
 metadata:
-  name: ibmcloudappid
+  name: appidentityandaccessadapter
   namespace: istio-system
 spec:
   description: 
