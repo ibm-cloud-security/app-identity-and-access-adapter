@@ -6,32 +6,30 @@ metadata:
 spec:
   targets:
     -
-      serviceName: svc-sample-app
+      serviceName: <svc-sample-app>
       paths:
         - exact: /web/home
           method: ALL
           policies:
             - policyType: oidc
-              config: sampleoidcconfig
+              config: <oidc-provider-config>
               rules:
                 - claim: scope
                   match: ALL
                   source: access_token
                   values:
-                    - appid_default
                     - openid
                 - claim: amr
                   match: ANY
                   source: id_token
                   values:
-                    - cloud_directory
                     - google
 
         - exact: /web/user
           method: GET
           policies:
             - policyType: oidc
-              config: sampleoidcconfigwithsecretref
+              config: <oidc-provider-config-with-secret-ref>
               redirectUri: https://github.com/ibm-cloud-security/app-identity-and-access-adapter
         - prefix: /
           method: ALL

@@ -12,7 +12,6 @@
 
 
 With the App Identity and Access Adapter for Istio Mixer, you can manage authentication and access management across your service mesh. The Adapter can be configured with any OIDC or OAuth 2.0 compliant identity provider, which enables it to seamlessly control authentication and authorization policies in many heterogeneous environments, including frontend and backend applications.
-{: shortdesc}
 
 
 ## Architecture
@@ -220,7 +219,7 @@ By default, logs are styled as JSON and provided at an `info` visbility level to
 To see the Adapter logs, you can use `kubectl` or access the pod from the `appidentityandaccessadapter` pod from the Kubernetes console.
 
 ```bash
-$ export adapter_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=appidentityandaccessadapter -o jsonpath='{.items[0].metadata.name}')
+$ alias adapter_logs="kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=appidentityandaccessadapter -o jsonpath='{.items[0].metadata.name}')"
 $ adapter_logs | jq
 ```
 
@@ -229,8 +228,8 @@ $ adapter_logs | jq
 If the Adapter does not appear to recieve requests, check the Mixer logs to ensure that it is successfully connected to the Adapter.
 
 ```bash
-$ export mixer_logs=kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer
-$ mixer_logs
+$ alias mixer_logs="kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer"
+$ mixer_logs | jq
 ```
 
 ## License
