@@ -155,41 +155,79 @@ Depending on whether you're protecting frontend or backend applications, create 
 
 Register application endpoints within a `Policy` CRD to validate incoming requests and enforce authentication rules. Each `Policy` applies exclusively to the Kubernetes namespace in which the object lives and can specify the services, paths, and methods that you want to protect.
 
-    ```helmyaml
-    kind: Policy
-    metadata:
-        name: policy-1
-        namespace: sample-namespace
-    spec:
-        targets:
-        - service: svc-service-name-123
-            paths: 
-            - exact: /web
-             method: GET
-             policies: 
-            - type: oidc
-               config: <name-OidcConfig-resource>
-            - prefix: /api
-            policies:
-            - type: jwt
-               config: <name-JwtConfig-resource>
-    ```
+```yaml
+apiVersion: "security.cloud.ibm.com/v1"
+kind: Policy
+metadata:
+  name:      samplepolicy
+  namespace: sample-app
+spec:
+  targets:
+    -
+      serviceName: <svc-sample-app>
+      paths:
+        - exact: /web/home
+          method: ALL
+          policies:
+            - policyType: oidc
+              config: <oidc-provider-config>
+              rules:
+                - claim: scope
+                  match: ALL
+                  source: access_token
+                  values:
+                    - appid_default
+                    - openid
+                - claim: amr
+                  match: ANY
+                  source: id_token
+                  values:
+                    - cloud_directory
+                    - google
 
-    | Service Object | Type | Required | Description   |
-    |----------------|:----:|:--------:| :-----------: |
-    | `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
-    | `paths` | array | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
+        - exact: /web/user
+          method: GET
+          policies:
+            - policyType: oidc
+              config: <oidc-provider-config>
+              redirectUri: https://github.com/ibm-cloud-security/app-identity-and-access-adapter
+        - prefix: /
+          method: ALL
+          policies:
+            -
+              policyType: jwt
+              config: <jwt-config>
+```
 
-    | Path Object    | Type | Required | Description   |
-    |----------------|:----:|:--------:| :-----------: |
-    | `exact or prefix` | string | yes | The path that you want to apply the policies on. Options include `exact` and `prefix`. `exact` matches the provides endpoints exactly with the last `/` trimmed. `prefix` matches the endpoints that begin with the route prefix that you provide. |
-    | `method` | enum | no | The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
-    | `policies` | array | no | The OIDC/JWT policies that you want to apply.  |
+| Service Object | Type | Required | Description   |
+|----------------|:----:|:--------:| :-----------: |
+| `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
+| `paths` | array[Path Object] | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
 
-    | Policy Object  | Type | Required | Description   |
-    |----------------|:----:|:--------:| :-----------: |
-    | `type` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
-    | `config` | string | yes | The name of the provider config that you want to use. |
+
+| Path Object    | Type | Required | Description   |
+|----------------|:----:|:--------:| :-----------: |
+| `exact or prefix` | string | yes | The path that you want to apply the policies on. Options include `exact` and `prefix`. `exact` matches the provides endpoints exactly with the last `/` trimmed. `prefix` matches the endpoints that begin with the route prefix that you provide. |
+| `method` | enum | no | The HTTP method protected. Valid options ALL, GET, PUT, POST, DELETE, PATCH - Defaults to ALL:  |
+| `policies` | array[Policy] | no | The OIDC/JWT policies that you want to apply.  |
+
+
+| Policy Object  | Type | Required | Description   |
+|----------------|:----:|:--------:| :-----------: |
+| `policyType` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
+| `config` | string | yes | The name of the provider config that you want to use. |
+| `redirectUri` | string | no | The url you want the user to be redirected after successful authentication, default: the original request url. |
+| `rules` | array[Rule] | no | The set of rules the you want to use for token validation. |
+
+
+| Rule Object  | Type | Required | Description   |
+|----------------|:----:|:--------:| :-----------: |
+| `claim` | string | yes | The claim that you want to validate. |
+| `match` | enum | no | The criteria required for claim validation. Options inlcude: `ALL`, `ANY` or `NOT`. The default is set to `ALL`. |
+| `source` | enum | no | The token where you want to apply the rule. Options inlcude: `access_token` or `id_token`. The default is set to `access_token`. |
+| `values` | array[string] | yes | The required set of values for validation. |
+
+
 
 
 
