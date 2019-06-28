@@ -1,9 +1,7 @@
 # App Identity and Access Adapter for Istio Mixer
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/ibm-cloud-security/app-identity-and-access-adapter)](https://goreportcard.com/report/github.com/ibm-cloud-security/app-identity-and-access-adapter)
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
-[![Coveralls][img-coveralls-master]][url-coveralls-master]
 
 [![GithubWatch][img-github-watchers]][url-github-watchers]
 [![GithubStars][img-github-stars]][url-github-stars]
