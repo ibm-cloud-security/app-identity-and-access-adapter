@@ -146,7 +146,7 @@ func buildOIDCPolicy(name string, namespace string, svc string, oidcConfigName s
 									Rules: []v1.Rule{
 										{
 											Claim: "scope",
-											Values: []string{"openid"},
+											Values: []string{ "openid" },
 											Match: "ALL",
 											Source: "access_token",
 										},

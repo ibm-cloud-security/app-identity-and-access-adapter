@@ -39,6 +39,10 @@ function checkEnv() {
 
 function configureCluster() {
     echo "Logging into IBM Cloud."
+    echo "${IBM_CLOUD_API_KEY}"
+    echo "${CLUSTER_ROOT}"
+    echo "${APPID_CLIENT_ID}"
+    echo "${APPID_CLIENT_SECRET}"
     ibmcloud login -r ${region} --apikey ${IBM_CLOUD_API_KEY}
 
 

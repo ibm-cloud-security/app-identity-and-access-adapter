@@ -364,6 +364,7 @@ func buildJwtPolicy(name string, namespace string, svc string, jwtConfigName str
 								{
 									PolicyType: "jwt",
 									Config:     jwtConfigName,
+									Rules:      []v1.Rule{},
 								},
 							},
 						},

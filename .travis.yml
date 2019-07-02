@@ -42,7 +42,7 @@ script:
   # Build executable, build docker image, and deploy to cluster
   - bash ./bin/build_deploy.sh || travis_terminate 1;
   # Run coverage on unit tests
-  - go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
+  #- go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
   # Run all integration tests
   - go test -v -race ./tests/integration/...
 
