@@ -36,7 +36,10 @@ spec:
                  {{- if ne .Source ""}}
                  source: {{.Source}}
                  {{- end}}
-                 values: {{- range .Values }} {{- end }}
+                 values:
+                 {{- range .Values}}
+                   - {{ . }}
+                 {{- end}}
                {{- end }}
             {{- end }}
         {{- end }}

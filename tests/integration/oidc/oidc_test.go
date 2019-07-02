@@ -146,15 +146,19 @@ func buildOIDCPolicy(name string, namespace string, svc string, oidcConfigName s
 									Rules: []v1.Rule{
 										{
 											Claim: "scope",
-											Values: []string{ "openid" },
 											Match: "ALL",
 											Source: "access_token",
+											Values: []string{
+												"openid",
+											},
 										},
 										{
 											Claim: "amr",
-											Values: []string{"cloud_directory"},
 											Match: "ANY",
 											Source: "id_token",
+											Values: []string{
+												"cloud_directory",
+											},
 										},
 									},
 								},
