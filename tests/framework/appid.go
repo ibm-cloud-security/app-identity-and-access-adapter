@@ -135,10 +135,10 @@ func (m *AppIDManager) ROP(username string, password string) error {
 	return nil
 }
 
-///
-/// App ID utility request functions to handle OIDC flow without UI
-/// Redirect cannot be used as cookies will not be automatically set
-///
+//
+// App ID utility request functions to handle OIDC flow without UI
+// Redirect cannot be used as cookies will not be automatically set
+//
 
 func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adapterState *http.Cookie, appIDState string, widgetURL string) {
 

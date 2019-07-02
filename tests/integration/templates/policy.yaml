@@ -25,6 +25,20 @@ spec:
               {{- if ne .RedirectUri ""}}
               redirectUri: {{ .RedirectUri }}
               {{- end }}
+              rules: {{ range .Rules }}
+               -
+                {{- if ne .Claim ""}}
+                claim: {{.Claim}}
+                {{- end}}
+                {{- if ne .Match ""}}
+                match: {{.Match}}
+                {{- end}}
+                {{- if ne .Source ""}}
+                source: {{.Source}}
+                {{- end}}
+                values: {{range .Values}}
+                {{- end }}
+                {{- end }}
             {{- end }}
         {{- end }}
     {{- end }}

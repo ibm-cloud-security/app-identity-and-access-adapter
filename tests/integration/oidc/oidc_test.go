@@ -2,15 +2,17 @@ package oidc
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
-	"github.com/stretchr/testify/require"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
 )
 
 const (
@@ -141,6 +143,20 @@ func buildOIDCPolicy(name string, namespace string, svc string, oidcConfigName s
 								{
 									PolicyType: "oidc",
 									Config:     oidcConfigName,
+									Rules: []v1.Rule{
+										{
+											Claim: "scope",
+											Values: []string{"openid"},
+											Match: "ALL",
+											Source: "access_token",
+										},
+										{
+											Claim: "amr",
+											Values: []string{"cloud_directory"},
+											Match: "ANY",
+											Source: "id_token",
+										},
+									},
 								},
 							},
 						},

@@ -11,6 +11,7 @@ app.get('/', (req, res) => {
 		routes: [
 			"/web/home",
 			"/web/home/:id",
+            "/web/user",
 			"/api/headers",
 			"/api/headers/:id",
 		]

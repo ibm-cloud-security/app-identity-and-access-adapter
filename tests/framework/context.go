@@ -26,6 +26,10 @@ type Env struct {
 
 // NewEnv returns a new ENV instance
 func NewEnv() *Env {
+	fmt.Printf("Printing env variables \n",)
+	for _, e := range os.Environ() {
+		fmt.Println(e)
+	}
 	return &Env{
 		os.Getenv(clusterRoot),
 		os.Getenv(kubeConfig),
