@@ -13,7 +13,7 @@ By using the App Identity and Access adapter, you can centralize all of your ide
 
 ## Multicloud Architecture
 
-A multicloud computing environment combines multiple cloud and/ or private computing environments into a single network architecture. By distributing workloads across multiple environments, you might find improved resiliency, flexibility, and greater cost-effificiency. To achieve the benefits, it's common to use a container-based applications with an orchestration layer, such as Kubernetes.
+A multicloud computing environment combines multiple cloud and/ or private computing environments into a single network architecture. By distributing workloads across multiple environments, you might find improved resiliency, flexibility, and greater cost-efficiency. To achieve the benefits, it's common to use a container-based applications with an orchestration layer, such as Kubernetes.
 
 ![App Identity and Access adapter architecture diagram](images/istio-adapter.png)
 Figure. Multicloud deployment achieved with the App Identity and Access adapter.
@@ -44,7 +44,7 @@ https://myhost/path/oidc/logout
 ```
 {: screen}
 
-If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
+If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retrieve new tokens when the identity token expires.
 
 
 ### Protecting backend apps
@@ -81,7 +81,7 @@ Before you get started, be sure you have the following prerequisites installed.
 
 To install the chart, initialize Helm in your cluster, define the options that you want to use, and then run the install command.
 
-1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluter.
+1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluster.
 
 2. Install Helm in your cluster.
 
@@ -220,8 +220,8 @@ spec:
 | Rule Object  | Type | Required | Description   |
 |----------------|:----:|:--------:| :-----------: |
 | `claim` | string | yes | The claim that you want to validate. |
-| `match` | enum | no | The criteria required for claim validation. Options inlcude: `ALL`, `ANY` or `NOT`. The default is set to `ALL`. |
-| `source` | enum | no | The token where you want to apply the rule. Options inlcude: `access_token` or `id_token`. The default is set to `access_token`. |
+| `match` | enum | no | The criteria required for claim validation. Options include: `ALL`, `ANY` or `NOT`. The default is set to `ALL`. |
+| `source` | enum | no | The token where you want to apply the rule. Options include: `access_token` or `id_token`. The default is set to `access_token`. |
 | `values` | array[string] | yes | The required set of values for validation. |
 
 
@@ -248,13 +248,13 @@ For more information about getting support, see [how do I get the support that I
 ### Troubleshooting: Logging
 {: #istio-logging}
 
-By default, logs are styled as JSON and provided at an `info` visbility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range `-1 - 7` as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
+By default, logs are styled as JSON and provided at an `info` visibility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range `-1 - 7` as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
 
 >>When you're manually viewing JSON logs, you might want to tail the logs and "pretty print" them by using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/).
 
 **Adapter**
 
-To see the adapter logs, you can use `kubectl` or access the pod from the `ibmcloudappid` pod from the Kubernetes console.
+To see the adapter logs, you can use `kubectl` or access the pod from the `appidentityandaccessadapter` pod from the Kubernetes console.
 
 ```bash
 $ alias adapter_logs="kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=appidentityandaccessadapter -o jsonpath='{.items[0].metadata.name}')"
