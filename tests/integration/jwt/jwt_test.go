@@ -231,7 +231,6 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 			for _, ts := range tests {
 				test := ts
 				t.Run("Request", func(st *testing.T) {
-					st.Parallel()
 					res, err := sendAuthRequest(ctx, test.method, test.path, test.authorization)
 					if err != nil {
 						st.FailNow()
@@ -307,7 +306,6 @@ func TestValidHeader(t *testing.T) {
 			for _, ts := range tests {
 				test := ts
 				t.Run("Request", func(st *testing.T) {
-					st.Parallel()
 					res, err := sendAuthRequest(ctx, test.method, test.path, test.authorization)
 					if err != nil {
 						st.FailNow()
