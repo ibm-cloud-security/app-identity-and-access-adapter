@@ -35,20 +35,17 @@ To view the user session information including the session tokens, you can look 
 ```
 Authorization: Bearer <access_token> <id_token>
 ```
-{: screen}
 
 You can also logout authenticated users. When an authenticated user accesses any protected endpoint with `oidc/logout` appended as shown in the following example, they are logged out.
 
 ```
 https://myhost/path/oidc/logout
 ```
-{: screen}
 
 If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retrieve new tokens when the identity token expires.
 
 
 ### Protecting backend apps
-{: #istio-backend}
 
 The adapter can be used in collaboration with the OAuth 2.0 [JWT Bearer flow](https://tools.ietf.org/html/rfc6750) to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component that says `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
 
@@ -246,7 +243,6 @@ For more information about getting support, see [how do I get the support that I
 
 
 ### Troubleshooting: Logging
-{: #istio-logging}
 
 By default, logs are styled as JSON and provided at an `info` visibility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range `-1 - 7` as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
 
