@@ -2,7 +2,6 @@ package oidc
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -64,8 +63,6 @@ func TestAuthorizationRedirect(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-		    fmt.Print("Printing cluster root values \n")
-			fmt.Print(ctx.Env.ClusterRoot)
 			configName := "oidc-config-1"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
 			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/1", "", "ALL")

@@ -25,6 +25,9 @@ spec:
               {{- if ne .RedirectUri ""}}
               redirectUri: {{ .RedirectUri }}
               {{- end }}
+              {{- $length := len .Rules }} {{ if eq $length 0 }}
+              rules: []
+              {{ else }}
               rules: {{- range .Rules }}
                -
                  {{- if ne .Claim ""}}
@@ -40,6 +43,7 @@ spec:
                  {{- range .Values}}
                    - {{ . }}
                  {{- end}}
+               {{- end }}
                {{- end }}
             {{- end }}
         {{- end }}

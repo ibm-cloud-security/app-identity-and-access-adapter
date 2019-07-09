@@ -21,7 +21,7 @@ const (
 	sampleAppService   = "svc-sample-app"
 )
 
-///
+//
 // Create a before method to setup a suite before tests execute
 //
 func before(ctx *framework.Context) error {
@@ -37,7 +37,7 @@ func before(ctx *framework.Context) error {
 	return nil
 }
 
-///
+//
 // Create a cleanup method to execute once a suite has completed
 //
 func after(ctx *framework.Context) error {
@@ -45,7 +45,7 @@ func after(ctx *framework.Context) error {
 	return nil
 }
 
-///
+//
 // Test main runs before ALL suite methods run
 // and begins test execution
 //
