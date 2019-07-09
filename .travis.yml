@@ -44,10 +44,13 @@ script:
   # Run coverage on unit tests
   - go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
   # Run all integration tests
-  - go test -v ./tests/integration/helm/... || travis_terminate 1;
-  - go test -v ./tests/integration/jwt/... || travis_terminate 1;
-  - go test -v ./tests/integration/oidc/... || travis_terminate 1;
-  - go test -v ./tests/integration/sample/... || travis_terminate 1;
+  - go test -v ./tests/integration/helm/helm_test.go || travis_terminate 1;
+  - sleep 10s;
+  - go test -v ./tests/integration/jwt/jwt_test.go || travis_terminate 1;
+  - sleep 10s;
+  - go test -v ./tests/integration/oidc/oidc_test.go || travis_terminate 1;
+  - sleep 10s;
+  - go test -v ./tests/integration/sample/sample_test.go || travis_terminate 1;
 
 after_success:
   - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.out
