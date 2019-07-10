@@ -123,7 +123,7 @@ func TestInvalidHeader(t *testing.T) {
 				},
 			}
 
-			time.Sleep(1 * time.Second) // Give a second to sync adapter
+			time.Sleep(10 * time.Second) // Give a second to sync adapter
 
 			for _, test := range tests {
 				t.Run("Request", func(st *testing.T) {
@@ -153,7 +153,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err)
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Second)
 
 			res, err := sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.DeleteCRD(&policy)
 			require.NoError(t, err)
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Second)
 
 			res, err = sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 				t.FailNow()
 			}
 
-			time.Sleep(1 * time.Second) // Give a second to sync adapter
+			time.Sleep(10 * time.Second) // Give a second to sync adapter
 
 			for _, ts := range tests {
 				test := ts
@@ -294,7 +294,7 @@ func TestValidHeader(t *testing.T) {
 				},
 			}
 
-			time.Sleep(2 * time.Second) // Give a second to sync adapter
+			time.Sleep(10 * time.Second) // Give a second to sync adapter
 
 			// Base case
 			res, err := sendAuthRequest(ctx, "POST", randomPath, "no auth")
