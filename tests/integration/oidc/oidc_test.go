@@ -18,6 +18,7 @@ import (
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
+	sleepTime          = 30
 )
 
 // ApplicationResponseHeaders models the sample application response json
@@ -71,7 +72,7 @@ func TestAuthorizationRedirect(t *testing.T) {
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(20 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			ctx.StopHttpRedirects()
 			res, err := ctx.SendRequest("GET", "/web/home/1", nil)
@@ -96,7 +97,7 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			var output ApplicationResponseHeaders
 			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, "/web/home/2", &output)
