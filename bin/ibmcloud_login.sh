@@ -16,9 +16,6 @@
 #
 
 ## Cluster Information
-region="us-south"
-dataCenter="dal10"
-clusterName="appid-istio-dev-dal10"
 
 # Adapter information
 adapterName="appidentityandaccessadapter"
@@ -39,18 +36,18 @@ function checkEnv() {
 
 function configureCluster() {
     echo "Logging into IBM Cloud."
-    ibmcloud login -r ${region} --apikey ${IBM_CLOUD_API_KEY}
+    ibmcloud login -r ${REGION} --apikey ${IBM_CLOUD_API_KEY}
 
 
-    ibmcloud ks cluster-config --cluster ${clusterName}
+    ibmcloud ks cluster-config --cluster ${CLUSTER_NAME}
 
     local homeDir="home"
     if [[ -z ${TRAVIS+x} ]]; then
         homeDir="Users"
     fi
 
-    echo "Exporting KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${clusterName}/kube-config-${dataCenter}-${clusterName}.yml"
-    export KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${clusterName}/kube-config-${dataCenter}-${clusterName}.yml
+    echo "Exporting KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${CLUSTER_NAME}/kube-config-${DATA_CENTER}-${CLUSTER_NAME}.yml"
+    export KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${CLUSTER_NAME}/kube-config-${DATA_CENTER}-${CLUSTER_NAME}.yml
 }
 
 # Execute
