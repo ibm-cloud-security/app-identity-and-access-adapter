@@ -61,7 +61,7 @@ func TestInvalidJwkConfig(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			config := buildJwtConfig("jwt-name-0", "default", "https://test")
+			config := buildJwtConfig("jwt-name-1", "default", "https://test")
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			if err == nil || !strings.Contains(err.Error(), "jwksUrl in body should match") {
 				println(err)
@@ -93,7 +93,7 @@ func TestInvalidHeader(t *testing.T) {
 			configName := "jwt-config-0"
 			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-0", sampleAppNamespace, sampleAppService, configName, randomPath, "", "GET")
+			policy := buildJwtPolicy("jwt-name-3", sampleAppNamespace, sampleAppService, configName, randomPath, "", "GET")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -145,7 +145,7 @@ func TestDeletePolicy(t *testing.T) {
 			configName := "jwt-config-3"
 			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-2", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
+			policy := buildJwtPolicy("jwt-name-4", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 		Run(func(ctx *framework.Context) {
 			configName := "jwt-config-5"
 			config := buildJwtConfig(configName, "sample-app", ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-name-2", "sample-app", "svc-sample-app", configName, "", "/api/headers", "ALL")
+			policy := buildJwtPolicy("jwt-name-5", "sample-app", "svc-sample-app", configName, "", "/api/headers", "ALL")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestValidHeader(t *testing.T) {
 			configName := "jwt-config-55"
 			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
-			policy := buildJwtPolicy("jwt-policy-2", sampleAppNamespace, sampleAppService, configName, randomPath, "", "POST")
+			policy := buildJwtPolicy("jwt-policy-6", sampleAppNamespace, sampleAppService, configName, randomPath, "", "POST")
 
 			err := ctx.CRDManager.AddCRD(framework.JwtConfigTemplate, &config)
 			require.NoError(t, err)

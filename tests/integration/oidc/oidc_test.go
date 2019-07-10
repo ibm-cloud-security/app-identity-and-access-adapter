@@ -90,7 +90,7 @@ func TestE2E(t *testing.T) {
 			ctx.EnableRedirects()
 			configName := "oidc-config-2"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
-			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/2", "", "ALL")
+			policy := buildOIDCPolicy("oidc-policy-2", sampleAppNamespace, sampleAppService, configName, "/web/home/2", "", "ALL")
 			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
 			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
