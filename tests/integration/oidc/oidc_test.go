@@ -71,7 +71,7 @@ func TestAuthorizationRedirect(t *testing.T) {
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(20 * time.Second)
 
 			ctx.StopHttpRedirects()
 			res, err := ctx.SendRequest("GET", "/web/home/1", nil)

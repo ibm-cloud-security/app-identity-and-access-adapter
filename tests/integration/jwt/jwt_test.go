@@ -19,6 +19,7 @@ import (
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
+	randomStringLength = 5
 )
 
 //
@@ -90,8 +91,8 @@ func TestInvalidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			configName := "jwt-config-0"
-			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			configName := "jwt-config-2"
+			randomPath := "/api/headers/" + framework.RandString(randomStringLength) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
 			policy := buildJwtPolicy("jwt-name-3", sampleAppNamespace, sampleAppService, configName, randomPath, "", "GET")
 
@@ -143,7 +144,7 @@ func TestDeletePolicy(t *testing.T) {
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
 			configName := "jwt-config-3"
-			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			randomPath := "/api/headers/" + framework.RandString(randomStringLength) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
 			policy := buildJwtPolicy("jwt-name-4", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
 
@@ -153,7 +154,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(2 * time.Second)
 
 			res, err := sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -162,7 +163,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.DeleteCRD(&policy)
 			require.NoError(t, err)
 
-			time.Sleep(10 * time.Second)
+			time.Sleep(2 * time.Second)
 
 			res, err = sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -174,7 +175,7 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			configName := "jwt-config-5"
+			configName := "jwt-config-4"
 			config := buildJwtConfig(configName, "sample-app", ctx.AppIDManager.PublicKeysURL())
 			policy := buildJwtPolicy("jwt-name-5", "sample-app", "svc-sample-app", configName, "", "/api/headers", "ALL")
 
@@ -192,32 +193,32 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "GET",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken + " " + ctx.AppIDManager.Tokens.IdentityToken,
 					method:        "PUT",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "PATCH",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "POST",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "DELETE",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 				{
 					authorization: "Bearer " + ctx.AppIDManager.Tokens.AccessToken,
 					method:        "PATCH",
-					path:          "/api/headers/" + framework.RandString(3),
+					path:          "/api/headers/" + framework.RandString(randomStringLength),
 				},
 			}
 
@@ -245,8 +246,8 @@ func TestValidHeader(t *testing.T) {
 	framework.
 		NewTest(t).
 		Run(func(ctx *framework.Context) {
-			configName := "jwt-config-55"
-			randomPath := "/api/headers/" + framework.RandString(3) // Use random path to avoid caching bugs
+			configName := "jwt-config-5"
+			randomPath := "/api/headers/" + framework.RandString(randomStringLength) // Use random path to avoid caching bugs
 			config := buildJwtConfig(configName, sampleAppNamespace, ctx.AppIDManager.PublicKeysURL())
 			policy := buildJwtPolicy("jwt-policy-6", sampleAppNamespace, sampleAppService, configName, randomPath, "", "POST")
 
@@ -294,7 +295,7 @@ func TestValidHeader(t *testing.T) {
 				},
 			}
 
-			time.Sleep(10 * time.Second) // Give a second to sync adapter
+			time.Sleep(20 * time.Second) // Give a second to sync adapter
 
 			// Base case
 			res, err := sendAuthRequest(ctx, "POST", randomPath, "no auth")
