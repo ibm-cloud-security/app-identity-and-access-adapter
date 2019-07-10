@@ -79,7 +79,7 @@ function installDemoApplication() {
 
 ### Execute
 checkEnv
-buildAndTag $1
+# buildAndTag $1
 deleteAndWait
 installAdapter "${IMAGE_TEST_TAG}"
 installDemoApplication
