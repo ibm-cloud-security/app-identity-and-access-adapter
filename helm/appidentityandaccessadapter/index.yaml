@@ -1,0 +1,13 @@
+apiVersion: v1
+entries:
+  appidentityandaccessadapter:
+  - apiVersion: v1
+    appVersion: "1.0"
+    created: "2019-07-10T09:42:29.591669-05:00"
+    description: A Helm chart for the App Identity and Access Adapter
+    digest: 499d5051db337c6e730d05874bc6b27c0c2cdd642de08960becc9c952c9bc047
+    name: appidentityandaccessadapter
+    urls:
+    - appidentityandaccessadapter-0.1.0.tgz
+    version: 0.1.0
+generated: "2019-07-10T09:42:29.587456-05:00"
