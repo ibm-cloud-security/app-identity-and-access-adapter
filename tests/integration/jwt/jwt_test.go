@@ -20,7 +20,7 @@ const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
 	randomStringLength = 5
-	sleepTime          = 10
+	sleepTime          = 20
 )
 
 //
@@ -44,7 +44,6 @@ func before(ctx *framework.Context) error {
 //
 func after(ctx *framework.Context) error {
 	_ = ctx.CRDManager.CleanUp()
-	time.Sleep(sleepTime * time.Second)
 	return nil
 }
 
