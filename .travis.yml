@@ -44,10 +44,7 @@ script:
   # Run coverage on unit tests
   - go test -coverprofile=coverage.out ./adapter/... || travis_terminate 1;
   # Run all integration tests
-  - go test -v ./tests/integration/jwt/... || travis_terminate 1;
-  - go test -v ./tests/integration/jwt/... || travis_terminate 1;
-  - go test -v ./tests/integration/jwt/... || travis_terminate 1;
-  - go test -v ./tests/integration/jwt/... || travis_terminate 1;
+  - go test -v -race ./tests/integration/... || travis_terminate 1;
 
 after_success:
   - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.out

@@ -20,7 +20,7 @@ const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
 	randomStringLength = 5
-	sleepTime          = 20
+	sleepTime          = 5
 )
 
 //

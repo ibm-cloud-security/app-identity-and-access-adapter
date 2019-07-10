@@ -18,7 +18,7 @@ import (
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
-	sleepTime          = 20
+	sleepTime          = 5
 	randomStringLength = 5
 )
 
