@@ -18,7 +18,7 @@ import (
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
-	sleepTime          = 30
+	sleepTime          = 20
 )
 
 // ApplicationResponseHeaders models the sample application response json

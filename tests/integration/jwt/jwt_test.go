@@ -20,6 +20,7 @@ const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
 	randomStringLength = 5
+	sleepTime          = 10
 )
 
 //
@@ -43,6 +44,7 @@ func before(ctx *framework.Context) error {
 //
 func after(ctx *framework.Context) error {
 	_ = ctx.CRDManager.CleanUp()
+	time.Sleep(sleepTime * time.Second)
 	return nil
 }
 
@@ -124,7 +126,7 @@ func TestInvalidHeader(t *testing.T) {
 				},
 			}
 
-			time.Sleep(10 * time.Second) // Give a second to sync adapter
+			time.Sleep(sleepTime * time.Second)
 
 			for _, test := range tests {
 				t.Run("Request", func(st *testing.T) {
@@ -154,7 +156,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err)
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			res, err := sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -163,7 +165,7 @@ func TestDeletePolicy(t *testing.T) {
 			err = ctx.CRDManager.DeleteCRD(&policy)
 			require.NoError(t, err)
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			res, err = sendAuthRequest(ctx, "GET", randomPath, "")
 			require.NoError(t, err)
@@ -227,7 +229,7 @@ func TestPrefixHeaderAllMethods(t *testing.T) {
 				t.FailNow()
 			}
 
-			time.Sleep(10 * time.Second) // Give a second to sync adapter
+			time.Sleep(sleepTime * time.Second) // Give a second to sync adapter
 
 			for _, ts := range tests {
 				test := ts
@@ -295,7 +297,7 @@ func TestValidHeader(t *testing.T) {
 				},
 			}
 
-			time.Sleep(20 * time.Second) // Give a second to sync adapter
+			time.Sleep(sleepTime * time.Second) // Give a second to sync adapter
 
 			// Base case
 			res, err := sendAuthRequest(ctx, "POST", randomPath, "no auth")

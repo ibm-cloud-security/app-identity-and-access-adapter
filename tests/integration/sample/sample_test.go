@@ -2,12 +2,13 @@ package sample
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
-	"testing"
 )
 
-///
+//
 // Create a before method to setup a suite before tests execute
 //
 func before(ctx *framework.Context) error {
@@ -16,7 +17,7 @@ func before(ctx *framework.Context) error {
 	return nil
 }
 
-///
+//
 // Create a cleanup method to execute once a suite has completed
 //
 func after(ctx *framework.Context) error {
@@ -24,7 +25,7 @@ func after(ctx *framework.Context) error {
 	return nil
 }
 
-///
+//
 // Test main runs before ALL suite methods run
 // and begins test execution
 //
@@ -36,7 +37,7 @@ func TestMain(t *testing.M) {
 		Run()
 }
 
-///
+//
 // Example: test calls the sample application's endpoint
 //
 func TestOK(t *testing.T) {
