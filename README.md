@@ -68,7 +68,7 @@ Before you get started, be sure you have the following prerequisites installed.
 
 - [Kubernetes Cluster](https://kubernetes.io/)
 - [Helm](https://helm.sh/)
-- [Istio v1.1](https://istio.io/docs/setup/kubernetes/install/)
+- [Istio v1.1+](https://istio.io/docs/setup/kubernetes/install/)
 
 >> You can also use the [IBM Cloud Kubernetes Service Managed Istio](https://cloud.ibm.com/docs/containers?topic=containers-istio).
 
@@ -92,9 +92,11 @@ To install the chart, initialize Helm in your cluster, define the options that y
 3. Install the chart.
 
     ```bash
-    helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter
+    $ helm repo add appidadapter https://raw.githubusercontent.com/ibm-cloud-security/app-identity-and-access-adapter/master/helm/appidentityandaccessadapter
+    $ helm install --name appidentityandaccessadapter appidadapter/appidentityandaccessadapter
     ```
 
+>>The chart can also be installed locally. First clone this repo by `git clone git@github.com:ibm-cloud-security/app-identity-and-access-adapter.git`, then install the chart `helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter`.
 
 ## Applying an authorization and authentication policy
 
