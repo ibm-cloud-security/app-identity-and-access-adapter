@@ -2,6 +2,7 @@
 
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
+[![Coverage Status](https://coveralls.io/repos/github/ibm-cloud-security/app-identity-and-access-adapter/badge.svg?branch=master)](https://coveralls.io/github/ibm-cloud-security/app-identity-and-access-adapter?branch=master)
 
 [![GithubWatch][img-github-watchers]][url-github-watchers]
 [![GithubStars][img-github-stars]][url-github-stars]
