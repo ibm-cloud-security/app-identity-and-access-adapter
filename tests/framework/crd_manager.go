@@ -2,11 +2,12 @@ package framework
 
 import (
 	"fmt"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
 	"math/rand"
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
 )
 
 const (
