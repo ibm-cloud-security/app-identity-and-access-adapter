@@ -2,6 +2,7 @@
 
 [![IBM Cloud powered][img-ibmcloud-powered]][url-ibmcloud]
 [![Travis][img-travis-master]][url-travis-master]
+[![Coverage Status](https://coveralls.io/repos/github/ibm-cloud-security/app-identity-and-access-adapter/badge.svg?branch=master)](https://coveralls.io/github/ibm-cloud-security/app-identity-and-access-adapter?branch=master)
 
 [![GithubWatch][img-github-watchers]][url-github-watchers]
 [![GithubStars][img-github-stars]][url-github-stars]
@@ -13,7 +14,7 @@ By using the App Identity and Access adapter, you can centralize all of your ide
 
 ## Multicloud Architecture
 
-A multicloud computing environment combines multiple cloud and/ or private computing environments into a single network architecture. By distributing workloads across multiple environments, you might find improved resiliency, flexibility, and greater cost-effificiency. To achieve the benefits, it's common to use a container-based applications with an orchestration layer, such as Kubernetes.
+A multicloud computing environment combines multiple cloud and/ or private computing environments into a single network architecture. By distributing workloads across multiple environments, you might find improved resiliency, flexibility, and greater cost-efficiency. To achieve the benefits, it's common to use a container-based applications with an orchestration layer, such as Kubernetes.
 
 ![App Identity and Access adapter architecture diagram](images/istio-adapter.png)
 Figure. Multicloud deployment achieved with the App Identity and Access adapter.
@@ -24,7 +25,7 @@ Figure. Multicloud deployment achieved with the App Identity and Access adapter.
 
 [Istio](https://istio.io) is an open source service mesh that layers transparently onto existing distributed applications that can integrate with Kubernetes. To reduce the complexity of deployments Istio provides behavioral insights and operational control over the service mesh as a whole. When App ID is combined with Istio, it becomes a scalable, integrated identity solution for multicloud architectures that does not require any custom application code changes. For more information, check out ["What is Istio?"](https://www.ibm.com/cloud/learn/istio?cm_mmc=OSocial_Youtube-_-Hybrid+Cloud_Cloud+Platform+Digital-_-WW_WW-_-IstioYTDescription&cm_mmca1=000023UA&cm_mmca2=10010608).
 
-Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic, also known as telemetry, that is sent to the Istio component called Mixer to enforce policy decisions. The App Identity and Access adapter extends the Mixer functionality by analyzing the telemetry (attributes) against custom policies to control identity and access management into and across the service mesh. The access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. For more information about policies and telemetry, see the [Istio documentation](https://istio.io/docs/concepts/policies-and-telemetry/). 
+Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic for all services in the service mesh. By using the proxy, Istio extracts information about traffic, also known as telemetry, that is sent to the Istio component called Mixer to enforce policy decisions. The App Identity and Access adapter extends the Mixer functionality by analyzing the telemetry (attributes) against custom policies to control identity and access management into and across the service mesh. The access management policies are linked to particular Kubernetes services and can be finely tuned to specific service endpoints. For more information about policies and telemetry, see the [Istio documentation](https://istio.io/docs/concepts/policies-and-telemetry/).
 
 ### Protecting frontend apps
 
@@ -42,11 +43,10 @@ You can also logout authenticated users. When an authenticated user accesses any
 https://myhost/path/oidc/logout
 ```
 
-If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retreive new tokens when the identity token expires.
+If needed, a refresh token can be used to automatically acquire new access and identity tokens without your user's needing to re-authenticate. If the configured identity provider returns a refresh token, it is persisted in the session and used to retrieve new tokens when the identity token expires.
 
 
 ### Protecting backend apps
-
 
 The adapter can be used in collaboration with the OAuth 2.0 [JWT Bearer flow](https://tools.ietf.org/html/rfc6750) to protect service APIs by validating JWT Bearer tokens. The Bearer authorization flow expects a request to contain an Authorization header with a valid access token and an optional identity token. The expected header structure is `Authorization=Bearer {access_token} [{id_token}]`. Unauthenticated clients are returned an HTTP 401 response status with a list of the scopes that are needed to obtain authorization. If the tokens are invalid or expired, the API strategy returns an HTTP 401 response with an optional error component that says `Www-Authenticate=Bearer scope="{scope}" error="{error}"`.
 
@@ -79,7 +79,7 @@ Before you get started, be sure you have the following prerequisites installed.
 
 To install the chart, initialize Helm in your cluster, define the options that you want to use, and then run the install command.
 
-1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluter.
+1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluster.
 
 2. Install Helm in your cluster.
 
@@ -218,8 +218,8 @@ spec:
 | Rule Object  | Type | Required | Description   |
 |----------------|:----:|:--------:| :-----------: |
 | `claim` | string | yes | The claim that you want to validate. |
-| `match` | enum | no | The criteria required for claim validation. Options inlcude: `ALL`, `ANY` or `NOT`. The default is set to `ALL`. |
-| `source` | enum | no | The token where you want to apply the rule. Options inlcude: `access_token` or `id_token`. The default is set to `access_token`. |
+| `match` | enum | no | The criteria required for claim validation. Options include: `ALL`, `ANY` or `NOT`. The default is set to `ALL`. |
+| `source` | enum | no | The token where you want to apply the rule. Options include: `access_token` or `id_token`. The default is set to `access_token`. |
 | `values` | array[string] | yes | The required set of values for validation. |
 
 
@@ -245,7 +245,7 @@ For more information about getting support, see [how do I get the support that I
 
 ### Troubleshooting: Logging
 
-By default, logs are styled as JSON and provided at an `info` visbility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range `-1 - 7` as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
+By default, logs are styled as JSON and provided at an `info` visibility level to provide for ease of integration with external logging systems. To update the logging configuration, you can use the Helm chart. Supported logging levels include range `-1 - 7` as shown in Zapcore. For more information about the levels, see the [Zapcore documentation](https://godoc.org/go.uber.org/zap/zapcore#Level).
 
 >>When you're manually viewing JSON logs, you might want to tail the logs and "pretty print" them by using [jq](https://brewinstall.org/install-jq-on-mac-with-brew/).
 
@@ -261,7 +261,7 @@ $ adapter_logs | jq
 
 **Mixer**
 
-If the adapter does not appear to recieve requests, check the Mixer logs to ensure that it is successfully connected to the adapter.
+If the adapter does not appear to receive requests, check the Mixer logs to ensure that it is successfully connected to the adapter.
 
 ```bash
 $ alias mixer_logs="kubectl -n istio-system logs -f $(kubectl -n istio-system get pods -lapp=telemetry -o jsonpath='{.items[0].metadata.name}') -c mixer"
