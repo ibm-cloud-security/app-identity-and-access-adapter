@@ -1,10 +1,12 @@
 package client
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestClientNew(t *testing.T) {

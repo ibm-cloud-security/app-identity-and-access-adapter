@@ -2,20 +2,23 @@ package oidc
 
 import (
 	"errors"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
-	"github.com/stretchr/testify/require"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework"
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/framework/utils"
 )
 
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
+	sleepTime          = 10
 )
 
 // ApplicationResponseHeaders models the sample application response json
@@ -63,16 +66,17 @@ func TestAuthorizationRedirect(t *testing.T) {
 		Run(func(ctx *framework.Context) {
 			configName := "oidc-config-1"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
-			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/1", "", "ALL")
+			path := "/web/home/1"
+			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, path, "", "ALL")
 			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
 			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			ctx.StopHttpRedirects()
-			res, err := ctx.SendRequest("GET", "/web/home/1", nil)
+			res, err := ctx.SendRequest("GET", path, nil)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusFound, res.StatusCode)
 			if !strings.HasPrefix(res.Header.Get("location"), ctx.AppIDManager.OAuthServerURL) {
@@ -88,16 +92,17 @@ func TestE2E(t *testing.T) {
 			ctx.EnableRedirects()
 			configName := "oidc-config-2"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
-			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, "/web/home/2", "", "ALL")
+			path := "/web/home/2"
+			policy := buildOIDCPolicy("oidc-policy-2", sampleAppNamespace, sampleAppService, configName, path, "", "ALL")
 			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
 			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
 			require.NoError(t, err2)
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(sleepTime * time.Second)
 
 			var output ApplicationResponseHeaders
-			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, "/web/home/2", &output)
+			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, path, &output)
 			require.NoError(t, err)
 
 			require.NotNil(t, output)
@@ -141,6 +146,24 @@ func buildOIDCPolicy(name string, namespace string, svc string, oidcConfigName s
 								{
 									PolicyType: "oidc",
 									Config:     oidcConfigName,
+									Rules: []v1.Rule{
+										{
+											Claim: "scope",
+											Match: "ALL",
+											Source: "access_token",
+											Values: []string{
+												"openid",
+											},
+										},
+										{
+											Claim: "amr",
+											Match: "ANY",
+											Source: "id_token",
+											Values: []string{
+												"cloud_directory",
+											},
+										},
+									},
 								},
 							},
 						},

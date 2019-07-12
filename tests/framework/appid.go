@@ -32,9 +32,8 @@ const (
 	applicationFormEncoded = "application/x-www-form-urlencoded"
 	contentType            = "Content-Type"
 	setCookie              = "set-cookie"
-	facebookStateID        = "#facebook_state"
-	samlStateID            = "#SAML_State"
 	widgetURLID            = "#widgetUrl"
+	stateID                = "#cd_form .form-group"
 )
 
 // AppIDManager models the authorization server
@@ -135,17 +134,16 @@ func (m *AppIDManager) ROP(username string, password string) error {
 	return nil
 }
 
-///
-/// App ID utility request functions to handle OIDC flow without UI
-/// Redirect cannot be used as cookies will not be automatically set
-///
+//
+// App ID utility request functions to handle OIDC flow without UI
+// Redirect cannot be used as cookies will not be automatically set
+//
 
 func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adapterState *http.Cookie, appIDState string, widgetURL string) {
 
 	// Make request to the frontend
 	req, err := http.NewRequest("GET", path, nil)
 	require.NoError(t, err)
-
 	res, err := m.client.Do(req)
 	require.NoError(t, err)
 
@@ -162,7 +160,6 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 	url2, err := res.Location()
 	require.NoError(t, err)
-
 	// Follow the redirect to the authorization server
 	redirectRes, err := http.DefaultClient.Get(url2.String()) // Use default to allow redirect
 	require.NoError(t, err)
@@ -174,12 +171,17 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 	// Parse login page
 	doc, err := goquery.NewDocumentFromReader(redirectRes.Body)
-	state, ok := doc.Find(facebookStateID).Attr("value")
-	if !ok || state == "" {
-		state, ok = doc.Find(samlStateID).Attr("value")
-	}
+	var state string
+	doc.Find(stateID).Each(func(i int, s *goquery.Selection) {
+		_ = s.Find("input").Each(func(i int, q *goquery.Selection) {
+			name, _ := q.Attr("name")
+			value,_ := q.Attr("value")
+			if name == "state" {
+				state = value
+			}
+		})
+	})
 	widgetUrl, okW := doc.Find(widgetURLID).Attr("value")
-	require.True(t, ok)
 	require.True(t, okW)
 	return stateCookie, state, widgetUrl
 }
