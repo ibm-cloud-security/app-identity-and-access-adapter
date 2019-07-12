@@ -18,8 +18,7 @@ import (
 const (
 	sampleAppNamespace = "sample-app"
 	sampleAppService   = "svc-sample-app"
-	sleepTime          = 5
-	randomStringLength = 5
+	sleepTime          = 10
 )
 
 // ApplicationResponseHeaders models the sample application response json
@@ -67,8 +66,8 @@ func TestAuthorizationRedirect(t *testing.T) {
 		Run(func(ctx *framework.Context) {
 			configName := "oidc-config-1"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
-			randomPath := "/web/home/" + framework.RandString(randomStringLength)
-			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
+			path := "/web/home/1"
+			policy := buildOIDCPolicy("oidc-policy-1", sampleAppNamespace, sampleAppService, configName, path, "", "ALL")
 			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
 			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
@@ -77,7 +76,7 @@ func TestAuthorizationRedirect(t *testing.T) {
 			time.Sleep(sleepTime * time.Second)
 
 			ctx.StopHttpRedirects()
-			res, err := ctx.SendRequest("GET", randomPath, nil)
+			res, err := ctx.SendRequest("GET", path, nil)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusFound, res.StatusCode)
 			if !strings.HasPrefix(res.Header.Get("location"), ctx.AppIDManager.OAuthServerURL) {
@@ -93,8 +92,8 @@ func TestE2E(t *testing.T) {
 			ctx.EnableRedirects()
 			configName := "oidc-config-2"
 			config := buildOIDCConfig(ctx, configName, sampleAppNamespace)
-			randomPath := "/web/home/" + framework.RandString(randomStringLength)
-			policy := buildOIDCPolicy("oidc-policy-2", sampleAppNamespace, sampleAppService, configName, randomPath, "", "ALL")
+			path := "/web/home/2"
+			policy := buildOIDCPolicy("oidc-policy-2", sampleAppNamespace, sampleAppService, configName, path, "", "ALL")
 			err1 := ctx.CRDManager.AddCRD(framework.OidcConfigTemplate, &config)
 			err2 := ctx.CRDManager.AddCRD(framework.PolicyTemplate, &policy)
 			require.NoError(t, err1)
@@ -103,7 +102,7 @@ func TestE2E(t *testing.T) {
 			time.Sleep(sleepTime * time.Second)
 
 			var output ApplicationResponseHeaders
-			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, randomPath, &output)
+			err := ctx.AppIDManager.LoginToCloudDirectory(t, ctx.Env.ClusterRoot, path, &output)
 			require.NoError(t, err)
 
 			require.NotNil(t, output)
