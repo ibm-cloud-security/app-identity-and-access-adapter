@@ -173,7 +173,8 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 	// Parse login page
 	doc, err := goquery.NewDocumentFromReader(redirectRes.Body)
-	state, _ := doc.Find(stateID).Attr("value")
+	state, statePresent := doc.Find(stateID).Attr("value")
+	require.True(t, statePresent)
 	widgetUrl, okW := doc.Find(widgetURLID).Attr("value")
 	require.True(t, okW)
 	return stateCookie, state, widgetUrl
