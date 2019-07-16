@@ -3,16 +3,18 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
 )
 
 const (
@@ -33,7 +35,7 @@ const (
 	contentType            = "Content-Type"
 	setCookie              = "set-cookie"
 	widgetURLID            = "#widgetUrl"
-	stateID                = "#cd_form .form-group"
+	stateID                = "#cd_form input[name='state']"
 )
 
 // AppIDManager models the authorization server
@@ -171,16 +173,7 @@ func (m *AppIDManager) initialRequestToFrontend(t *testing.T, path string) (adap
 
 	// Parse login page
 	doc, err := goquery.NewDocumentFromReader(redirectRes.Body)
-	var state string
-	doc.Find(stateID).Each(func(i int, s *goquery.Selection) {
-		_ = s.Find("input").Each(func(i int, q *goquery.Selection) {
-			name, _ := q.Attr("name")
-			value,_ := q.Attr("value")
-			if name == "state" {
-				state = value
-			}
-		})
-	})
+	state, _ := doc.Find(stateID).Attr("value")
 	widgetUrl, okW := doc.Find(widgetURLID).Attr("value")
 	require.True(t, okW)
 	return stateCookie, state, widgetUrl
