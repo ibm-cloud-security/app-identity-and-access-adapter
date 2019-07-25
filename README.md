@@ -9,7 +9,7 @@
 [![GithubForks][img-github-forks]][url-github-forks]
 
 
-By using the App Identity and Access adapter, you can centralize all of your identity management any OIDC compliant identity provider. Because enterprises use clouds from multiple providers or a combination of on and off-premise solutions, heterogenous deployment models can help you to preserve existing infrastructure and avoid vendor lock-in. The adapter can be configured to work with any OIDC compliant identity provider, which enables it to control authentication and authorization policies in all environments including frontend and backend applications. And, it does it all without any change to your code or the need to redeploy your application.
+By using the App Identity and Access adapter, you can centralize all of your identity management using any OIDC compliant identity provider. Because enterprises use clouds from multiple providers or a combination of on and off-premise solutions, heterogenous deployment models can help you to preserve existing infrastructure and avoid vendor lock-in. The adapter can be configured to work with any OIDC compliant identity provider, which enables it to control authentication and authorization policies in all environments including frontend and backend applications. And, it does it all without any change to your code or the need to redeploy your application.
 
 
 ## Multicloud Architecture
