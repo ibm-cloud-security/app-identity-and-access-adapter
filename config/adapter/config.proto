@@ -1,7 +1,11 @@
 syntax = "proto3";
 
 // $title: App Identity and Access Adapter
+<<<<<<< HEAD
 // $description: Adapter to enforce authentication and authorization policies for frontend and backend applications
+=======
+// $description: Adapter to enforce authentication and authorization policies for frontend and backend applications.
+>>>>>>> development
 // $location: https://istio.io/docs/reference/config/policy-and-telemetry/adapters/app-identity-access-adapter.html
 // $provider: IBM Cloud
 // $contact_email: antona@us.ibm.com
