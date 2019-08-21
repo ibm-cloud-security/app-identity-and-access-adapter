@@ -5,6 +5,6 @@ metadata:
   namespace: sample-app
 spec:
   authMethod:   client_secret_basic
-  discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/<tenant-ID>/oidc-discovery/.well-known
+  discoveryUrl: https://us-south.appid.cloud.ibm.com/oauth/v4/<tenant_id>/.well-known/openid-configuration
   clientId:     <client-id>
   clientSecret: <client-secret>
