@@ -200,7 +200,7 @@ spec:
 
 | Service Object | Type | Required | Description   |
 |----------------|:----:|:--------:| :-----------: |
-| `service` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
+| `serviceName` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
 | `paths` | array[Path Object] | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
 
 

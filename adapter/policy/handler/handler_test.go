@@ -22,7 +22,7 @@ func getObjectMeta() metav1.ObjectMeta {
 }
 
 func getTypeMeta() metav1.TypeMeta {
-	return metav1.TypeMeta{APIVersion: "v1", Kind: "JwtPolicy"}
+	return metav1.TypeMeta{APIVersion: "v1", Kind: "OidcConfig"}
 }
 
 
