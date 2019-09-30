@@ -1,6 +1,5 @@
 package crdeventhandler
 
-
 import (
 	"testing"
 
@@ -16,17 +15,17 @@ import (
 
 const (
 	jwksUrl             string = "https://sampleurl"
-	ns  string = "ns"
-	service string= "service"
+	ns                  string = "ns"
+	service             string = "service"
 	secretFromRef       string = "secretFromRef"
 	secretFromPlainText string = "secretFromPlainTextssd"
 )
 
-func getDefaultService() policy.Service{
-	return policy.Service{Namespace:ns, Name: service}
+func getDefaultService() policy.Service {
+	return policy.Service{Namespace: ns, Name: service}
 }
 
-func getDefaultPathPolicy() []v1.PathPolicy{
+func getDefaultPathPolicy() []v1.PathPolicy {
 	return []v1.PathPolicy{}
 }
 
@@ -98,23 +97,23 @@ func getOidcConfig(spec v1.OidcConfigSpec, objMeta metav1.ObjectMeta, typeMeta m
 	return &v1.OidcConfig{Spec: spec, ObjectMeta: objMeta, TypeMeta: typeMeta}
 }
 
-func getDefaultRoutePolicy() policy.RoutePolicy{
+func getDefaultRoutePolicy() policy.RoutePolicy {
 	return policy.NewRoutePolicy()
 }
 
-func getRoutePolicy(policyReference string) policy.RoutePolicy{
+func getRoutePolicy(policyReference string) policy.RoutePolicy {
 	return policy.RoutePolicy{
 		PolicyReference: policyReference,
-		Actions: getPathPolicy(),
+		Actions:         getPathPolicy(),
 	}
 }
 
-func getPathPolicy() []v1.PathPolicy{
+func getPathPolicy() []v1.PathPolicy {
 	return []v1.PathPolicy{
 		{
-			PolicyType: policy.OIDC.String(),
+			PolicyType:  policy.OIDC.String(),
 			RedirectUri: jwksUrl,
-			Config: "sampleoidc",
+			Config:      "sampleoidc",
 		},
 	}
 }
@@ -135,7 +134,6 @@ func policyGenerator(targets []v1.TargetElement) *v1.Policy {
 func oidcConfigGenerator(name string, id string, url string) *v1.OidcConfig {
 	return getOidcConfig(getOidcConfigSpec(name, id, url), getObjectMetaWithName(name), getTypeMeta())
 }
-
 
 func TestGetClientSecret(t *testing.T) {
 	tests := []struct {
@@ -193,7 +191,7 @@ func TestGetClientSecret(t *testing.T) {
 }
 
 func TestHandler_JwtConfigAddEventHandler(t *testing.T) {
-	store:= storePolicy.New()
+	store := storePolicy.New()
 	handler := GetAddEventHandler(jwtConfigGenerator(), store, fake.NewSimpleClientset())
 	handler.HandleAddUpdateEvent()
 	key := "ns/sample"
@@ -201,7 +199,7 @@ func TestHandler_JwtConfigAddEventHandler(t *testing.T) {
 }
 
 func TestHandler_OidcConfigAddEventHandler(t *testing.T) {
-	store:= storePolicy.New()
+	store := storePolicy.New()
 	policyName := "oidcconfig"
 	key := "ns/" + policyName
 	handler := GetAddEventHandler(oidcConfigGenerator(policyName, "oidc", jwksUrl), store, fake.NewSimpleClientset())
@@ -210,19 +208,29 @@ func TestHandler_OidcConfigAddEventHandler(t *testing.T) {
 }
 
 func TestHandler_PolicyAddEventHandler(t *testing.T) {
-	store:= storePolicy.New()
+	store := storePolicy.New()
 	key := "ns/sample"
 	targets := []v1.TargetElement{
-		getTargetElements(service, getPathConfigs(getPathConfig("/path", "/paths", "GET", getPathPolicy()))),
+		getTargetElements(service, getPathConfigs(getPathConfig("/path", "/", "GET", getPathPolicy()))),
 	}
 	handler := GetAddEventHandler(policyGenerator(targets), store, fake.NewSimpleClientset())
 	handler.HandleAddUpdateEvent()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/path")), getRoutePolicy(key))
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/paths/*")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/revision")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getRoutePolicy(key))
+	targets = []v1.TargetElement{
+		getTargetElements(service, getPathConfigs(getPathConfig("/userpath", "/paths", "GET", getPathPolicy()))),
+	}
+	handler = GetAddEventHandler(policyGenerator(targets), store, fake.NewSimpleClientset())
+	handler.HandleAddUpdateEvent()
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/revision")), policy.NewRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), policy.NewRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/path")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/userpath")), getRoutePolicy(key))
 }
 
 func TestHandler_InvalidObject(t *testing.T) {
-	store:= storePolicy.New()
+	store := storePolicy.New()
 	handler := GetAddEventHandler(1, store, fake.NewSimpleClientset())
 	assert.Nil(t, handler)
 }

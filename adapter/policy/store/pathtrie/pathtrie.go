@@ -37,7 +37,7 @@ func (trie *PathTrie) Get(key string) interface{} {
 }
 
 // Get returns the actions stored for the given endpoint.
-func (trie *PathTrie) GetActions(key string) interface{} {
+func (trie *PathTrie) GetActions(key string, returnParentActions bool) interface{} {
 	prefix := "/*"
 	node := trie
 	parent := trie.children[prefix]
@@ -52,7 +52,7 @@ func (trie *PathTrie) GetActions(key string) interface{} {
 	}
 
 	if node == nil || node.value == nil {
-		if parent == nil {
+		if !returnParentActions || parent == nil {
 			return nil
 		} else {
 			return parent.value
