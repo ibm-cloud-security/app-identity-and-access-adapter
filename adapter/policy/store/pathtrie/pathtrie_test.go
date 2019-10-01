@@ -95,7 +95,21 @@ func TestPathTrie_GetActions(t *testing.T) {
 	cases = append(cases, Case{"/home/user", nil}, Case{"/path/home", 3}, Case{"/web/home", 7})
 	// Get Actions
 	for _, c := range cases {
-		if value := trie.GetActions(c.key); value != c.value {
+		if value := trie.GetActions(c.key, true); value != c.value {
+			assert.Fail(t, fmt.Sprintf("expected key %s to have value %v, got %v", c.key, c.value, value))
+		}
+	}
+
+	cases = []Case{
+		{"/web/user", nil},
+		{"/path", 2},
+		{"/path/path1", 4},
+		{"/path/path2", nil},
+	}
+
+	// Get Actions
+	for _, c := range cases {
+		if value := trie.GetActions(c.key, false); value != c.value {
 			assert.Fail(t, fmt.Sprintf("expected key %s to have value %v, got %v", c.key, c.value, value))
 		}
 	}
