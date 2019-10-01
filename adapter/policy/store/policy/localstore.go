@@ -103,12 +103,6 @@ func (l *LocalStore) SetPolicies(endpoint policy.Endpoint, actions policy.RouteP
 	}
 }
 
-func (l *LocalStore) DeletePolicies(endpoint policy.Endpoint) {
-	if l.policies == nil {
-		l.policies[endpoint.Service].Delete(endpoint.Path)
-	}
-}
-
 func (l *LocalStore) GetPolicyMapping(policy string) []policy.PolicyMapping {
 	if l.policyMappings != nil {
 		return l.policyMappings[policy]
