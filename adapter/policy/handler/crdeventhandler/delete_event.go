@@ -39,7 +39,7 @@ func (e *PolicyDeleteEventHandler) HandleDeleteEvent() {
 	parsedPolicies := e.Store.GetPolicyMapping(e.Key)
 	for _, policies := range parsedPolicies {
 		zap.S().Debug("Getting policy for endpoint", policies.Endpoint)
-		storedPolicy := e.Store.GetPolicies(policies.Endpoint)
+		storedPolicy := e.Store.GetPolicies(policies.Endpoint, false)
 		if storedPolicy.PolicyReference == e.Key {
 			e.Store.SetPolicies(policies.Endpoint, policy.NewRoutePolicy())
 		}

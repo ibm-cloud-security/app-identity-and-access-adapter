@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	filterType     = "xFilterType"
+	filterType     = "x-filter-type"
 	istioAdapter   = "IstioAdapter"
 	defaultTimeout = 5 * time.Second
 )

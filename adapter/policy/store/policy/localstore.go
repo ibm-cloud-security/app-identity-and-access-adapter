@@ -68,16 +68,12 @@ func (l *LocalStore) DeleteClient(clientName string) {
 	}
 }
 
-func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) policy.RoutePolicy {
+func (l *LocalStore) GetPolicies(endpoint policy.Endpoint, getParentPolicies bool) policy.RoutePolicy {
 	if l.policies != nil && l.policies[endpoint.Service] != nil {
-		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path, true)).(policy.Actions)
+		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path, getParentPolicies)).(policy.Actions)
 		if ok {
 			result, present := actions[endpoint.Method]
 			if present { // found actions for method
-				return result
-			}
-			result, present = actions[policy.ALL]
-			if present { // check if actions are set for ALL
 				return result
 			}
 		}

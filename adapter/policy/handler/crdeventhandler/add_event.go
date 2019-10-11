@@ -65,7 +65,7 @@ func (e *PolicyAddEventHandler) HandleAddUpdateEvent() {
 		parsedPolicies := e.Store.GetPolicyMapping(mappingId)
 		for _, policies := range parsedPolicies {
 			zap.S().Debug("Getting policy for endpoint", policies.Endpoint)
-			storedPolicy := e.Store.GetPolicies(policies.Endpoint)
+			storedPolicy := e.Store.GetPolicies(policies.Endpoint, false)
 			if storedPolicy.PolicyReference == mappingId {
 				e.Store.SetPolicies(policies.Endpoint, policy.NewRoutePolicy())
 			}

@@ -215,18 +215,18 @@ func TestHandler_PolicyAddEventHandler(t *testing.T) {
 	}
 	handler := GetAddEventHandler(policyGenerator(targets), store, fake.NewSimpleClientset())
 	handler.HandleAddUpdateEvent()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), getRoutePolicy(key))
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/revision")), getRoutePolicy(key))
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path"), true), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/revision"), true), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*"), true), getRoutePolicy(key))
 	targets = []v1.TargetElement{
 		getTargetElements(service, getPathConfigs(getPathConfig("/userpath", "/paths", "GET", getPathPolicy()))),
 	}
 	handler = GetAddEventHandler(policyGenerator(targets), store, fake.NewSimpleClientset())
 	handler.HandleAddUpdateEvent()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/revision")), policy.NewRoutePolicy())
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path")), policy.NewRoutePolicy())
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/path")), getRoutePolicy(key))
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/userpath")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/revision"), false), policy.NewRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/path"),false), policy.NewRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/path"), true), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/userpath"), false), getRoutePolicy(key))
 }
 
 func TestHandler_InvalidObject(t *testing.T) {

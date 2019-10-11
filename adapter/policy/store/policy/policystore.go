@@ -14,7 +14,7 @@ type PolicyStore interface {
 	GetClient(clientName string) client.Client
 	AddClient(clientName string, client client.Client)
 	DeleteClient(clientName string)
-	GetPolicies(endpoint policy.Endpoint) policy.RoutePolicy
+	GetPolicies(endpoint policy.Endpoint, getParentPolicies bool) policy.RoutePolicy
 	SetPolicies(endpoint policy.Endpoint, actions policy.RoutePolicy)
 	// DeletePolicies(ep policy.Endpoint, obj interface{})
 	GetPolicyMapping(policy string) []policy.PolicyMapping
