@@ -42,12 +42,12 @@ func TestHandler_PolicyDeleteEventHandler(t *testing.T) {
 	}
 	handler := GetAddEventHandler(policyGenerator(targets), store, fake.NewSimpleClientset())
 	handler.HandleAddUpdateEvent()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/path"), false), getRoutePolicy(key))
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/paths/*"), false), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/path")), getRoutePolicy(key))
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET,"/paths/*")), getRoutePolicy(key))
 	deleteHandler := GetDeleteEventHandler(policy.CrdKey{ Id: key, CrdType: v1.POLICY}, store)
 	deleteHandler.HandleDeleteEvent()
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(),policy.GET,"/path"), false), getDefaultRoutePolicy())
-	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*"), false), getDefaultRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(),policy.GET,"/path")), getDefaultRoutePolicy())
+	assert.Equal(t, store.GetPolicies(getEndpoint(getDefaultService(), policy.GET, "/paths/*")), getDefaultRoutePolicy())
 
 }
 

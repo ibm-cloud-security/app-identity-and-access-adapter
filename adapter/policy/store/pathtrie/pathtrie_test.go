@@ -8,7 +8,7 @@ import (
 )
 
 type Case struct {
-	key string
+	key   string
 	value interface{}
 }
 
@@ -92,24 +92,39 @@ func TestPathTrie_GetActions(t *testing.T) {
 	}
 
 	cases := getCases()
-	cases = append(cases, Case{"/home/user", nil}, Case{"/path/home", 3}, Case{"/web/home", 7})
+	cases = append(cases, Case{"/home/user", nil}, Case{"/path/home", nil}, Case{"/web/home", nil})
 	// Get Actions : return parent actions
 	for _, c := range cases {
-		if value := trie.GetActions(c.key, true); value != c.value {
+		if value := trie.GetActions(c.key); value != c.value {
 			assert.Fail(t, fmt.Sprintf("expected key %s to have value %v, got %v", c.key, c.value, value))
 		}
 	}
+}
 
-	cases = []Case{
-		{"/web/user", nil},
-		{"/path", 2},
-		{"/path/path1", 4},
-		{"/path/path2", nil},
+func TestPathTrie_GetPrefixActions(t *testing.T) {
+	trie := NewPathTrie()
+	initialValues := getCases()
+
+	// initial put
+	for _, c := range initialValues {
+		if isNew := trie.Put(c.key, c.value); !isNew {
+			assert.Fail(t, fmt.Sprintf("expected key %s to be missing", c.key))
+		}
 	}
-
-	// Get Actions
+	cases := []Case{
+		{"/path", 3},
+		{"/path/*", 3},
+		{"/path/path1", 3},
+		{"/home", nil},
+		{"/web", 7},
+		{"/web/*", 7},
+		{"/web/user", 7},
+		{"/web/user/profile", 7},
+		{"/path/path2", 3},
+	}
+	// Get Parent Actions
 	for _, c := range cases {
-		if value := trie.GetActions(c.key, false); value != c.value {
+		if value := trie.GetPrefixActions(c.key); value != c.value {
 			assert.Fail(t, fmt.Sprintf("expected key %s to have value %v, got %v", c.key, c.value, value))
 		}
 	}

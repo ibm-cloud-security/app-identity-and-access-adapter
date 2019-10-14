@@ -36,8 +36,12 @@ func (trie *PathTrie) Get(key string) interface{} {
 	return node.value
 }
 
+func (trie *PathTrie) GetActions(key string) interface{} {
+	return trie.Get(key)
+}
+
 // Get returns the actions stored for the given endpoint.
-func (trie *PathTrie) GetActions(key string, returnParentActions bool) interface{} {
+func (trie *PathTrie) GetPrefixActions(key string) interface{} {
 	prefix := "/*"
 	node := trie
 	parent := trie.children[prefix]
@@ -50,15 +54,10 @@ func (trie *PathTrie) GetActions(key string, returnParentActions bool) interface
 			break
 		}
 	}
-
-	if node == nil || node.value == nil {
-		if !returnParentActions || parent == nil {
-			return nil
-		} else {
-			return parent.value
-		}
+	if parent == nil {
+		return nil
 	}
-	return node.value
+	return parent.value
 }
 
 // Put inserts the value into the trie at the given key, replacing any

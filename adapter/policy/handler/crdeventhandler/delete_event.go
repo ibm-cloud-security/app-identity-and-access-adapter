@@ -39,9 +39,9 @@ func (e *PolicyDeleteEventHandler) HandleDeleteEvent() {
 	parsedPolicies := e.Store.GetPolicyMapping(e.Key)
 	for _, policies := range parsedPolicies {
 		zap.S().Debug("Getting policy for endpoint", policies.Endpoint)
-		storedPolicy := e.Store.GetPolicies(policies.Endpoint, false)
+		storedPolicy := e.Store.GetPolicies(policies.Endpoint)
 		if storedPolicy.PolicyReference == e.Key {
-			e.Store.SetPolicies(policies.Endpoint, policy.NewRoutePolicy())
+			e.Store.DeletePolicies(policies.Endpoint)
 		}
 	}
 	// remove entry from policyMapping

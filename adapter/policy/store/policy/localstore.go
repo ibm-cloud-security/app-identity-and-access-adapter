@@ -68,9 +68,39 @@ func (l *LocalStore) DeleteClient(clientName string) {
 	}
 }
 
-func (l *LocalStore) GetPolicies(endpoint policy.Endpoint, getParentPolicies bool) policy.RoutePolicy {
+func (l *LocalStore) GetPolicies(endpoint policy.Endpoint) policy.RoutePolicy {
 	if l.policies != nil && l.policies[endpoint.Service] != nil {
-		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path, getParentPolicies)).(policy.Actions)
+		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
+		if ok {
+			result, present := actions[endpoint.Method]
+			if present { // found actions for method
+				return result
+			}
+		}
+	}
+	return policy.NewRoutePolicy()
+}
+
+func (l *LocalStore) DeletePolicies(endpoint policy.Endpoint) {
+	if l.policies != nil && l.policies[endpoint.Service] != nil {
+		actions, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions)
+		if ok {
+			_, present := actions[endpoint.Method]
+			if present { // found actions for method
+				delete(actions, endpoint.Method)
+			}
+			if len(actions) > 0 { // update the trie after deleting the policy for the method
+				l.policies[endpoint.Service].Put(endpoint.Path, actions)
+			} else { // remove path from trie, if no methods are configured
+				l.policies[endpoint.Service].Delete(endpoint.Path)
+			}
+		}
+	}
+}
+
+func (l *LocalStore) GetPrefixPolicies(endpoint policy.Endpoint) policy.RoutePolicy {
+	if l.policies != nil && l.policies[endpoint.Service] != nil {
+		actions, ok := (l.policies[endpoint.Service].GetPrefixActions(endpoint.Path)).(policy.Actions)
 		if ok {
 			result, present := actions[endpoint.Method]
 			if present { // found actions for method
@@ -89,7 +119,7 @@ func (l *LocalStore) SetPolicies(endpoint policy.Endpoint, actions policy.RouteP
 		l.policies[endpoint.Service] = pathtrie.NewPathTrie()
 	}
 
-	if obj, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path, false)).(policy.Actions); ok {
+	if obj, ok := (l.policies[endpoint.Service].GetActions(endpoint.Path)).(policy.Actions); ok {
 		obj[endpoint.Method] = actions
 		l.policies[endpoint.Service].Put(endpoint.Path, obj)
 	} else {

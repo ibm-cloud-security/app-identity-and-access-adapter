@@ -93,7 +93,7 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 	// Check all possible endpoint variants for policies
 	// retrieve policies configured for the endpoint
 	for _, ep := range endpoints {
-		endpointActions, err := m.policies(ep, false)
+		endpointActions, err := m.parseActions(ep, m.store.GetPolicies(ep), "policy")
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 	}
 	// retrieve prefix policies configured for the endpoint
 	for _, ep := range endpoints {
-		endpointActions, err := m.policies(ep, true)
+		endpointActions, err := m.parseActions(ep, m.store.GetPrefixPolicies(ep), "prefix policies")
 		if err != nil {
 			return nil, err
 		}
@@ -114,17 +114,16 @@ func (m *engine) getPolicies(endpoints []policy.Endpoint) ([]Action, error) {
 	return actions, nil
 }
 
-func (m *engine) policies(endpoint policy.Endpoint, getParentPolicies bool) ([]Action, error) {
-	zap.L().Debug("Retrieving policies for endpoint",
+func (m *engine) parseActions(endpoint policy.Endpoint, routePolicy policy.RoutePolicy, message string) ([]Action, error) {
+	zap.L().Debug("Retrieving "+message+" for endpoint",
 		zap.String("namespace", endpoint.Service.Namespace),
 		zap.String("service", endpoint.Service.Name),
 		zap.String("path", endpoint.Path),
 		zap.String("method", endpoint.Method.String()))
-	// Get policies for endpoint
-	if routeNode := m.store.GetPolicies(endpoint, getParentPolicies); len(routeNode.Actions) > 0 {
+	if len(routePolicy.Actions) > 0 {
 		// Convert policy definition into Action
-		endpointActions := make([]Action, len(routeNode.Actions))
-		for i, p := range routeNode.Actions {
+		endpointActions := make([]Action, len(routePolicy.Actions))
+		for i, p := range routePolicy.Actions {
 			action := Action{
 				PathPolicy: p,
 				Type:       policy.NewType(p.PolicyType),
@@ -154,7 +153,7 @@ func (m *engine) policies(endpoint policy.Endpoint, getParentPolicies bool) ([]A
 
 		return endpointActions, nil
 	} else {
-		zap.L().Debug("No policies policies for endpoint",
+		zap.L().Debug("No "+message+" for endpoint",
 			zap.String("namespace", endpoint.Service.Namespace),
 			zap.String("service", endpoint.Service.Name),
 			zap.String("path", endpoint.Path),
