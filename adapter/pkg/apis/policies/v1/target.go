@@ -2,7 +2,7 @@ package v1
 
 type TargetElement struct {
 	ServiceName string       `json:"serviceName"`
-	ServiceHost []string       `json:"serviceHost"`
+	ServiceHost string       `json:"serviceHost"`
 	Paths       []PathConfig `json:"paths"`
 }
 

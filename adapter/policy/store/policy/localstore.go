@@ -16,7 +16,7 @@ type LocalStore struct {
 	// policyMappings maps policy(namespace/name) -> list of created endpoints
 	policyMappings map[string][]policy.PolicyMapping
 	// serviceHostMappings maps service -> serviceHost
-	serviceHostMappings map[policy.Service][]string
+	serviceHostMappings map[policy.Service]string
 	keysets             map[string]keyset.KeySet // jwt config ClientName:keyset
 }
 
@@ -26,7 +26,7 @@ func New() PolicyStore {
 		clients:             make(map[string]client.Client),
 		policies:            make(map[policy.Service]pathtrie.Trie),
 		policyMappings:      make(map[string][]policy.PolicyMapping),
-		serviceHostMappings: make(map[policy.Service][]string),
+		serviceHostMappings: make(map[policy.Service]string),
 		keysets:             make(map[string]keyset.KeySet),
 	}
 }
@@ -152,16 +152,16 @@ func (l *LocalStore) AddPolicyMapping(name string, mapping []policy.PolicyMappin
 	l.policyMappings[name] = mapping
 }
 
-func (l *LocalStore) GetServiceHostMapping(service policy.Service) []string {
+func (l *LocalStore) GetServiceHostMapping(service policy.Service) string {
 	if l.serviceHostMappings != nil {
 		return l.serviceHostMappings[service]
 	}
-	return nil
+	return ""
 }
 
-func (l *LocalStore) SetServiceHostMapping(service policy.Service, serviceHost []string) {
+func (l *LocalStore) SetServiceHostMapping(service policy.Service, serviceHost string) {
 	if l.serviceHostMappings == nil {
-		l.serviceHostMappings = make(map[policy.Service][]string)
+		l.serviceHostMappings = make(map[policy.Service]string)
 	}
 	l.serviceHostMappings[service] = serviceHost
 }

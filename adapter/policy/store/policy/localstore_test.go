@@ -139,12 +139,12 @@ func TestLocalStore_PolicyMapping(t *testing.T) {
 }
 
 func serviceHostMapping(t *testing.T, store PolicyStore) {
-	host := []string{"host"}
-	assert.Nil(t, store.GetServiceHostMapping(getService()))
+	host := "host"
+	assert.Equal(t, store.GetServiceHostMapping(getService()), "")
 	store.SetServiceHostMapping(getService(), host)
 	assert.Equal(t, store.GetServiceHostMapping(getService()), host)
 	store.DeleteServiceHostMapping(getService())
-	assert.Nil(t, store.GetServiceHostMapping(getService()))
+	assert.Equal(t, store.GetServiceHostMapping(getService()), "")
 }
 
 func TestLocalStore_ServiceHostMapping(t *testing.T) {

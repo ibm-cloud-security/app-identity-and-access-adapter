@@ -72,19 +72,13 @@ func generateAuthorizationURL(c client.Client, redirectURI string, state string)
 }
 
 // buildRequestURL constructs the original url from the request object
-func buildRequestURL(action *authnz.RequestMsg, hosts []string) string {
+func buildRequestURL(action *authnz.RequestMsg, host string) string {
 	requestHost := action.Host
-	if hosts != nil && len(hosts) > 0 {
-		found := false
-		for _, host := range hosts {
-			host = strings.TrimSuffix(host, "/")
-			if host == requestHost {
-				found = true
-				break
-			}
-		}
-		if !found {
-			requestHost = strings.TrimSuffix(hosts[0], "/")
+	if host != "" {
+		if strings.HasPrefix(host, "http") {
+			return strings.TrimSuffix(host, "/") + action.Path
+		} else {
+			requestHost = strings.TrimSuffix(host, "/")
 		}
 	}
 	return action.Scheme + "://" + requestHost + action.Path

@@ -58,7 +58,9 @@ func TestBuildRequestURL(t *testing.T) {
 		Host:   "me.com",
 		Path:   "/hello world",
 	}
-	assert.Equal(t, "https://me.com/hello world", buildRequestURL(inp,nil))
+	assert.Equal(t, "https://me.com/hello world", buildRequestURL(inp,""))
+	assert.Equal(t, "https://abc.com/hello world", buildRequestURL(inp,"abc.com/"))
+	assert.Equal(t, "https://abc.com/hello world", buildRequestURL(inp,"abc.com"))
 }
 
 func TestTokenCookieName(t *testing.T) {

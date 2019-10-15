@@ -66,15 +66,15 @@ func GetKubeSecret(kubeClient kubernetes.Interface, namespace string, ref v1.Cli
 	return kubeClient.CoreV1().Secrets(namespace).Get(ref.Name, metav1.GetOptions{})
 }
 
-func ParseServiceHosts(target []v1.TargetElement, namespace string) map[policy.Service][]string {
-	serviceHosts := make(map[policy.Service][]string)
+func ParseServiceHosts(target []v1.TargetElement, namespace string) map[policy.Service]string {
+	serviceHosts := make(map[policy.Service]string)
 	if len(target) > 0 {
 		for _, items := range target {
 			service := policy.Service{
 				Name:      items.ServiceName,
 				Namespace: namespace,
 			}
-			if items.ServiceHost != nil && len(items.ServiceHost) > 0 {
+			if items.ServiceHost != "" {
 				serviceHosts[service] = items.ServiceHost
 			}
 		}

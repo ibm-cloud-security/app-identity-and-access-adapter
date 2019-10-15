@@ -21,7 +21,7 @@ type PolicyStore interface {
 	GetPolicyMapping(policy string) []policy.PolicyMapping
 	AddPolicyMapping(policy string, mapping []policy.PolicyMapping)
 	DeletePolicyMapping(policy string)
-	GetServiceHostMapping(service policy.Service) []string
-	SetServiceHostMapping(service policy.Service, serviceHost []string)
+	GetServiceHostMapping(service policy.Service) string
+	SetServiceHostMapping(service policy.Service, serviceHost string)
 	DeleteServiceHostMapping(service policy.Service)
 }
