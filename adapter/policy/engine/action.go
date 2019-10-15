@@ -11,7 +11,8 @@ import (
 // Action encapsulates information needed to begin executing a policy
 type Action struct {
 	v1.PathPolicy
-	KeySet keyset.KeySet
-	Client client.Client
-	Type   policy.Type
+	KeySet     keyset.KeySet
+	Client     client.Client
+	Type       policy.Type
+	Hosts []string
 }

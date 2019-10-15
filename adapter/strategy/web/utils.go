@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -71,8 +72,22 @@ func generateAuthorizationURL(c client.Client, redirectURI string, state string)
 }
 
 // buildRequestURL constructs the original url from the request object
-func buildRequestURL(action *authnz.RequestMsg) string {
-	return action.Scheme + "://" + action.Host + action.Path
+func buildRequestURL(action *authnz.RequestMsg, hosts []string) string {
+	requestHost := action.Host
+	if hosts != nil && len(hosts) > 0 {
+		found := false
+		for _, host := range hosts {
+			host = strings.TrimSuffix(host, "/")
+			if host == requestHost {
+				found = true
+				break
+			}
+		}
+		if !found {
+			requestHost = strings.TrimSuffix(hosts[0], "/")
+		}
+	}
+	return action.Scheme + "://" + requestHost + action.Path
 }
 
 // buildTokenCookieName constructs the cookie name

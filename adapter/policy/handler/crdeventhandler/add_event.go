@@ -77,6 +77,11 @@ func (e *PolicyAddEventHandler) HandleAddUpdateEvent() {
 		e.Store.SetPolicies(policies.Endpoint, policy.RoutePolicy{PolicyReference: mappingId, Actions: policies.Actions})
 	}
 	e.Store.AddPolicyMapping(mappingId, parsedPolicies)
+	pareServiceHosts := ParseServiceHosts(e.Obj.Spec.Target, e.Obj.ObjectMeta.Namespace)
+	for service, host := range pareServiceHosts {
+		zap.S().Debug("Adding serviceHost for service: ", service, ", host: ", host)
+		e.Store.SetServiceHostMapping(service, host)
+	}
 	zap.L().Info("Policy created/updated", zap.String("ID", string(e.Obj.ObjectMeta.UID)))
 }
 

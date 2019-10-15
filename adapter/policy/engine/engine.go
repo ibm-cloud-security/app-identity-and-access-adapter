@@ -81,6 +81,9 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*Action, error) {
 		}
 	}
 
+	// Get the target hosts for the service
+	policies[0].Hosts = m.store.GetServiceHostMapping(policy.Service{Namespace: target.Namespace, Name: target.Service})
+
 	// Temporarily return only 1 policy. When we support multiple and decide on behavior this can be updated.
 	return &policies[0], nil
 }

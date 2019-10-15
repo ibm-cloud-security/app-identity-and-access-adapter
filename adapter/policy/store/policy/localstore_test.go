@@ -132,7 +132,22 @@ func policyMappingTest(t *testing.T, store PolicyStore) {
 	store.DeletePolicyMapping(samplePolicy)
 	assert.Nil(t, store.GetPolicyMapping(samplePolicy))
 }
+
 func TestLocalStore_PolicyMapping(t *testing.T) {
 	policyMappingTest(t, &LocalStore{})
 	policyMappingTest(t, New())
+}
+
+func serviceHostMapping(t *testing.T, store PolicyStore) {
+	host := []string{"host"}
+	assert.Nil(t, store.GetServiceHostMapping(getService()))
+	store.SetServiceHostMapping(getService(), host)
+	assert.Equal(t, store.GetServiceHostMapping(getService()), host)
+	store.DeleteServiceHostMapping(getService())
+	assert.Nil(t, store.GetServiceHostMapping(getService()))
+}
+
+func TestLocalStore_ServiceHostMapping(t *testing.T) {
+	serviceHostMapping(t, &LocalStore{})
+	serviceHostMapping(t, New())
 }
