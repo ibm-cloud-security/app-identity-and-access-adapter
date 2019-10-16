@@ -7,6 +7,7 @@ spec:
   targets:
     -
       serviceName: <svc-sample-app>
+      serviceHost: <svc-host>
       paths:
         - exact: /web/home
           method: ALL
