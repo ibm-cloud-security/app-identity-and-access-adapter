@@ -164,7 +164,6 @@ spec:
   targets:
     -
       serviceName: <svc-sample-app>
-      serviceHost: <svc-host>
       paths:
         - exact: /web/home
           method: ALL
@@ -202,7 +201,6 @@ spec:
 | Service Object | Type | Required | Description   |
 |----------------|:----:|:--------:| :-----------: |
 | `serviceName` | string | yes | The name of Kubernetes service in the Policy namespace that you want to protect. |
-| `serviceHost` | string | no  | The host for the Kubernetes service in the Policy namespace that you want to protect. This will be used to configure the redirect URI. By default request host will be used to configure the redirect URI. |
 | `paths` | array[Path Object] | yes | A list of path objects that define the endpoints that you want to protect. If left empty, all paths are protected. |
 
 
