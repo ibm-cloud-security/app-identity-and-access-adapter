@@ -41,7 +41,7 @@ spec:
               number: 8000
             host: svc-sample-app
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dpl-sample-app
@@ -50,6 +50,9 @@ metadata:
     app: sample-app
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: sample-app
   template:
     metadata:
       labels:
@@ -57,7 +60,7 @@ spec:
     spec:
       containers:
         - name: sample-app
-          image: ibmcloudsecurity/app-identity-and-access-adapter-sample-app:latest
+          image: ishangulhane/app-identity-and-access-adapter-sample-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
