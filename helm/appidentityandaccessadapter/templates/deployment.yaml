@@ -15,7 +15,7 @@ spec:
       labels:
         app: {{ .Values.appName }}
       annotations:
-        sidecar.istio.io/inject:                    "false"
+        sidecar.istio.io/inject: "false"
         scheduler.alpha.kubernetes.io/critical-pod: ""
     spec:
       containers:
@@ -23,9 +23,9 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
 
           args:
-              {{ if .Values.logging.json }}
+            {{ if .Values.logging.json }}
             - "--json"
-                {{ end }}
+            {{ end }}
             - "--port={{ .Values.service.port }}"
             - "--level={{ .Values.logging.level }}"
             - "--hash-key={{ .Values.keys.hashKeySize }}"
