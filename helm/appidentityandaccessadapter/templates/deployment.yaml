@@ -1,7 +1,7 @@
 apiVersion: apps/v1
-kind:       Deployment
+kind: Deployment
 metadata:
-  name:      dpl-{{ .Values.appName }}
+  name: dpl-{{ .Values.appName }}
   namespace: istio-system
   labels:
     app: {{ .Values.appName }}
@@ -35,7 +35,7 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
           volumeMounts:
-            - name:      transient-storage
+            - name: transient-storage
               mountPath: /volume
       volumes:
         - name: transient-storage
