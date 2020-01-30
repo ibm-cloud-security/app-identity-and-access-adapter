@@ -96,7 +96,7 @@ To install the chart, initialize Helm in your cluster, define the options that y
     $ helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter
     ```
 
->>Helm lets you specify an image tag during installation with the set image.tag flag. For example, `helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter --set image.tag=0.4.0`
+>>Helm lets you specify an image tag during installation with the set image.tag flag. For example, `helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter --set image.tag=0.5.0`
 
 >>The chart can also be installed locally. First clone this repo by `git clone git@github.com:ibm-cloud-security/app-identity-and-access-adapter.git`, then install the chart `helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter`.
 

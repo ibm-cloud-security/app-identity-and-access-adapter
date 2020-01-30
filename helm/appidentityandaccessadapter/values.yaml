@@ -18,7 +18,7 @@ image:
   ## The image version to pull. Tag "latest" always contains
   ## the most up-to-date image. To avoid breaking changes during
   ## installs, it is recommended to use a tag.
-  tag: 0.4.0
+  tag: 0.5.0
   ## The pullPolicy defines when the adapter image needs to be re-pulled
   ## from the source repository. Set to Always when using "latest."
   pullPolicy: Always
