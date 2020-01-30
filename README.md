@@ -81,7 +81,9 @@ To install the chart, initialize Helm in your cluster, define the options that y
 
 1. If you're working with IBM Cloud Kubeneretes service, be sure to login and set the context for your cluster.
 
-2. Install Helm in your cluster.
+2. Enable Istio [Policy Enforcement](https://istio.io/docs/tasks/policy-enforcement/enabling-policy/)
+
+3. Install Helm in your cluster.
 
     ```bash
     helm init
@@ -89,14 +91,14 @@ To install the chart, initialize Helm in your cluster, define the options that y
 
 >>You might want to configure Helm to use `--tls` mode. For help with enabling TLS, check out the [Helm repository](https://github.com/helm/helm/blob/master/docs/tiller_ssl.md). If you enable TLS, be sure to append `--tls` to every Helm command that you run. For more information about using Helm with IBM Cloud Kubernetes Service, see [Adding services by using Helm Charts](https://cloud.ibm.com/docs/docs/containers?topic=containers-helm#public_helm_install).
 
-3. Install the chart.
+4. Install the chart.
 
     ```bash
     $ helm repo add appidentityandaccessadapter https://raw.githubusercontent.com/ibm-cloud-security/app-identity-and-access-adapter/master/helm/appidentityandaccessadapter
     $ helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter
     ```
 
->>Helm lets you specify an image tag during installation with the set image.tag flag. For example, `helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter --set image.tag=0.4.0`
+>>Helm lets you specify an image tag during installation with the set image.tag flag. For example, `helm install --name appidentityandaccessadapter appidentityandaccessadapter/appidentityandaccessadapter --set image.tag=0.5.0`
 
 >>The chart can also be installed locally. First clone this repo by `git clone git@github.com:ibm-cloud-security/app-identity-and-access-adapter.git`, then install the chart `helm install ./helm/appidentityandaccessadapter --name appidentityandaccessadapter`.
 
