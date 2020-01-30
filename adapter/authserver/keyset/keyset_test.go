@@ -39,7 +39,7 @@ func TestNew(t *testing.T) {
 
 		h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			assert.Equal(t, req.URL.String(), "/publicKeys")
-			assert.Equal(t, req.Header.Get("xFilterType"), "IstioAdapter")
+			assert.Equal(t, req.Header.Get("x-filter-type"), "IstioAdapter")
 			w.Write([]byte(e.res))
 		})
 

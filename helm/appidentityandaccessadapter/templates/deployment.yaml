@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dpl-{{ .Values.appName }}
@@ -7,6 +7,9 @@ metadata:
     app: {{ .Values.appName }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
   template:
     metadata:
       labels:

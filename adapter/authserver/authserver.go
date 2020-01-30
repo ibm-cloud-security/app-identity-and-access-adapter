@@ -122,9 +122,9 @@ func (s *RemoteService) UserInfoEndpoint() string {
 // GetTokens performs a request to the token endpoint
 func (s *RemoteService) GetTokens(authnMethod string, clientID string, clientSecret string, authorizationCode string, redirectURI string, refreshToken string) (*TokenResponse, error) {
 	_ = s.initialize()
-	form := url.Values{
-		"client_id": {clientID},
-	}
+
+	form := url.Values{}
+
 	if refreshToken != "" {
 		form.Add("grant_type", "refresh_token")
 		form.Add("refresh_token", refreshToken)
