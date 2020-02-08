@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -60,7 +60,7 @@ func generateAuthorizationURL(c client.Client, redirectURI string, state string)
 		"client_id":     {c.ID()},
 		"response_type": {"code"},
 		"redirect_uri":  {redirectURI},
-		"scope":         {"openid profile email"},
+		"scope":         {c.Scope()},
 		"state":         {state},
 	}
 
