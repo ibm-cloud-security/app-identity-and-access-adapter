@@ -1,8 +1,6 @@
 package policy
 
 import (
-	"go.uber.org/zap"
-
 	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 )
 
@@ -66,7 +64,6 @@ func (t Type) String() string {
 }
 
 func NewType(t string) Type {
-	zap.S().Info("Type: ", t)
 	switch t {
 	case "jwt":
 		return JWT

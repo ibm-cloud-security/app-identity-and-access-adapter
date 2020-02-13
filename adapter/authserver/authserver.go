@@ -77,7 +77,7 @@ func New(discoveryEndpoint string) AuthorizationServerService {
 		zap.L().Debug("Initialization from discovery endpoint failed. Will retry later.", zap.String("url", discoveryEndpoint))
 		return s
 	}
-	zap.L().Debug("Initialized discovery configuration successfully", zap.String("url", discoveryEndpoint))
+	zap.L().Debug("Initialized successfully using discovery endpoint", zap.String("url", discoveryEndpoint))
 	return s
 }
 
@@ -206,7 +206,7 @@ func (s *RemoteService) loadDiscoveryEndpoint() (interface{}, error) {
 		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(err))
 		return nil, err
 	} else if res.StatusCode != http.StatusOK {
-		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Error(oa2Err))
+		zap.L().Debug("Could not sync discovery endpoint", zap.String("url", s.discoveryURL), zap.Int("status", res.StatusCode), zap.Error(oa2Err))
 		return nil, oa2Err
 	}
 
