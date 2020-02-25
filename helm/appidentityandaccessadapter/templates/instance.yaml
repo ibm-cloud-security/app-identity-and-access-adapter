@@ -15,7 +15,7 @@ spec:
     request:
       scheme: request.scheme | ""
       host: request.host | ""
-      path: request.url_path | ""
+      path: conditional(request.url_path != "/", request.url_path, "")
       headers:
         cookies: request.headers["cookie"] | ""
         authorization: request.headers["authorization"] | ""
