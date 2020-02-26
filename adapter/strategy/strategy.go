@@ -6,7 +6,7 @@ import (
 	policy "istio.io/api/policy/v1beta1"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 // Strategy defines the entry point to an authentication handler

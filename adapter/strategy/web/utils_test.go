@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
 )
 

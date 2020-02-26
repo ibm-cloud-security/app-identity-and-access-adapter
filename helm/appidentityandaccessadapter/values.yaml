@@ -57,3 +57,7 @@ logging:
   ## from -1 to 7
   ## See zapcore: https://godoc.org/go.uber.org/zap/zapcore#Level
   level: 0
+
+# Use Secure attribute for session cookies.
+# That ensures they are sent over HTTPS and should be enabled for production!
+secureCookies: false

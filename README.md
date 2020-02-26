@@ -29,7 +29,7 @@ Istio uses an Envoy proxy sidecar to mediate all inbound and outbound traffic fo
 
 ### Protecting frontend apps
 
-If you're using a browser based application, you can use the [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html) / OAuth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL.
+If you're using a browser based application, you can use the [Open ID Connect (OIDC)](https://openid.net/specs/openid-connect-core-1_0.html) / OAuth 2.0 `authorization_grant` flow to authenticate your users. When an unauthenticated user is detected, they are automatically redirected to the authentication page. When the authentication completes, the browser is redirected to an implicit `/oidc/callback` endpoint where the adapter intercepts the request. At this point, the adapter obtains tokens from the identity provider and then redirects the user back to their originally requested URL. Instead of the implicit `/oidc/callback` appended to the original URI, you can configure a different absolute URI or full URL to the callback in the OidcConfig.
 
 To view the user session information including the session tokens, you can look in the `Authorization` header.
 
@@ -137,7 +137,11 @@ Depending on whether you're protecting frontend or backend applications, create 
     | `clientSecretRef` | object | no | A reference secret that is used to authenticate the client. This can be used in place of the `clientSecret`. |
     | `clientSecretRef.name` | string |yes | The name of the Kubernetes Secret that contains the `clientSecret`. |
     | `clientSecretRef.key` | string | yes | The field within the Kubernetes Secret that contains the `clientSecret`. |
+    | `callback` | string | no | Callback URL or URI to return to from the IODC provider (default is relative `oidc/callback`) |
 
+    **Callback**
+
+    The default callback is `oidc/callback` in the relative form, which means that for the original request path `/something`, the redirect URL into which the OIDC provider will redirect will be `scheme://host/something/oidc/callback`. Each URI you are protecting will have its own callback URL generated. Some providers only support a fixed return URL, though. To make a fixed URI, you can specify an absolute callback URI like `/oidc/callback` which will form a URL with original request scheme and host. Or you can set a full URL to the callback in the form `https://host/callback/url`. In any case, you are responsible to ensure the routes and Policy are all set up so that the resulting callback URL is handled by the adapter.
 
 * For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which is used to validate token signatures.
 

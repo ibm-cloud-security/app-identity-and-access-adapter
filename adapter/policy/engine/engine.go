@@ -5,13 +5,13 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 
 	"go.uber.org/zap"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy"
 	policy2 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -53,6 +53,9 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*Action, error) {
 
 	// Strip custom path components
 	if strings.HasSuffix(target.Path, callbackEndpoint) {
+		// Attempt to strip default /oidc/callback for backward compatibility.
+		// Now also a custom callbak can be configured in OidcConfig. Custom callbacks
+		// has to be explicitly supported in the routing so stripping them is not required.
 		target.Path = strings.Split(target.Path, callbackEndpoint)[0]
 	} else if strings.HasSuffix(target.Path, logoutEndpoint) {
 		target.Path = strings.Split(target.Path, logoutEndpoint)[0]
@@ -150,8 +153,8 @@ func createDefaultRules(action Action) []v1.Rule {
 	case policy.OIDC:
 		return []v1.Rule{
 			{
-				Claim: aud,
-				Match: "ANY",
+				Claim:  aud,
+				Match:  "ANY",
 				Values: []string{action.Client.ID()},
 			},
 		}

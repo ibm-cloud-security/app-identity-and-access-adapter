@@ -17,17 +17,18 @@ type OidcConfig struct {
 
 // OidcConfigSpec is the spec for a OidcConfig resource
 type OidcConfigSpec struct {
-	ClientName       string
-	AuthMethod       string `json:"authMethod"`
-	ClientID         string `json:"clientId"`
-	DiscoveryURL     string `json:"discoveryUrl"`
-	ClientSecret     string `json:"clientSecret"`
+	ClientName      string
+	AuthMethod      string          `json:"authMethod"`
+	ClientID        string          `json:"clientId"`
+	ClientCallback  string          `json:"callback"`
+	DiscoveryURL    string          `json:"discoveryUrl"`
+	ClientSecret    string          `json:"clientSecret"`
 	ClientSecretRef ClientSecretRef `json:"clientSecretRef"`
 }
 
 type ClientSecretRef struct {
-	Name	string `json:"name"`
-	Key		string `json:"key"`
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

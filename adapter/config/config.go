@@ -14,9 +14,12 @@ type Config struct {
 	// The blockKey is used to encrypt the cookie value
 	// Valid lengths are 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.
 	BlockKeySize IntOptions
+	// Use Secure attribute for session cookies.
+	// That ensures they are sent over HTTPS and should be enabled for production!
+	SecureCookies bool
 }
 
-// defaultArgs returns the default configuration size
+// NewConfig returns the default configuration
 func NewConfig() *Config {
 	return &Config{
 		AdapterPort: uint16(47304),
@@ -37,5 +40,6 @@ func NewConfig() *Config {
 			},
 			Value: 16,
 		},
+		SecureCookies: false,
 	}
 }
