@@ -216,7 +216,7 @@ spec:
 | Policy Object  | Type | Required | Description   |
 |----------------|:----:|:--------:| :-----------: |
 | `policyType` | enum | yes | The type of OIDC policy. Options include: `jwt` or `oidc`. |
-| `config` | string | yes | The name of the provider config that you want to use. |
+| `config` | string | yes | The name of the provider config that you want to use. By default is looking for a config object in the same namespace where the target service is located. To use config from a particular namespace - specify it in format `namespace/config_name`  |
 | `redirectUri` | string | no | The url you want the user to be redirected after successful authentication, default: the original request url. |
 | `rules` | array[Rule] | no | The set of rules the you want to use for token validation. |
 
