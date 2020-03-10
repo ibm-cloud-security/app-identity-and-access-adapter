@@ -137,6 +137,7 @@ Depending on whether you're protecting frontend or backend applications, create 
     | `clientSecretRef` | object | no | A reference secret that is used to authenticate the client. This can be used in place of the `clientSecret`. |
     | `clientSecretRef.name` | string |yes | The name of the Kubernetes Secret that contains the `clientSecret`. |
     | `clientSecretRef.key` | string | yes | The field within the Kubernetes Secret that contains the `clientSecret`. |
+    | `scopes` | array[string] | no | The scopes to request (`openid profile email` by default). |
 
 
 * For backend applications: The OAuth 2.0 Bearer token spec defines a pattern for protecting APIs by using [JSON Web Tokens (JWTs)](https://tools.ietf.org/html/rfc7519.html). Using the following configuration as an example, define a `JwtConfig` CRD that contains the public key resource, which is used to validate token signatures.

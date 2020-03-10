@@ -77,7 +77,7 @@ func (m *engine) Evaluate(target *authnz.TargetMsg) (*Action, error) {
 		if p.Rules == nil {
 			policies[i].Rules = createDefaultRules(p)
 		} else {
-			policies[i].Rules = append(p.Rules, createDefaultRules(p)...)
+			policies[i].Rules = p.Rules
 		}
 	}
 
@@ -154,8 +154,8 @@ func createDefaultRules(action Action) []v1.Rule {
 	case policy.OIDC:
 		return []v1.Rule{
 			{
-				Claim: aud,
-				Match: "ANY",
+				Claim:  aud,
+				Match:  "ANY",
 				Values: []string{action.Client.ID()},
 			},
 		}
