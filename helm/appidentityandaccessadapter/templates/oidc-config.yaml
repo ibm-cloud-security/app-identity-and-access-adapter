@@ -47,3 +47,8 @@ spec:
                             required:
                             - name
                             - key
+                        scopes:
+                            type: array
+                            items:
+                                type: string
+                            minItems: 1
