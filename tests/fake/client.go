@@ -1,6 +1,8 @@
 package fake
 
-import "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
+import (
+	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
+)
 
 type TokenResponse struct {
 	Res *authserver.TokenResponse
@@ -13,6 +15,7 @@ type Client struct {
 	ClientName    string
 	ClientID      string
 	ClientSecret  string
+	Scopes        []string
 }
 
 func NewClient(tokenResponse *TokenResponse) *Client {
@@ -35,6 +38,10 @@ func (m *Client) ID() string {
 
 func (m *Client) Secret() string {
 	return m.ClientSecret
+}
+
+func (m *Client) Scope() string {
+	return "openid profile email"
 }
 
 func (m *Client) AuthorizationServer() authserver.AuthorizationServerService {
