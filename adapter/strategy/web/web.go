@@ -3,11 +3,12 @@ package webstrategy
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -30,7 +31,7 @@ import (
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -69,10 +70,10 @@ type Encryptor interface {
 	Decode(name, value string, dst interface{}) error
 }
 
-// OidcCookie represents a token stored in browser
-type OidcCookie struct {
-	Value      string
-	Expiration time.Time
+// OidcState represents a state passed to the OIDC provider during auth flow and later validated
+type OidcState struct {
+	OriginalURL string
+	Expiration  time.Time
 }
 
 // New creates an instance of an OIDC protection agent.
@@ -87,7 +88,7 @@ func New(ctx *config.Config, kubeClient kubernetes.Interface) strategy.Strategy 
 
 	// Instantiate the secure cookie encryption instance by
 	// reading or creating a new HMAC and AES symmetric key
-	_, err := w.getSecureCookie()
+	_, err := w.getEncryptionSecret()
 	if err != nil {
 		zap.L().Warn("Could not sync signing / encryption secrets, will retry later", zap.Error(err))
 	}
@@ -102,16 +103,18 @@ func (w *WebStrategy) HandleAuthnZRequest(r *authnz.HandleAuthnZRequest, action 
 		return w.handleLogout(r, action)
 	}
 
-	if strings.HasSuffix(r.Instance.Request.Path, callbackEndpoint) {
+	request := r.Instance.Request
+
+	if client.IsCallbackRequest(action.Client, request.Scheme, request.Host, request.Path) {
 		if r.Instance.Request.Params.Error != "" {
-			zap.L().Debug("An error occurred during authentication", zap.String("error_query_param", r.Instance.Request.Params.Error))
-			return w.handleErrorCallback(errors.New(r.Instance.Request.Params.Error))
-		} else if r.Instance.Request.Params.Code != "" {
+			zap.L().Debug("An error occurred during authentication", zap.String("error_query_param", request.Params.Error))
+			return w.handleErrorCallback(errors.New(request.Params.Error))
+		} else if request.Params.Code != "" {
 			zap.L().Debug("Received authorization code")
-			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, r.Instance.Request, action)
+			return w.handleAuthorizationCodeCallback(r.Instance.Request.Params.Code, request, action)
 		} else {
 			zap.L().Debug("Unexpected response on callback endpoint /oidc/callback. Triggering re-authentication.")
-			return w.handleAuthorizationCodeFlow(r.Instance.Request, action)
+			return w.handleAuthorizationCodeFlow(request, action)
 		}
 	}
 
@@ -209,7 +212,7 @@ func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.
 		return nil, nil
 	} else {
 		zap.L().Debug("Updated tokens using refresh token", zap.String("client_name", c.Name()), zap.String("session_id", sessionID))
-		cookie := generateSessionIDCookie(c, &sessionID)
+		cookie := generateSessionIDCookie(c, &sessionID, w.ctx.SecureCookies)
 		w.tokenCache.Store(cookie.Value, tokens)
 		return &authnz.HandleAuthnZResponse{
 			Result: &v1beta1.CheckResult{Status: status.WithMessage(rpc.OK, "User is authenticated")},
@@ -250,48 +253,37 @@ func (w *WebStrategy) handleLogout(r *authnz.HandleAuthnZRequest, action *engine
 	redirectURL := strings.Split(r.Instance.Request.Path, logoutEndpoint)[0]
 	cookies := []*http.Cookie{
 		{
-			Name:    cookieName,
-			Value:   "deleted",
-			Path:    "/",
-			Expires: time.Now().Add(-100 * time.Hour),
+			Name:   cookieName,
+			Value:  "deleted",
+			Path:   "/",
+			Secure: w.ctx.SecureCookies,
+			//TODO: possible to use Expires instead of Max-Age once Istio supports it,
+			// see https://github.com/istio/istio/pull/21270
+			//Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
+			MaxAge: 90 * 24 * 60 * 60, // 90 days
 		},
 	}
 	return buildSuccessRedirectResponse(redirectURL, cookies), nil
 }
 
-/*
-func (w *WebStrategy) handleLogout(path string, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
-	// Uncomment when we go stateless
-	expiration := time.Now().Add(-100 * time.Hour)
-	cookies := make([]*http.Cookie, 3)
-	for i, name := range []string{accessTokenCookie, idTokenCookie, refreshTokenCookie} {
-		cookies[i] = &http.Cookie{
-			Name:    buildTokenCookieName(name, action.Client),
-			Value:   "deleted",
-			Path:    "/",
-			Expires: expiration,
-		}
-	}
-	redirectURL := strings.Split(path, logoutEndpoint)[0]
-	return buildSuccessRedirectResponse(redirectURL, cookies), nil
-}
-*/
-
 // handleAuthorizationCodeCallback processes a successful OAuth 2.0 callback containing a authorization code
 func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
 
-	err := w.validateState(request, action.Client)
+	state, err := w.validateState(action.Client.ID(), request)
 	if err != nil {
 		zap.L().Info("OIDC callback: could not validate state parameter", zap.Error(err), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(err)
 	}
 
-	redirectURI := buildRequestURL(request)
+	// Set the redirect URL back to this adapter
+	// Some providers require this callback to be the same as the one used for /autorization (handleAuthorizationCodeFlow)
+	redirectURL := client.CallbackURLForTarget(action.Client, request.Scheme, request.Host, request.Path)
 
 	// Exchange authorization grant code for tokens
-	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
+	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURL)
 	if err != nil {
-		zap.L().Info("OIDC callback: Could not retrieve tokens", zap.Error(err), zap.String("client_name", action.Client.Name()))
+		zap.L().Info("OIDC callback: Could not retrieve tokens", zap.Error(err),
+			zap.String("client_name", action.Client.Name()), zap.String("redirect_uri", redirectURL))
 		return w.handleErrorCallback(err)
 	}
 
@@ -310,28 +302,35 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return w.handleErrorCallback(validationErr)
 	}
 
-	cookie := generateSessionIDCookie(action.Client, nil)
+	cookie := generateSessionIDCookie(action.Client, nil, w.ctx.SecureCookies)
 	w.tokenCache.Store(cookie.Value, response)
 
-	zap.L().Debug("OIDC callback: created new active session: ", zap.String("client_name", action.Client.Name()), zap.String("session_id", cookie.Value))
+	zap.L().Debug("OIDC callback: created new active session: ", zap.String("session_id", cookie.Value), zap.String("client_name", action.Client.Name()))
 
+	// redirect to the original URL (as specified in the state)
+	redirectURL = state.OriginalURL
+
+	// overwrite redirect URL if requested by the action
 	if action.RedirectUri != "" {
-		redirectURI = action.RedirectUri
+		redirectURL = action.RedirectUri
 	}
 
-	return buildSuccessRedirectResponse(redirectURI, []*http.Cookie{cookie}), nil
+	return buildSuccessRedirectResponse(redirectURL, []*http.Cookie{cookie}), nil
 }
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
-	redirectURI := buildRequestURL(request) + callbackEndpoint
-	// / Build and store session state
-	state, stateCookie, err := w.buildStateParam(action.Client)
+	// set the redirect URL back to this adapter
+	redirectURL := client.CallbackURLForTarget(action.Client, request.Scheme, request.Host, request.Path)
+
+	// build and store the OIDC state with the original URL
+	originalRequestURL := buildRequestURL(request)
+	state, err := w.buildStateParam(action.Client.ID(), originalRequestURL)
 	if err != nil {
 		zap.L().Info("Could not generate state parameter", zap.Error(err), zap.String("client_name", action.Client.Name()))
 		return nil, err
 	}
-	zap.S().Debugf("Initiating redirect to identity provider using redirect URL: %s", redirectURI)
+	zap.S().Debugf("Initiating redirect to identity provider using redirect URL: %s", redirectURL)
 	return &authnz.HandleAuthnZResponse{
 		Result: &v1beta1.CheckResult{
 			Status: rpc.Status{
@@ -340,8 +339,7 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 				Details: []*types.Any{status.PackErrorDetail(&policy.DirectHttpResponse{
 					Code: policy.Found, // Response Mixer remaps on request
 					Headers: map[string]string{
-						location:  generateAuthorizationURL(action.Client, redirectURI, state),
-						setCookie: stateCookie.String(),
+						location: generateAuthorizationURL(action.Client, redirectURL, state),
 					},
 				})},
 			},
@@ -349,28 +347,30 @@ func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, ac
 	}, nil
 }
 
-// getSecureCookie retrieves the SecureCookie encryption struct in a
+// getEncryptionSecret retrieves the secret (used to encrypt/decrypt the state) in a
 // thread safe manner.
-func (w *WebStrategy) getSecureCookie() (Encryptor, error) {
+func (w *WebStrategy) getEncryptionSecret() (Encryptor, error) {
 	// Allow all threads to check if instance already exists
 	if w.encrpytor != nil {
 		return w.encrpytor, nil
 	}
+
 	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
 	// Once this thread has the lock check again to see if it had been set while waiting
 	if w.encrpytor != nil {
-		w.mutex.Unlock()
 		return w.encrpytor, nil
 	}
+
 	// We need to generate a new key set
-	sc, err := w.generateSecureCookie()
-	w.mutex.Unlock()
+	sc, err := w.getOrGenerateEncryptionSecret()
 	return sc, err
 }
 
-// generateSecureCookie instantiates a SecureCookie instance using either the preconfigured
-// key secret cookie or a dynamically generated pair.
-func (w *WebStrategy) generateSecureCookie() (Encryptor, error) {
+// getOrGenerateEncryptionSecret returns the encryptor based on the pre-configured secret
+// or it generates a new secret if none has been pre-configured
+func (w *WebStrategy) getOrGenerateEncryptionSecret() (Encryptor, error) {
 	var secret interface{}
 	// Check if key set was already configured. This should occur during helm install
 	secret, err := networking.Retry(3, 1, func() (interface{}, error) {
@@ -381,7 +381,7 @@ func (w *WebStrategy) generateSecureCookie() (Encryptor, error) {
 		zap.S().Infof("Secret %v not found: %v. Another will be generated.", defaultKeySecret, err)
 		secret, err = w.generateKeySecret(w.ctx.HashKeySize.Value, w.ctx.BlockKeySize.Value)
 		if err != nil {
-			zap.L().Info("Failed to retrieve tokens", zap.Error(err))
+			zap.L().Info("Failed to generate secret", zap.Error(err))
 			return nil, err
 		}
 	}
@@ -416,65 +416,54 @@ func (w *WebStrategy) generateKeySecret(hashKeySize int, blockKeySize int) (inte
 	})
 }
 
-// generateEncryptedCookie creates an encodes and encrypts cookieData into an http.Cookie
-func (w *WebStrategy) generateEncryptedCookie(cookieName string, cookieData *OidcCookie) (*http.Cookie, error) {
+// encryptState encodes and encrypts OidcState
+func (w *WebStrategy) encryptState(clientID string, state *OidcState) (string, error) {
 	// encode the struct
-	data, err := bson.Marshal(&cookieData)
+	data, err := bson.Marshal(&state)
 	if err != nil {
-		zap.L().Warn("Could not marshal cookie data", zap.Error(err))
-		return nil, err
+		zap.L().Warn("Could not marshal the state object", zap.Error(err))
+		return "", err
 	}
 
-	sc, err := w.getSecureCookie()
+	sc, err := w.getEncryptionSecret()
 	if err != nil {
-		zap.L().Warn("Could not get secure cookie instance", zap.Error(err))
-		return nil, err
+		zap.L().Warn("Could not get encryptor", zap.Error(err))
+		return "", err
 	}
 
 	// create the cookie
-	if encoded, err := sc.Encode(cookieName, data); err == nil {
-		return &http.Cookie{
-			Name:     cookieName,
-			Value:    encoded,
-			Path:     "/",
-			Secure:   false, // TODO: DO NOT RELEASE WITHOUT THIS FLAG SET TO TRUE
-			HttpOnly: false,
-			Expires:  time.Now().Add(time.Hour * time.Duration(4)),
-		}, nil
+	if encoded, err := sc.Encode(clientID, data); err == nil {
+		return encoded, nil
 	} else {
-		zap.S().Error("Error encoding cookie: length: %s", len(encoded))
-		return nil, err
+		zap.S().Error("Error encoding state", zap.Error(err), zap.Int("len", len(encoded)))
+		return "", err
 	}
 }
 
-// parseAndValidateCookie parses a raw http.Cookie, performs basic validation
-// and returns an OIDCCookie
-func (w *WebStrategy) parseAndValidateCookie(cookie *http.Cookie) *OidcCookie {
-	if cookie == nil {
-		zap.L().Debug("Cookie does not exist")
+// decryptAndValidateState decrypts and decodes the state string, performs basic validation
+// and returns the parsed OidcState
+func (w *WebStrategy) decryptAndValidateState(clientID string, encryptedState string) *OidcState {
+	if encryptedState == "" {
+		zap.L().Debug("Empty encoded state string")
 		return nil
 	}
-	sc, err := w.getSecureCookie()
+	sc, err := w.getEncryptionSecret()
 	if err != nil {
-		zap.L().Debug("Error getting securecookie", zap.Error(err))
+		zap.L().Debug("Error getting encryptor", zap.Error(err))
 		return nil
 	}
 	value := []byte{}
-	if err := sc.Decode(cookie.Name, cookie.Value, &value); err != nil {
-		zap.L().Debug("Could not decode cookie:", zap.Error(err))
+	if err := sc.Decode(clientID, encryptedState, &value); err != nil {
+		zap.L().Debug("Could not decode encrypted state:", zap.Error(err))
 		return nil
 	}
-	cookieObj := OidcCookie{}
+	cookieObj := OidcState{}
 	if err := bson.Unmarshal(value, &cookieObj); err != nil {
-		zap.L().Debug("Could not unmarshal cookie:", zap.Error(err))
-		return nil
-	}
-	if cookieObj.Value == "" {
-		zap.L().Debug("Cookie does not have a token value")
+		zap.L().Debug("Could not unmarshal the state object:", zap.Error(err))
 		return nil
 	}
 	if cookieObj.Expiration.Before(time.Now()) {
-		zap.S().Debug("Cookies have expired: %v - %v", cookieObj.Expiration, time.Now())
+		zap.S().Debug("State parameter has expired: %v - %v", cookieObj.Expiration, time.Now())
 		return nil
 	}
 	return &cookieObj
@@ -504,55 +493,44 @@ func buildSuccessRedirectResponse(redirectURI string, cookies []*http.Cookie) *a
 	}
 }
 
-func (w *WebStrategy) buildStateParam(c client.Client) (string, *http.Cookie, error) {
-	state := randString(10)
-	cookieName := buildTokenCookieName(sessionCookie, c)
-	cookie, err := w.generateEncryptedCookie(cookieName, &OidcCookie{
-		Value:      state,
-		Expiration: time.Now().Add(time.Hour),
+// buildState param creates encrypted string holding the action metadata to pass to the OIDC provider as the state
+func (w *WebStrategy) buildStateParam(clientID, originalURL string) (string, error) {
+	encState, err := w.encryptState(clientID, &OidcState{
+		OriginalURL: originalURL,
+		Expiration:  time.Now().Add(10 * time.Minute),
 	})
-	return state, cookie, err
+	return encState, err
 }
 
 // validateState ensures the callback request state parameter matches the state stored in an encrypted session cookie
 // Follows from OAuth 2.0 specification https://tools.ietf.org/html/rfc6749#section-4.1.1
-func (w *WebStrategy) validateState(request *authnz.RequestMsg, c client.Client) error {
-	// Get state cookie from header
-	header := http.Header{
-		"Cookie": {request.Headers.Cookies},
+func (w *WebStrategy) validateState(clientID string, request *authnz.RequestMsg) (*OidcState, error) {
+	// Ensure state is returned on request from identity provider
+	if request.Params.State == "" {
+		stateError := errors.New("state parameter not provided")
+		zap.L().Info("OIDC callback: missing state parameter from identity provider")
+		return nil, stateError
 	}
-	r := http.Request{Header: header}
-	name := buildTokenCookieName(sessionCookie, c)
-	oidcStateCookie, err := r.Cookie(name)
+
+	// Unescape state parameter
+	encryptedState, err := url.QueryUnescape(request.Params.State)
 	if err != nil {
-		return errors.New("state parameter not provided")
+		stateError := errors.New("bad state parameter")
+		zap.L().Info("OIDC callback: bad state parameter", zap.String("state", request.Params.State))
+		return nil, stateError
 	}
 
 	// Parse encrypted state cookie
-	storedHttpCookie := w.parseAndValidateCookie(oidcStateCookie)
+	state := w.decryptAndValidateState(clientID, encryptedState)
 
 	// Ensure state cookie is returned
-	if storedHttpCookie == nil {
-		stateError := errors.New("missing state parameter")
-		zap.L().Info("OIDC callback: missing stored state parameter", zap.Error(err))
-		return stateError
-	}
-
-	// Ensure state is returned on request from identity provider
-	if request.Params.State == "" {
-		stateError := errors.New("missing state parameter from callback")
-		zap.L().Info("OIDC callback: missing state parameter from identity provider", zap.Error(err))
-		return stateError
-	}
-
-	// Validate cookie state with stored state
-	if request.Params.State != storedHttpCookie.Value {
+	if state == nil {
 		stateError := errors.New("invalid state parameter")
-		zap.L().Info("OIDC callback: missing or invalid state parameter", zap.Error(err))
-		return stateError
+		zap.L().Info("OIDC callback: state parameter invalid or malformed")
+		return nil, stateError
 	}
 
 	zap.L().Debug("OIDC callback: validated state parameter")
 
-	return nil
+	return state, nil
 }

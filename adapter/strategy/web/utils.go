@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/client"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -82,7 +82,7 @@ func buildTokenCookieName(base string, c client.Client) string {
 
 // generateSessionIDCookie creates a new sessionId cookie
 // if the provided value is empty and new id is randomly generated
-func generateSessionIDCookie(c client.Client, value *string) *http.Cookie {
+func generateSessionIDCookie(c client.Client, value *string, secure bool) *http.Cookie {
 	var v = randString(15)
 	if value != nil {
 		v = *value
@@ -91,8 +91,12 @@ func generateSessionIDCookie(c client.Client, value *string) *http.Cookie {
 		Name:     buildTokenCookieName(sessionCookie, c),
 		Value:    v,
 		Path:     "/",
-		Secure:   false, // TODO: replace on release
-		HttpOnly: false,
-		Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		HttpOnly: true, // Cookie available to HTTP protocol only (no JS access)
+		//TODO: possible to use Expires instead of Max-Age once Istio supports it,
+		// see https://github.com/istio/istio/pull/21270
+		//Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
+		MaxAge: 90 * 24 * 60 * 60, // 90 days
 	}
 }

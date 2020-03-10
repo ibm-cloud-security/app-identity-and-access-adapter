@@ -8,11 +8,12 @@ type TokenResponse struct {
 }
 
 type Client struct {
-	Server        authserver.AuthorizationServerService
-	TokenResponse *TokenResponse
-	ClientName    string
-	ClientID      string
-	ClientSecret  string
+	Server         authserver.AuthorizationServerService
+	TokenResponse  *TokenResponse
+	ClientName     string
+	ClientID       string
+	ClientCallback string
+	ClientSecret   string
 }
 
 func NewClient(tokenResponse *TokenResponse) *Client {
@@ -25,12 +26,27 @@ func NewClient(tokenResponse *TokenResponse) *Client {
 	}
 }
 
+func NewClientWithCallback(tokenResponse *TokenResponse, callback string) *Client {
+	return &Client{
+		Server:         NewAuthServer(),
+		ClientName:     "name",
+		ClientID:       "id",
+		ClientCallback: callback,
+		ClientSecret:   "secret",
+		TokenResponse:  tokenResponse,
+	}
+}
+
 func (m *Client) Name() string {
 	return m.ClientName
 }
 
 func (m *Client) ID() string {
 	return m.ClientID
+}
+
+func (m *Client) Callback() string {
+	return m.ClientCallback
 }
 
 func (m *Client) Secret() string {

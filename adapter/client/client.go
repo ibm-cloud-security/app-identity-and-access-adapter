@@ -6,13 +6,14 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/authserver"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 )
 
 // Client encapsulates an authn/z client object
 type Client interface {
 	Name() string
 	ID() string
+	Callback() string
 	Secret() string
 	AuthorizationServer() authserver.AuthorizationServerService
 	ExchangeGrantCode(code string, redirectURI string) (*authserver.TokenResponse, error)
@@ -30,6 +31,10 @@ func (c *remoteClient) Name() string {
 
 func (c *remoteClient) ID() string {
 	return c.ClientID
+}
+
+func (c *remoteClient) Callback() string {
+	return c.ClientCallback
 }
 
 func (c *remoteClient) Secret() string {

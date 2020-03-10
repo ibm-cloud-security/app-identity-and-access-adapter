@@ -3,12 +3,13 @@ package webstrategy
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
+	v1 "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/pkg/apis/policies/v1"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
 
 	"github.com/gogo/protobuf/types"
@@ -22,14 +23,15 @@ import (
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/config"
 	err "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/errors"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/tests/fake"
 )
 
 const (
-	defaultHost     = "tests.io"
-	defaultBasePath = "/api"
-	defaultState    = "session"
+	defaultHost        = "tests.io"
+	defaultBasePath    = "/api"
+	defaultState       = "session"
+	defaultOriginalURL = "https://" + defaultHost + defaultBasePath
 )
 
 var defaultHashKey = securecookie.GenerateRandomKey(16)
@@ -67,6 +69,45 @@ func TestHandleNewAuthorizationRequest(t *testing.T) {
 			&v1beta1.DirectHttpResponse{
 				Code:    302,
 				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/oidc/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
+			nil,
+		},
+		{ // New Authentication with a custom absolute-form callback URI
+			generateAuthnzRequest("", "", "", "", ""),
+			&engine.Action{
+				Client: fake.NewClientWithCallback(nil, "/my/callback"),
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/my/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
+			nil,
+		},
+		{ // New Authentication with a custom relative-form callback URI
+			generateAuthnzRequest("", "", "", "", ""),
+			&engine.Action{
+				Client: fake.NewClientWithCallback(nil, "my/callback"),
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://tests.io/api/my/callback", "")},
+			},
+			"Redirecting to identity provider",
+			int32(16),
+			nil,
+		},
+		{ // New Authentication with a custom full callback URL
+			generateAuthnzRequest("", "", "", "", ""),
+			&engine.Action{
+				Client: fake.NewClientWithCallback(nil, "https://my-adapter-domain.com/my/callback"),
+			},
+			&v1beta1.DirectHttpResponse{
+				Code:    302,
+				Headers: map[string]string{"location": generateAuthorizationURL(fake.NewClient(nil), "https://my-adapter-domain.com/my/callback", "")},
 			},
 			"Redirecting to identity provider",
 			int32(16),
@@ -190,6 +231,7 @@ func TestRefreshTokenFlow(t *testing.T) {
 		t.Run("refresh", func(t *testing.T) {
 			t.Parallel()
 			api := WebStrategy{
+				ctx:        config.NewConfig(),
 				tokenCache: new(sync.Map),
 				encrpytor:  defaultSecureCookie,
 				tokenUtil: MockValidator{
@@ -281,9 +323,12 @@ func TestCodeCallback(t *testing.T) {
 		},
 	}
 
-	encryptCookie := func(c *OidcCookie) string {
-		cookie, _ := api.generateEncryptedCookie("oidc-cookie-id", c)
-		return cookie.String()
+	encryptState := func(c *OidcState) string {
+		state, err := api.encryptState(fake.NewClient(nil).ID(), c)
+		if err != nil {
+			panic(err)
+		}
+		return url.QueryEscape(state)
 	}
 
 	var tests = []struct {
@@ -294,7 +339,7 @@ func TestCodeCallback(t *testing.T) {
 		message        string
 		err            error
 	}{
-		{ // missing state cookie
+		{ // missing state
 			"",
 			nil,
 			generateAuthnzRequest("", "code", "", callbackEndpoint, ""),
@@ -304,50 +349,40 @@ func TestCodeCallback(t *testing.T) {
 			"state parameter not provided",
 			nil,
 		},
-		{ // invalid state - missing
+		{ // bad state (unable to url-decode)
 			"",
 			nil,
-			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: ""}), "code", "", callbackEndpoint, defaultState),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, "inva%FFli%X0d-state"),
 			&v1beta1.DirectHttpResponse{
 				Code: 401,
 			},
-			"missing state parameter",
+			"bad state parameter",
 			nil,
 		},
-		{ // invalid state - missing expiration
+		{ // invalid state - not a properly encrypted state string
 			"",
 			nil,
-			generateAuthnzRequest(encryptCookie(&OidcCookie{Value: defaultState}), "code", "", callbackEndpoint, defaultState),
-			&v1beta1.DirectHttpResponse{
-				Code: 401,
-			},
-			"missing state parameter",
-			nil,
-		},
-		{ // invalid state - mismatch
-			"",
-			nil,
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, "session2"),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, "invalidencryptedstate"),
 			&v1beta1.DirectHttpResponse{
 				Code: 401,
 			},
 			"invalid state parameter",
 			nil,
 		},
-		{ // state not returned from IdP
+		{ // invalid state - expired (empty expiration date)
 			"",
 			nil,
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, ""),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, encryptState(&OidcState{})),
 			&v1beta1.DirectHttpResponse{
 				Code: 401,
 			},
-			"missing state parameter from callback",
+			"invalid state parameter",
 			nil,
 		},
 		{ // could not exchange grant code
 			"",
 			defaultFailureTokenResponse("problem getting tokens"),
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, encryptState(&OidcState{Expiration: time.Now().Add(1 * time.Minute)})),
 			&v1beta1.DirectHttpResponse{
 				Code: 401,
 			},
@@ -361,7 +396,7 @@ func TestCodeCallback(t *testing.T) {
 					IdentityToken: "invalid_token",
 				},
 			},
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, encryptState(&OidcState{Expiration: time.Now().Add(1 * time.Minute)})),
 			&v1beta1.DirectHttpResponse{
 				Code: 401,
 			},
@@ -371,11 +406,11 @@ func TestCodeCallback(t *testing.T) {
 		{ // success
 			"",
 			defaultSuccessTokenResponse(),
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, encryptState(&OidcState{Expiration: time.Now().Add(1 * time.Minute), OriginalURL: defaultOriginalURL})),
 			&v1beta1.DirectHttpResponse{
 				Code: 302,
 				Headers: map[string]string{
-					"location": "https://" + defaultHost + defaultBasePath,
+					"location": defaultOriginalURL,
 					setCookie:  "oidc-test-id",
 				},
 			},
@@ -385,7 +420,7 @@ func TestCodeCallback(t *testing.T) {
 		{ // success w/new redirect
 			"https://" + defaultHost + "/another_path",
 			defaultSuccessTokenResponse(),
-			generateAuthnzRequest(encryptCookie(defaultSessionOidcCookie()), "code", "", callbackEndpoint, defaultState),
+			generateAuthnzRequest("", "code", "", callbackEndpoint, encryptState(&OidcState{Expiration: time.Now().Add(1 * time.Minute)})),
 			&v1beta1.DirectHttpResponse{
 				Code: 302,
 				Headers: map[string]string{
@@ -443,6 +478,7 @@ func TestLogout(t *testing.T) {
 		}
 
 		api := WebStrategy{
+			ctx:       config.NewConfig(),
 			tokenUtil: MockValidator{},
 		}
 
@@ -466,13 +502,15 @@ func compareDirectHttpResponses(t *testing.T, r *authnz.HandleAuthnZResponse, ex
 			continue
 		}
 		assert.Equal(t, expected.Code, response.Code)
-		for key, value := range expected.Headers {
-			if key == setCookie {
+		for expectKey, expectValue := range expected.Headers {
+			if expectKey == setCookie {
 				assert.NotEmpty(t, response.Headers[setCookie])
 				continue
 			}
-			if !strings.HasPrefix(response.Headers[key], value) {
-				assert.Fail(t, "incorrect header value: '"+key+"'\n found: "+value+"\n expected:"+response.Headers[key])
+			if !strings.HasPrefix(response.Headers[expectKey], expectValue) {
+				assert.Fail(t, "incorrect header value: '"+expectKey+
+					"'\n found: "+response.Headers[expectKey]+
+					"\n expected: "+expectValue)
 			}
 		}
 
@@ -480,10 +518,10 @@ func compareDirectHttpResponses(t *testing.T, r *authnz.HandleAuthnZResponse, ex
 	}
 }
 
-func defaultSessionOidcCookie() *OidcCookie {
-	return &OidcCookie{
-		Value:      defaultState,
-		Expiration: time.Now().Add(time.Hour),
+func defaultSessionOidcCookie() *OidcState {
+	return &OidcState{
+		OriginalURL: defaultOriginalURL,
+		Expiration:  time.Now().Add(time.Hour),
 	}
 }
 
@@ -543,8 +581,11 @@ func createCookie() *http.Cookie {
 		Name:     "oidc-cookie-id",
 		Value:    defaultState,
 		Path:     "/",
-		Secure:   false, // TODO: replace on release
-		HttpOnly: false,
-		Expires:  time.Now().Add(time.Hour * time.Duration(2160)),
+		Secure:   false, // disabled for tests
+		HttpOnly: true,  // Cookie available to HTTP protocol only (no JS access)
+		//TODO: possible to use Expires instead of Max-Age once Istio supports it,
+		// see https://github.com/istio/istio/pull/21270
+		//Expires:  time.Now().Add(time.Hour * time.Duration(2160)), // 90 days
+		MaxAge: 90 * 24 * 60 * 60, // 90 days
 	}
 }

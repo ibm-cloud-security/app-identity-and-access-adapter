@@ -35,6 +35,7 @@ func getCmd() *cobra.Command {
 	f.Int8VarP(&sa.Level, "level", "l", sa.Level, "Set output log level. Range [-1, 7].")
 	f.VarP(&sa.HashKeySize, "hash-key", "", "The size of the HMAC signature key. It is recommended to use a key with 32 or 64 bytes.")
 	f.VarP(&sa.BlockKeySize, "block-key", "", "The size of the AES blockKey size used to encrypt the cookie value. Valid lengths are 16, 24, or 32.")
+	f.BoolVarP(&sa.SecureCookies, "secure-cookies", "", sa.SecureCookies, "Use Secure attribute for session cookies to ensure they are sent over HTTPS only.")
 
 	return cmd
 }

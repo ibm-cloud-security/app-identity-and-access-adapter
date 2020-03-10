@@ -30,6 +30,9 @@ spec:
             - "--level={{ .Values.logging.level }}"
             - "--hash-key={{ .Values.keys.hashKeySize }}"
             - "--block-key={{ .Values.keys.blockKeySize }}"
+            {{ if .Values.secureCookies }}
+            - "--secure-cookies"
+            {{ end }}
 
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           ports:
