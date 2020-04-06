@@ -39,7 +39,7 @@ function configureCluster() {
     ibmcloud login -r ${REGION} --apikey ${IBM_CLOUD_API_KEY}
 
 
-    ibmcloud ks cluster-config --cluster ${CLUSTER_NAME}
+    ibmcloud ks cluster config --cluster ${CLUSTER_NAME}
 
     local homeDir="home"
     if [[ -z ${TRAVIS+x} ]]; then
