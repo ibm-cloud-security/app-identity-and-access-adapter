@@ -4,8 +4,9 @@ bin/appidentityandaccessadapter
 .vscode/**
 vendor
 main
-node_modules
 .DS_Store
 coverage.out
 profile.out
 samples/testcrds/
+samples/app/package-lock.json
+samples/app/node_modules
