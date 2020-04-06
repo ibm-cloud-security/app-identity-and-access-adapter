@@ -39,15 +39,12 @@ function configureCluster() {
     ibmcloud login -r ${REGION} --apikey ${IBM_CLOUD_API_KEY}
 
 
-    ibmcloud ks cluster-config --cluster ${CLUSTER_NAME}
+    ibmcloud ks cluster config --cluster ${CLUSTER_NAME}
 
     local homeDir="home"
     if [[ -z ${TRAVIS+x} ]]; then
         homeDir="Users"
     fi
-
-    echo "Exporting KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${CLUSTER_NAME}/kube-config-${DATA_CENTER}-${CLUSTER_NAME}.yml"
-    export KUBECONFIG=/${homeDir}/${USER}/.bluemix/plugins/container-service/clusters/${CLUSTER_NAME}/kube-config-${DATA_CENTER}-${CLUSTER_NAME}.yml
 }
 
 # Execute
