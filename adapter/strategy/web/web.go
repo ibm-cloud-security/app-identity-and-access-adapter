@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -30,7 +30,7 @@ import (
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -139,17 +139,17 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 
 	sessionCookie, err := request.Cookie(buildTokenCookieName(sessionCookie, action.Client))
 	if err != nil {
-		zap.L().Debug("Current session does not exist.", zap.String("client_name", action.Client.Name()))
+		zap.L().Debug("Session cookie not provided", zap.String("client_name", action.Client.Name()))
 		return nil, nil
 	}
 
 	// Load session information
 	var session *authserver.TokenResponse
 	if storedSession, ok := w.tokenCache.Load(sessionCookie.Value); !ok {
-		zap.L().Debug("Tokens not found in cache.", zap.String("client_name", action.Client.Name()))
+		zap.L().Debug("Session token does not exist", zap.String("client_name", action.Client.Name()))
 		return nil, nil
 	} else if session, ok = storedSession.(*authserver.TokenResponse); !ok {
-		zap.L().Debug("Tokens not found in cache.", zap.String("client_name", action.Client.Name()))
+		zap.L().Debug("Incompatible session token", zap.String("client_name", action.Client.Name()))
 		return nil, nil
 	}
 

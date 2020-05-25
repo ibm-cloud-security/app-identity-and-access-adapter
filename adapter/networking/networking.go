@@ -2,9 +2,10 @@ package networking
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -71,13 +72,13 @@ func decodeResponse(res *http.Response, successV, failureV OK) error {
 // decodeJSON parses a JSON body and calls validate
 func decodeJSON(r *http.Response, v OK) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		zap.L().Debug("Could not parse request body.", zap.Error(err))
+		zap.L().Debug("Could not parse response body", zap.Error(err))
 		return err
 	}
 	return v.OK()
 }
 
-// retry provides a recursive function retry implementation
+// Retry provides a recursive function retry implementation
 func Retry(attempts int, sleep time.Duration, fn func() (interface{}, error)) (interface{}, error) {
 	res, err := fn()
 	if err != nil {

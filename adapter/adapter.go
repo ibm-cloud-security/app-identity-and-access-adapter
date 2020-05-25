@@ -23,9 +23,9 @@ import (
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/initializer"
 	storePolicy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/store/policy"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/api"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/web"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	apistrategy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/api"
+	webstrategy "github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy/web"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 type (
@@ -59,19 +59,22 @@ func (s *AppidAdapter) HandleAuthnZ(ctx context.Context, r *authnz.HandleAuthnZR
 	///// Check policy
 	action, err := s.engine.Evaluate(r.Instance.Target)
 	if err != nil {
-		zap.L().Debug("Could not check policies", zap.Error(err))
+		zap.L().Warn("Could not check policies", zap.Error(err))
 		return nil, err
 	}
 
 	switch action.Type {
 	case policy.JWT:
-		zap.L().Info("Executing JWT policies")
+		zap.L().Debug("Executing JWT policies", zap.String("method", r.Instance.Target.Method),
+			zap.String("path", r.Instance.Target.Path), zap.String("service", r.Instance.Target.Service))
 		return s.apistrategy.HandleAuthnZRequest(r, action)
 	case policy.OIDC:
-		zap.L().Info("Executing OIDC policies")
+		zap.L().Debug("Executing OIDC policies", zap.String("method", r.Instance.Target.Method),
+			zap.String("path", r.Instance.Target.Path), zap.String("service", r.Instance.Target.Service))
 		return s.webstrategy.HandleAuthnZRequest(r, action)
 	default:
-		zap.L().Info("No OIDC/JWT policies configured")
+		zap.L().Debug("No OIDC/JWT policies configured", zap.String("method", r.Instance.Target.Method),
+			zap.String("path", r.Instance.Target.Path), zap.String("service", r.Instance.Target.Service))
 		return &authnz.HandleAuthnZResponse{
 			Result: &v1beta1.CheckResult{Status: status.OK},
 		}, nil
