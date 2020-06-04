@@ -13,36 +13,37 @@ import (
 
 func getPathConfig(exact string, prefix string, method string, policies []v1.PathPolicy) v1.PathConfig {
 	return v1.PathConfig{
-		Exact: exact,
-		Prefix: prefix,
-		Method: method,
+		Exact:    exact,
+		Prefix:   prefix,
+		Method:   method,
 		Policies: policies,
 	}
 }
 
-func getPathConfigs(path v1.PathConfig) []v1.PathConfig{
-	return []v1.PathConfig{ path,}
+func getPathConfigs(path v1.PathConfig) []v1.PathConfig {
+	return []v1.PathConfig{path,}
 }
 
 func getTargetElements(service string, paths []v1.PathConfig) v1.TargetElement {
 	return v1.TargetElement{
 		ServiceName: service,
-		Paths: paths,
+		Paths:       paths,
+		ServiceHost: service,
 	}
 }
 
-
 type output struct {
-	policies []policy.PolicyMapping
-	total int
+	policies        []policy.PolicyMapping
+	total           int
+	serviceMappings map[policy.Service]string
 }
 
 func TestParsedTarget(t *testing.T) {
-	tests := [] struct{
-		name string
-		targets  []v1.TargetElement
-		output output
-	} {
+	tests := [] struct {
+		name    string
+		targets []v1.TargetElement
+		output  output
+	}{
 		{
 			name: "No exact/prefix provided",
 			targets: []v1.TargetElement{
@@ -61,6 +62,7 @@ func TestParsedTarget(t *testing.T) {
 						Actions:  getDefaultPathPolicy(),
 					},
 				},
+				serviceMappings: map[policy.Service]string{policy.Service{Name: service, Namespace: "ns"}: service},
 			},
 		},
 		{
@@ -86,6 +88,7 @@ func TestParsedTarget(t *testing.T) {
 						Actions:  getDefaultPathPolicy(),
 					},
 				},
+				serviceMappings: map[policy.Service]string{policy.Service{Name: service, Namespace: "ns"}: service},
 			},
 		},
 		{
@@ -111,6 +114,7 @@ func TestParsedTarget(t *testing.T) {
 						Actions:  getDefaultPathPolicy(),
 					},
 				},
+				serviceMappings: map[policy.Service]string{policy.Service{Name: service, Namespace: "ns"}: service},
 			},
 		},
 	}
@@ -123,6 +127,10 @@ func TestParsedTarget(t *testing.T) {
 			assert.Equal(t, len(result), test.output.total)
 			if !reflect.DeepEqual(result, test.output.policies) {
 				assert.Fail(t, fmt.Sprintf("expected out to have value %v, got %v", test.output.policies, result))
+			}
+			serviceMappings := ParseServiceHosts(test.targets, ns)
+			if !reflect.DeepEqual(serviceMappings, test.output.serviceMappings) {
+				assert.Fail(t, fmt.Sprintf("expected out to have value %v, got %v", test.output.serviceMappings, serviceMappings))
 			}
 		})
 	}

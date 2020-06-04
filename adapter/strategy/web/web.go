@@ -286,7 +286,7 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 		return w.handleErrorCallback(err)
 	}
 
-	redirectURI := buildRequestURL(request)
+	redirectURI := buildRequestURL(request, action.Host)
 
 	// Exchange authorization grant code for tokens
 	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
@@ -324,7 +324,8 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 
 // handleAuthorizationCodeFlow initiates an OAuth 2.0 / OIDC authorization_code grant flow.
 func (w *WebStrategy) handleAuthorizationCodeFlow(request *authnz.RequestMsg, action *engine.Action) (*authnz.HandleAuthnZResponse, error) {
-	redirectURI := buildRequestURL(request) + callbackEndpoint
+	redirectURI := buildRequestURL(request, action.Host) + callbackEndpoint
+
 	// / Build and store session state
 	state, stateCookie, err := w.buildStateParam(action.Client)
 	if err != nil {

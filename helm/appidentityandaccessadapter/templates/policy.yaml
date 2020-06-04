@@ -31,6 +31,9 @@ spec:
                                     serviceName:
                                         type:      string
                                         minLength: 1
+                                    serviceHost:
+                                        type:      string
+                                        minLength: 1
                                     paths:
                                         type: array
                                         items:
