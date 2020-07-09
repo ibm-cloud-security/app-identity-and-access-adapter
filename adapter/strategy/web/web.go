@@ -3,6 +3,7 @@ package webstrategy
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -289,7 +290,8 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 	redirectURI := buildRequestURL(request)
 
 	// Exchange authorization grant code for tokens
-	response, err := action.Client.ExchangeGrantCode(code.(string), redirectURI)
+	unescapedCode, err := url.QueryUnescape(code.(string))
+	response, err := action.Client.ExchangeGrantCode(unescapedCode, redirectURI)
 	if err != nil {
 		zap.L().Info("OIDC callback: Could not retrieve tokens", zap.Error(err), zap.String("client_name", action.Client.Name()))
 		return w.handleErrorCallback(err)
