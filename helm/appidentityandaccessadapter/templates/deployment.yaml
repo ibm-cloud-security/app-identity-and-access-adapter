@@ -37,6 +37,12 @@ spec:
           volumeMounts:
             - name: transient-storage
               mountPath: /volume
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
       volumes:
         - name: transient-storage
           emptyDir: {}
+{{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+{{- end }}

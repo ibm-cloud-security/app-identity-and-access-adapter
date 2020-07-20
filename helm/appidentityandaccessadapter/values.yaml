@@ -57,3 +57,22 @@ logging:
   ## from -1 to 7
   ## See zapcore: https://godoc.org/go.uber.org/zap/zapcore#Level
   level: 0
+
+# resources:
+  # limits:
+    # cpu: 100m
+    # memory: 80Mi
+  # requests:
+    # cpu: 10m
+    # memory: 40Mi
+
+affinity: {}
+  # podAntiAffinity:
+  #   preferredDuringSchedulingIgnoredDuringExecution:
+  #   - weight: 5
+  #     podAffinityTerm:
+  #       topologyKey: "kubernetes.io/hostname"
+  #       labelSelector:
+  #         matchLabels:
+  #           app: {{ template "dex.name" . }}
+  #           release: "{{ .Release.Name }}"
