@@ -113,11 +113,11 @@ func (c *Controller) processNextItem() bool {
 	// after both instances, we want to forget the key from the queue, as this indicates
 	// a code path of successful queue key processing
 	if !exists {
-		zap.L().Debug("Controller.processNextItem: object deleted detected: %s", zap.String("key", keyRaw))
+		zap.L().Debug("Controller.processNextItem: object deletion detected: %s", zap.String("key", keyRaw))
 		c.Handler.HandleDeleteEvent(policy.CrdKey{Id: keyRaw, CrdType: c.CrdType})
 		c.Queue.Forget(key)
 	} else {
-		zap.L().Debug("Controller.processNextItem: object created detected: %s", zap.String("key", keyRaw))
+		zap.L().Debug("Controller.processNextItem: object creation detected: %s", zap.String("key", keyRaw))
 		c.Handler.HandleAddUpdateEvent(item)
 		c.Queue.Forget(key)
 	}
