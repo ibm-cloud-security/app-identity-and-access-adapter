@@ -55,7 +55,7 @@ func TestGenerateAuthorizationURL(t *testing.T) {
 func TestBuildRequestURL(t *testing.T) {
 	inp := &authnz.RequestMsg{
 		Scheme: "https",
-		Host:   "me.com",
+		Host:   "me.com/",
 		Path:   "/hello world",
 	}
 	assert.Equal(t, "https://me.com/hello world", buildRequestURL(inp))
