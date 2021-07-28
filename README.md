@@ -8,6 +8,7 @@
 [![GithubStars][img-github-stars]][url-github-stars]
 [![GithubForks][img-github-forks]][url-github-forks]
 
+**Note:** *This project is deprecated and is no longer supported officially. Please see [Multicloud apps with Istio documentation](https://cloud.ibm.com/docs/appid?topic=appid-istio-adapter) for more details. Adapter's docker image been removed from docker hub. If you want continue using you can clone the repository and maintain your own version of the image. The repository contains all the necessary scripts to make the migration easy. You can find the CD scripts in the [bin](https://github.com/ibm-cloud-security/app-identity-and-access-adapter/blob/development/bin) directory. You will also have to point the [helm chart](https://github.com/ibm-cloud-security/app-identity-and-access-adapter/blob/development/helm/appidentityandaccessadapter/values.yaml#L17) to the new image repository.*
 
 By using the App Identity and Access adapter, you can centralize all of your identity management using any OIDC compliant identity provider. Because enterprises use clouds from multiple providers or a combination of on and off-premise solutions, heterogenous deployment models can help you to preserve existing infrastructure and avoid vendor lock-in. The adapter can be configured to work with any OIDC compliant identity provider, which enables it to control authentication and authorization policies in all environments including frontend and backend applications. And, it does it all without any change to your code or the need to redeploy your application.
 
