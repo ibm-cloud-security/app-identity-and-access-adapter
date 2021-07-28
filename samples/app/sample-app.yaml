@@ -60,7 +60,7 @@ spec:
     spec:
       containers:
         - name: sample-app
-          image: ibmcloudsecurity/app-identity-and-access-adapter-sample-app:latest
+          image: ishangulhane/app-identity-and-access-adapter-sample-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

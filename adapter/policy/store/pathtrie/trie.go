@@ -4,6 +4,7 @@ package pathtrie
 type Trie interface {
 	Get(key string) interface{}
 	GetActions(key string) interface{}
+	GetPrefixActions(key string) interface{}
 	Put(key string, value interface{}) bool
 	Delete(key string) bool
 }

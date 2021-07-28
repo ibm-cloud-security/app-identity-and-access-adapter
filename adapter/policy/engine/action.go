@@ -14,4 +14,5 @@ type Action struct {
 	KeySet keyset.KeySet
 	Client client.Client
 	Type   policy.Type
+	Host   string
 }
