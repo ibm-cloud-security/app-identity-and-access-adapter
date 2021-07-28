@@ -81,10 +81,13 @@ func New(discoveryEndpoint string) AuthorizationServerService {
 	return s
 }
 
-// KeySet returns the instance's keyset
+// KeySet returns the instance's keyset or nil if none is available
 func (s *RemoteService) KeySet() keyset.KeySet {
 	_ = s.initialize()
-	if s.jwks == nil && s.JwksURL != "" {
+	// If s.JwksURL contains an URL, make sure we return a KeySet with that URL
+	// That fixes the problem when SetKeySet() is used to set a KeySet with
+	// an empty JWKS URL while we already know the proper JWKS URL from the discovery
+	if s.JwksURL != "" && (s.jwks == nil || s.jwks.PublicKeyURL() == "") {
 		s.jwks = keyset.New(s.JwksURL, s.httpclient)
 	}
 	return s.jwks
@@ -210,8 +213,8 @@ func (s *RemoteService) loadDiscoveryEndpoint() (interface{}, error) {
 		return nil, oa2Err
 	}
 
-	s.initialized = true
 	s.DiscoveryConfig = *config
+	s.initialized = true
 
 	return http.StatusOK, nil
 }

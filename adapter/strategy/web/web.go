@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -30,7 +30,7 @@ import (
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/policy/engine"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/strategy"
 	"github.com/ibm-cloud-security/app-identity-and-access-adapter/adapter/validator"
-	"github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
+	authnz "github.com/ibm-cloud-security/app-identity-and-access-adapter/config/template"
 )
 
 const (
@@ -158,6 +158,10 @@ func (w *WebStrategy) isAuthorized(cookies string, action *engine.Action) (*auth
 	// Validate session
 	userInfoEndpoint := action.Client.AuthorizationServer().UserInfoEndpoint()
 	keySet := action.Client.AuthorizationServer().KeySet()
+	if keySet == nil {
+		zap.L().Debug("Unable to validate session because KeySet is missing for the authorization server", zap.String("client_name", action.Client.Name()))
+		return nil, nil
+	}
 
 	handleTokenValidationError := func(validationErr *oAuthError.OAuthError) (*authnz.HandleAuthnZResponse, error) {
 		if validationErr.Msg == oAuthError.ExpiredTokenError().Msg {
@@ -197,6 +201,10 @@ func (w *WebStrategy) handleRefreshTokens(sessionID string, session *authserver.
 	}
 	userInfoEndpoint := c.AuthorizationServer().UserInfoEndpoint()
 	keySet := c.AuthorizationServer().KeySet()
+	if keySet == nil {
+		zap.L().Debug("Unable to refresh tokens because KeySet is missing for the authorization server", zap.String("client_name", c.Name()))
+		return nil, nil
+	}
 
 	if tokens, err := c.RefreshToken(session.RefreshToken); err != nil {
 		zap.L().Info("Could not retrieve tokens using the refresh token", zap.String("client_name", c.Name()), zap.Error(err))
@@ -297,6 +305,10 @@ func (w *WebStrategy) handleAuthorizationCodeCallback(code interface{}, request 
 
 	userInfoEndpoint := action.Client.AuthorizationServer().UserInfoEndpoint()
 	keySet := action.Client.AuthorizationServer().KeySet()
+	if keySet == nil {
+		zap.L().Debug("Unable to handle IODC callback because KeySet is missing for the authorization server", zap.String("client_name", action.Client.Name()))
+		return nil, nil
+	}
 
 	validationErr := w.tokenUtil.Validate(response.AccessToken, validator.Access, keySet, action.Rules, userInfoEndpoint)
 	if validationErr != nil {
